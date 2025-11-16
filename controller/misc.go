@@ -70,6 +70,10 @@ func GetStatus(c *gin.Context) {
 		"home_link":                   operation_setting.GetGeneralSetting().HomeLink,
 		"about_link":                  operation_setting.GetGeneralSetting().AboutLink,
 		"pricing_link":                operation_setting.GetGeneralSetting().PricingLink,
+		"docs_link_embed":             operation_setting.GetGeneralSetting().DocsLinkEmbed,
+		"home_link_embed":             operation_setting.GetGeneralSetting().HomeLinkEmbed,
+		"about_link_embed":            operation_setting.GetGeneralSetting().AboutLinkEmbed,
+		"pricing_link_embed":          operation_setting.GetGeneralSetting().PricingLinkEmbed,
 		"quota_per_unit":              common.QuotaPerUnit,
 		// 兼容旧前端：保留 display_in_currency，同时提供新的 quota_display_type
 		"display_in_currency":           operation_setting.IsCurrencyDisplay(),

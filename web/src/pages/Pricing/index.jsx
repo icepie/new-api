@@ -17,13 +17,32 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
+import React, { useContext } from 'react';
 import ModelPricingPage from '../../components/table/model-pricing/layout/PricingPage';
+import { StatusContext } from '../../context/Status';
 
-const Pricing = () => (
-  <>
-    <ModelPricingPage />
-  </>
-);
+const Pricing = () => {
+  const [statusState] = useContext(StatusContext);
+  const pricingLink = statusState?.status?.pricing_link || '';
+  const pricingLinkEmbed = statusState?.status?.pricing_link_embed || false;
+
+  // 如果设置了模型广场URL且开启了内嵌，则使用iframe显示
+  if (pricingLink && pricingLinkEmbed) {
+    return (
+      <div className='w-full overflow-x-hidden'>
+        <iframe
+          src={pricingLink}
+          style={{ width: '100%', height: '100vh', border: 'none' }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <ModelPricingPage />
+    </>
+  );
+};
 
 export default Pricing;

@@ -19,7 +19,18 @@ For commercial licensing, please contact support@quantumnous.com
 
 import { useMemo } from 'react';
 
-export const useNavigation = (t, docsLink, homeLink, aboutLink, pricingLink, headerNavModules) => {
+export const useNavigation = (
+  t,
+  docsLink,
+  homeLink,
+  aboutLink,
+  pricingLink,
+  docsLinkEmbed,
+  homeLinkEmbed,
+  aboutLinkEmbed,
+  pricingLinkEmbed,
+  headerNavModules,
+) => {
   const mainNavLinks = useMemo(() => {
     // 默认配置，如果没有传入配置则显示所有模块
     const defaultModules = {
@@ -38,7 +49,8 @@ export const useNavigation = (t, docsLink, homeLink, aboutLink, pricingLink, hea
         text: t('首页'),
         itemKey: 'home',
         to: '/',
-        ...(homeLink
+        // 如果设置了URL但没有开启内嵌，则跳转到外部链接
+        ...(homeLink && !homeLinkEmbed
           ? {
               isExternal: true,
               externalLink: homeLink,
@@ -54,7 +66,8 @@ export const useNavigation = (t, docsLink, homeLink, aboutLink, pricingLink, hea
         text: t('模型广场'),
         itemKey: 'pricing',
         to: '/pricing',
-        ...(pricingLink
+        // 如果设置了URL但没有开启内嵌，则跳转到外部链接
+        ...(pricingLink && !pricingLinkEmbed
           ? {
               isExternal: true,
               externalLink: pricingLink,
@@ -66,8 +79,13 @@ export const useNavigation = (t, docsLink, homeLink, aboutLink, pricingLink, hea
             {
               text: t('文档'),
               itemKey: 'docs',
-              isExternal: true,
-              externalLink: docsLink,
+              // 如果开启了内嵌，则路由到页面；否则跳转到外部链接
+              ...(docsLinkEmbed
+                ? { to: '/docs' }
+                : {
+                    isExternal: true,
+                    externalLink: docsLink,
+                  }),
             },
           ]
         : []),
@@ -75,7 +93,8 @@ export const useNavigation = (t, docsLink, homeLink, aboutLink, pricingLink, hea
         text: t('关于'),
         itemKey: 'about',
         to: '/about',
-        ...(aboutLink
+        // 如果设置了URL但没有开启内嵌，则跳转到外部链接
+        ...(aboutLink && !aboutLinkEmbed
           ? {
               isExternal: true,
               externalLink: aboutLink,
@@ -97,7 +116,18 @@ export const useNavigation = (t, docsLink, homeLink, aboutLink, pricingLink, hea
       }
       return modules[link.itemKey] === true;
     });
-  }, [t, docsLink, homeLink, aboutLink, pricingLink, headerNavModules]);
+  }, [
+    t,
+    docsLink,
+    homeLink,
+    aboutLink,
+    pricingLink,
+    docsLinkEmbed,
+    homeLinkEmbed,
+    aboutLinkEmbed,
+    pricingLinkEmbed,
+    headerNavModules,
+  ]);
 
   return {
     mainNavLinks,

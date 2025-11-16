@@ -49,6 +49,10 @@ export default function GeneralSettings(props) {
     'general_setting.home_link': '',
     'general_setting.about_link': '',
     'general_setting.pricing_link': '',
+    'general_setting.docs_link_embed': false,
+    'general_setting.home_link_embed': false,
+    'general_setting.about_link_embed': false,
+    'general_setting.pricing_link_embed': false,
     'general_setting.quota_display_type': 'USD',
     'general_setting.custom_currency_symbol': '¤',
     'general_setting.custom_currency_exchange_rate': '',
@@ -196,6 +200,15 @@ export default function GeneralSettings(props) {
                   onChange={handleFieldChange('general_setting.docs_link')}
                   showClear
                 />
+                <Form.Switch
+                  field={'general_setting.docs_link_embed'}
+                  label={t('文档地址内嵌')}
+                  size='default'
+                  checkedText='｜'
+                  uncheckedText='〇'
+                  onChange={handleFieldChange('general_setting.docs_link_embed')}
+                  style={{ marginTop: 8 }}
+                />
               </Col>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>
                 <Form.Input
@@ -205,6 +218,15 @@ export default function GeneralSettings(props) {
                   placeholder={t('例如 https://example.com')}
                   onChange={handleFieldChange('general_setting.home_link')}
                   showClear
+                />
+                <Form.Switch
+                  field={'general_setting.home_link_embed'}
+                  label={t('首页地址内嵌')}
+                  size='default'
+                  checkedText='｜'
+                  uncheckedText='〇'
+                  onChange={handleFieldChange('general_setting.home_link_embed')}
+                  style={{ marginTop: 8 }}
                 />
               </Col>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>
@@ -216,6 +238,15 @@ export default function GeneralSettings(props) {
                   onChange={handleFieldChange('general_setting.about_link')}
                   showClear
                 />
+                <Form.Switch
+                  field={'general_setting.about_link_embed'}
+                  label={t('关于地址内嵌')}
+                  size='default'
+                  checkedText='｜'
+                  uncheckedText='〇'
+                  onChange={handleFieldChange('general_setting.about_link_embed')}
+                  style={{ marginTop: 8 }}
+                />
               </Col>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>
                 <Form.Input
@@ -225,6 +256,15 @@ export default function GeneralSettings(props) {
                   placeholder={t('例如 https://example.com/pricing')}
                   onChange={handleFieldChange('general_setting.pricing_link')}
                   showClear
+                />
+                <Form.Switch
+                  field={'general_setting.pricing_link_embed'}
+                  label={t('模型广场地址内嵌')}
+                  size='default'
+                  checkedText='｜'
+                  uncheckedText='〇'
+                  onChange={handleFieldChange('general_setting.pricing_link_embed')}
+                  style={{ marginTop: 8 }}
                 />
               </Col>
               {/* 单位美元额度已合入汇率组合控件（TOKENS 模式下编辑），不再单独展示 */}

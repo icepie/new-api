@@ -75,6 +75,8 @@ const Home = () => {
   const isMobile = useIsMobile();
   const isDemoSiteMode = statusState?.status?.demo_site_enabled || false;
   const docsLink = statusState?.status?.docs_link || '';
+  const homeLink = statusState?.status?.home_link || '';
+  const homeLinkEmbed = statusState?.status?.home_link_embed || false;
   const serverAddress =
     statusState?.status?.server_address || `${window.location.origin}`;
   const endpointItems = API_ENDPOINTS.map((e) => ({ value: e }));
@@ -147,6 +149,25 @@ const Home = () => {
     }, 3000);
     return () => clearInterval(timer);
   }, [endpointItems.length]);
+
+  // 如果设置了首页URL且开启了内嵌，则使用iframe显示
+  if (homeLink && homeLinkEmbed) {
+    return (
+      <div className='w-full overflow-x-hidden'>
+        <iframe
+          src={homeLink}
+          className='w-full h-screen border-none'
+          onLoad={() => {
+            const iframe = document.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+              iframe.contentWindow.postMessage({ themeMode: actualTheme }, '*');
+              iframe.contentWindow.postMessage({ lang: i18n.language }, '*');
+            }
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className='w-full overflow-x-hidden'>

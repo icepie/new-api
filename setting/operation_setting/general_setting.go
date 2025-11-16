@@ -15,6 +15,10 @@ type GeneralSetting struct {
 	HomeLink            string `json:"home_link"`
 	AboutLink           string `json:"about_link"`
 	PricingLink         string `json:"pricing_link"`
+	DocsLinkEmbed       bool   `json:"docs_link_embed"`
+	HomeLinkEmbed       bool   `json:"home_link_embed"`
+	AboutLinkEmbed      bool   `json:"about_link_embed"`
+	PricingLinkEmbed    bool   `json:"pricing_link_embed"`
 	PingIntervalEnabled bool   `json:"ping_interval_enabled"`
 	PingIntervalSeconds int    `json:"ping_interval_seconds"`
 	// 当前站点额度展示类型：USD / CNY / TOKENS
@@ -31,6 +35,10 @@ var generalSetting = GeneralSetting{
 	HomeLink:                   "",
 	AboutLink:                  "",
 	PricingLink:                "",
+	DocsLinkEmbed:              false,
+	HomeLinkEmbed:              false,
+	AboutLinkEmbed:             false,
+	PricingLinkEmbed:           false,
 	PingIntervalEnabled:        false,
 	PingIntervalSeconds:        60,
 	QuotaDisplayType:           QuotaDisplayTypeUSD,

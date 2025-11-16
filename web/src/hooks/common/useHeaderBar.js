@@ -52,6 +52,10 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   const homeLink = statusState?.status?.home_link || '';
   const aboutLink = statusState?.status?.about_link || '';
   const pricingLink = statusState?.status?.pricing_link || '';
+  const docsLinkEmbed = statusState?.status?.docs_link_embed || false;
+  const homeLinkEmbed = statusState?.status?.home_link_embed || false;
+  const aboutLinkEmbed = statusState?.status?.about_link_embed || false;
+  const pricingLinkEmbed = statusState?.status?.pricing_link_embed || false;
   const isDemoSiteMode = statusState?.status?.demo_site_enabled || false;
 
   // 获取顶栏模块配置
@@ -194,6 +198,10 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
     homeLink,
     aboutLink,
     pricingLink,
+    docsLinkEmbed,
+    homeLinkEmbed,
+    aboutLinkEmbed,
+    pricingLinkEmbed,
     isDemoSiteMode,
     isConsoleRoute,
     theme,
