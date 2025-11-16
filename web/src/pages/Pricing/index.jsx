@@ -17,22 +17,39 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import ModelPricingPage from '../../components/table/model-pricing/layout/PricingPage';
 import { StatusContext } from '../../context/Status';
+import { useActualTheme } from '../../context/Theme';
 
 const Pricing = () => {
   const [statusState] = useContext(StatusContext);
+  const actualTheme = useActualTheme();
   const pricingLink = statusState?.status?.pricing_link || '';
   const pricingLinkEmbed = statusState?.status?.pricing_link_embed || false;
+
+  // 构建带主题参数的 URL
+  const pricingIframeSrc = useMemo(() => {
+    if (!pricingLink) return '';
+    try {
+      const url = new URL(pricingLink);
+      url.searchParams.set('theme', actualTheme);
+      return url.toString();
+    } catch {
+      // 如果 URL 解析失败，直接拼接参数
+      const separator = pricingLink.includes('?') ? '&' : '?';
+      return `${pricingLink}${separator}theme=${actualTheme}`;
+    }
+  }, [pricingLink, actualTheme]);
 
   // 如果设置了模型广场URL且开启了内嵌，则使用iframe显示
   if (pricingLink && pricingLinkEmbed) {
     return (
-      <div className='w-full overflow-x-hidden'>
+      <div className='w-full overflow-x-hidden mt-16'>
         <iframe
-          src={pricingLink}
-          style={{ width: '100%', height: '100vh', border: 'none' }}
+          key={pricingIframeSrc}
+          src={pricingIframeSrc}
+          className='w-full h-[calc(100vh-4rem)] border-none'
         />
       </div>
     );

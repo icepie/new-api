@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { StatusContext } from '../../context/Status';
 import { useActualTheme } from '../../context/Theme';
 import { useTranslation } from 'react-i18next';
@@ -29,13 +29,28 @@ const Docs = () => {
   const docsLink = statusState?.status?.docs_link || '';
   const docsLinkEmbed = statusState?.status?.docs_link_embed || false;
 
+  // 构建带主题参数的 URL
+  const iframeSrc = useMemo(() => {
+    if (!docsLink) return '';
+    try {
+      const url = new URL(docsLink);
+      url.searchParams.set('theme', actualTheme);
+      return url.toString();
+    } catch {
+      // 如果 URL 解析失败，直接拼接参数
+      const separator = docsLink.includes('?') ? '&' : '?';
+      return `${docsLink}${separator}theme=${actualTheme}`;
+    }
+  }, [docsLink, actualTheme]);
+
   // 如果设置了文档URL且开启了内嵌，则使用iframe显示
   if (docsLink && docsLinkEmbed) {
     return (
-      <div className='w-full overflow-x-hidden'>
+      <div className='w-full overflow-x-hidden mt-16'>
         <iframe
-          src={docsLink}
-          className='w-full h-screen border-none'
+          key={iframeSrc}
+          src={iframeSrc}
+          className='w-full h-[calc(100vh-4rem)] border-none'
           onLoad={() => {
             const iframe = document.querySelector('iframe');
             if (iframe && iframe.contentWindow) {

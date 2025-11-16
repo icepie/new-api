@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useMemo } from 'react';
 import { API, showError } from '../../helpers';
 import { marked } from 'marked';
 import { Empty } from '@douyinfe/semi-ui';
@@ -27,15 +27,31 @@ import {
 } from '@douyinfe/semi-illustrations';
 import { useTranslation } from 'react-i18next';
 import { StatusContext } from '../../context/Status';
+import { useActualTheme } from '../../context/Theme';
 
 const About = () => {
   const { t } = useTranslation();
   const [statusState] = useContext(StatusContext);
+  const actualTheme = useActualTheme();
   const [about, setAbout] = useState('');
   const [aboutLoaded, setAboutLoaded] = useState(false);
   const aboutLink = statusState?.status?.about_link || '';
   const aboutLinkEmbed = statusState?.status?.about_link_embed || false;
   const currentYear = new Date().getFullYear();
+
+  // 构建带主题参数的 URL
+  const aboutIframeSrc = useMemo(() => {
+    if (!aboutLink) return '';
+    try {
+      const url = new URL(aboutLink);
+      url.searchParams.set('theme', actualTheme);
+      return url.toString();
+    } catch {
+      // 如果 URL 解析失败，直接拼接参数
+      const separator = aboutLink.includes('?') ? '&' : '?';
+      return `${aboutLink}${separator}theme=${actualTheme}`;
+    }
+  }, [aboutLink, actualTheme]);
 
   const displayAbout = async () => {
     setAbout(localStorage.getItem('about') || '');
@@ -139,10 +155,11 @@ const About = () => {
   // 如果设置了关于URL且开启了内嵌，则使用iframe显示
   if (aboutLink && aboutLinkEmbed) {
     return (
-      <div className='w-full overflow-x-hidden'>
+      <div className='w-full overflow-x-hidden mt-16'>
         <iframe
-          src={aboutLink}
-          style={{ width: '100%', height: '100vh', border: 'none' }}
+          key={aboutIframeSrc}
+          src={aboutIframeSrc}
+          className='w-full h-[calc(100vh-4rem)] border-none'
         />
       </div>
     );

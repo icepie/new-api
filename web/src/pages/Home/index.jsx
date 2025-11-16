@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useMemo } from 'react';
 import {
   Button,
   Typography,
@@ -150,13 +150,28 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [endpointItems.length]);
 
+  // 构建带主题参数的 URL
+  const homeIframeSrc = useMemo(() => {
+    if (!homeLink) return '';
+    try {
+      const url = new URL(homeLink);
+      url.searchParams.set('theme', actualTheme);
+      return url.toString();
+    } catch {
+      // 如果 URL 解析失败，直接拼接参数
+      const separator = homeLink.includes('?') ? '&' : '?';
+      return `${homeLink}${separator}theme=${actualTheme}`;
+    }
+  }, [homeLink, actualTheme]);
+
   // 如果设置了首页URL且开启了内嵌，则使用iframe显示
   if (homeLink && homeLinkEmbed) {
     return (
-      <div className='w-full overflow-x-hidden'>
+      <div className='w-full overflow-x-hidden mt-16'>
         <iframe
-          src={homeLink}
-          className='w-full h-screen border-none'
+          key={homeIframeSrc}
+          src={homeIframeSrc}
+          className='w-full h-[calc(100vh-4rem)] border-none'
           onLoad={() => {
             const iframe = document.querySelector('iframe');
             if (iframe && iframe.contentWindow) {
