@@ -54,6 +54,16 @@ export function setStatusData(data) {
   } else {
     localStorage.removeItem('docs_link');
   }
+  if (data.home_link) {
+    localStorage.setItem('home_link', data.home_link);
+  } else {
+    localStorage.removeItem('home_link');
+  }
+  if (data.about_link) {
+    localStorage.setItem('about_link', data.about_link);
+  } else {
+    localStorage.removeItem('about_link');
+  }
 }
 
 export function setUserData(data) {

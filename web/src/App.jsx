@@ -17,8 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { lazy, Suspense, useContext, useMemo } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import React, { lazy, Suspense, useContext, useMemo, useEffect } from 'react';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Loading from './components/common/ui/Loading';
 import User from './pages/User';
 import { AuthRedirect, PrivateRoute, AdminRoute } from './helpers';
@@ -54,6 +54,27 @@ const About = lazy(() => import('./pages/About'));
 const UserAgreement = lazy(() => import('./pages/UserAgreement'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 
+// 首页重定向包装组件：如果设置了首页URL，重定向到控制台
+const HomeWithRedirect = () => {
+  const [statusState] = useContext(StatusContext);
+  const navigate = useNavigate();
+  const homeLink = statusState?.status?.home_link || '';
+
+  useEffect(() => {
+    // 如果设置了首页URL，重定向到控制台
+    if (homeLink && homeLink.trim() !== '') {
+      navigate('/console', { replace: true });
+    }
+  }, [homeLink, navigate]);
+
+  // 如果设置了首页URL，不渲染Home组件（会重定向）
+  if (homeLink && homeLink.trim() !== '') {
+    return null;
+  }
+
+  return <Home />;
+};
+
 function App() {
   const location = useLocation();
   const [statusState] = useContext(StatusContext);
@@ -87,7 +108,7 @@ function App() {
           path='/'
           element={
             <Suspense fallback={<Loading></Loading>} key={location.pathname}>
-              <Home />
+              <HomeWithRedirect />
             </Suspense>
           }
         />
