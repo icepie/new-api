@@ -40,6 +40,9 @@ const OperationSetting = () => {
     /* 通用设置 */
     TopUpLink: '',
     'general_setting.docs_link': '',
+    'general_setting.home_link': '',
+    'general_setting.about_link': '',
+    'general_setting.pricing_link': '',
     QuotaPerUnit: 0,
     USDExchangeRate: 0,
     RetryTimes: 0,

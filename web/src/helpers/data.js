@@ -64,6 +64,11 @@ export function setStatusData(data) {
   } else {
     localStorage.removeItem('about_link');
   }
+  if (data.pricing_link) {
+    localStorage.setItem('pricing_link', data.pricing_link);
+  } else {
+    localStorage.removeItem('pricing_link');
+  }
 }
 
 export function setUserData(data) {

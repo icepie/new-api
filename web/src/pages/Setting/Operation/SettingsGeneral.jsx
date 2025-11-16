@@ -48,6 +48,7 @@ export default function GeneralSettings(props) {
     'general_setting.docs_link': '',
     'general_setting.home_link': '',
     'general_setting.about_link': '',
+    'general_setting.pricing_link': '',
     'general_setting.quota_display_type': 'USD',
     'general_setting.custom_currency_symbol': '¤',
     'general_setting.custom_currency_exchange_rate': '',
@@ -129,6 +130,11 @@ export default function GeneralSettings(props) {
 
   useEffect(() => {
     const currentInputs = {};
+    // 先初始化所有字段为默认值
+    for (let key in inputs) {
+      currentInputs[key] = inputs[key];
+    }
+    // 然后用后端返回的值覆盖
     for (let key in props.options) {
       if (Object.keys(inputs).includes(key)) {
         currentInputs[key] = props.options[key];
@@ -208,6 +214,16 @@ export default function GeneralSettings(props) {
                   initValue={''}
                   placeholder={t('例如 https://example.com/about')}
                   onChange={handleFieldChange('general_setting.about_link')}
+                  showClear
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.Input
+                  field={'general_setting.pricing_link'}
+                  label={t('模型广场地址')}
+                  initValue={''}
+                  placeholder={t('例如 https://example.com/pricing')}
+                  onChange={handleFieldChange('general_setting.pricing_link')}
                   showClear
                 />
               </Col>
