@@ -98,7 +98,7 @@ const About = () => {
           rel='noopener noreferrer'
           className='!text-semi-color-primary'
         >
-          NewAPI
+          NiceRouter
         </a>{' '}
         {t('© {{currentYear}}', { currentYear })}{' '}
         <a
