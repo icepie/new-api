@@ -104,6 +104,11 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   useEffect(() => {
     setLogoLoaded(false);
     if (!logo) return;
+    // 如果是默认 logo，直接设置为已加载
+    if (logo === 'default') {
+      setLogoLoaded(true);
+      return;
+    }
     const img = new Image();
     img.src = logo;
     img.onload = () => setLogoLoaded(true);

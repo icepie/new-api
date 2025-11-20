@@ -21,6 +21,7 @@ import React, { useEffect, useState, useMemo, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Typography } from '@douyinfe/semi-ui';
 import { getFooterHTML, getLogo, getSystemName } from '../../helpers';
+import LogoImage from '../common/logo/LogoImage';
 import { StatusContext } from '../../context/Status';
 
 const FooterBar = () => {
@@ -49,7 +50,7 @@ const FooterBar = () => {
         {isDemoSiteMode && (
           <div className='flex flex-col md:flex-row justify-between w-full max-w-[1110px] mb-10 gap-8'>
             <div className='flex-shrink-0'>
-              <img
+              <LogoImage
                 src={logo}
                 alt={systemName}
                 className='w-16 h-16 rounded-full bg-gray-800 p-1.5 object-contain'
@@ -191,7 +192,7 @@ const FooterBar = () => {
         <div className='flex flex-col md:flex-row items-center justify-between w-full max-w-[1110px] gap-6'>
           <div className='flex flex-wrap items-center gap-2'>
             <Typography.Text className='text-sm !text-semi-color-text-1'>
-              © {currentYear} {systemName}
+              © {currentYear} <span className={systemName === 'NiceRouter' ? 'italic' : ''}>{systemName}</span>
             </Typography.Text>
           </div>
         </div>

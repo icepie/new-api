@@ -51,6 +51,7 @@ import {
 import OIDCIcon from '../common/logo/OIDCIcon';
 import WeChatIcon from '../common/logo/WeChatIcon';
 import LinuxDoIcon from '../common/logo/LinuxDoIcon';
+import LogoImage from '../common/logo/LogoImage';
 import TwoFAVerification from './TwoFAVerification';
 import { useTranslation } from 'react-i18next';
 
@@ -429,8 +430,8 @@ const LoginForm = () => {
       <div className='flex flex-col items-center'>
         <div className='w-full max-w-md'>
           <div className='flex items-center justify-center mb-6 gap-2'>
-            <img src={logo} alt='Logo' className='h-10 rounded-full' />
-            <Title heading={3} className='!text-gray-800'>
+            <LogoImage src={logo} alt='Logo' className='h-10 rounded-full' />
+            <Title heading={3} className={`!text-gray-800 ${systemName === 'NiceRouter' ? '!italic' : ''}`}>
               {systemName}
             </Title>
           </div>
@@ -607,8 +608,8 @@ const LoginForm = () => {
       <div className='flex flex-col items-center'>
         <div className='w-full max-w-md'>
           <div className='flex items-center justify-center mb-6 gap-2'>
-            <img src={logo} alt='Logo' className='h-10 rounded-full' />
-            <Title heading={3}>{systemName}</Title>
+            <LogoImage src={logo} alt='Logo' className='h-10 rounded-full' />
+            <Title heading={3} className={systemName === 'NiceRouter' ? '!italic' : ''}>{systemName}</Title>
           </div>
 
           <Card className='border-0 !rounded-2xl overflow-hidden'>

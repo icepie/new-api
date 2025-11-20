@@ -24,6 +24,7 @@ import { Layout, Toast, Modal } from '@douyinfe/semi-ui';
 
 // Context
 import { UserContext } from '../../context/User';
+import { useActualTheme } from '../../context/Theme';
 import { useIsMobile } from '../../hooks/common/useIsMobile';
 
 // hooks
@@ -41,6 +42,7 @@ import {
 } from '../../constants/playground.constants';
 import {
   getLogo,
+  getDefaultLogoDataUrl,
   stringToColor,
   buildMessageContent,
   createMessage,
@@ -79,6 +81,7 @@ const generateAvatarDataUrl = (username) => {
 const Playground = () => {
   const { t } = useTranslation();
   const [userState] = useContext(UserContext);
+  const actualTheme = useActualTheme();
   const isMobile = useIsMobile();
   const styleState = { isMobile };
   const [searchParams] = useSearchParams();
@@ -160,6 +163,11 @@ const Playground = () => {
     );
 
   // 角色信息
+  const logo = getLogo();
+  const logoAvatar = logo === 'default' 
+    ? getDefaultLogoDataUrl(actualTheme === 'dark')
+    : logo;
+  
   const roleInfo = {
     user: {
       name: userState?.user?.username || 'User',
@@ -167,11 +175,11 @@ const Playground = () => {
     },
     assistant: {
       name: 'Assistant',
-      avatar: getLogo(),
+      avatar: logoAvatar,
     },
     system: {
       name: 'System',
-      avatar: getLogo(),
+      avatar: logoAvatar,
     },
   };
 

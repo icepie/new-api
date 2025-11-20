@@ -110,7 +110,8 @@ const PageLayout = () => {
     if (logo) {
       let linkElement = document.querySelector("link[rel~='icon']");
       if (linkElement) {
-        linkElement.href = logo;
+        // 如果是默认 logo，使用 SVG favicon
+        linkElement.href = logo === 'default' ? '/logo.svg' : logo;
       }
     }
     const savedLang = localStorage.getItem('i18nextLng');
