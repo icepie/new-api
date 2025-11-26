@@ -148,14 +148,14 @@ const UserArea = ({
       'flex items-center justify-center !py-[10px] !px-1.5';
 
     const loginButtonSpecificStyling =
-      '!bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-700 transition-colors';
+      '!bg-white dark:!bg-gray-800 !border !border-gray-300 dark:!border-gray-600 hover:!bg-gray-50 dark:hover:!bg-gray-700 transition-colors';
     let loginButtonClasses = `${commonSizingAndLayoutClass} ${loginButtonSpecificStyling}`;
 
-    let registerButtonClasses = `${commonSizingAndLayoutClass}`;
+    let registerButtonClasses = `${commonSizingAndLayoutClass} !bg-black dark:!bg-white hover:!bg-gray-800 dark:hover:!bg-gray-200 transition-colors`;
 
     const loginButtonTextSpanClass =
-      '!text-xs !text-semi-color-text-1 dark:!text-gray-300 !p-1.5';
-    const registerButtonTextSpanClass = '!text-xs !text-white !p-1.5';
+      '!text-xs !text-gray-900 dark:!text-gray-100 !p-1.5';
+    const registerButtonTextSpanClass = '!text-xs !text-white dark:!text-black !p-1.5';
 
     if (showRegisterButton) {
       if (isMobile) {
@@ -174,7 +174,18 @@ const UserArea = ({
           <Button
             theme='borderless'
             type='tertiary'
-            className={loginButtonClasses}
+            className={`${loginButtonClasses} auth-page-button-white`}
+            style={{
+              backgroundColor: 'white',
+              borderColor: '#d1d5db',
+              color: '#111827',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+            }}
           >
             <span className={loginButtonTextSpanClass}>{t('登录')}</span>
           </Button>
@@ -185,7 +196,20 @@ const UserArea = ({
               <Button
                 theme='solid'
                 type='primary'
-                className={registerButtonClasses}
+                className={`${registerButtonClasses} auth-page-button-black`}
+                style={{
+                  backgroundColor: 'black',
+                  color: 'white',
+                  borderColor: 'black',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#1f2937';
+                  e.currentTarget.style.borderColor = '#1f2937';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'black';
+                  e.currentTarget.style.borderColor = 'black';
+                }}
               >
                 <span className={registerButtonTextSpanClass}>{t('注册')}</span>
               </Button>

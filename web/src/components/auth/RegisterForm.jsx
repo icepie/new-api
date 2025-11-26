@@ -453,21 +453,38 @@ const RegisterForm = () => {
                 <Button
                   theme='solid'
                   type='primary'
-                  className='w-full h-12 flex items-center justify-center bg-black text-white !rounded-full hover:bg-gray-800 transition-colors'
+                  className='w-full h-12 flex items-center justify-center !rounded-full transition-colors auth-page-button-black'
+                  style={{
+                    backgroundColor: 'black',
+                    color: 'white',
+                    borderColor: 'black',
+                  }}
                   icon={<IconMail size='large' />}
                   onClick={handleEmailRegisterClick}
                   loading={emailRegisterLoading}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = '#1f2937';
+                      e.currentTarget.style.borderColor = '#1f2937';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = 'black';
+                      e.currentTarget.style.borderColor = 'black';
+                    }
+                  }}
                 >
                   <span className='ml-3'>{t('使用 用户名 注册')}</span>
                 </Button>
               </div>
 
               <div className='mt-6 text-center text-sm'>
-                <Text>
+                <Text className='auth-page-link-text'>
                   {t('已有账户？')}{' '}
                   <Link
                     to='/login'
-                    className='text-blue-600 hover:text-blue-800 font-medium'
+                    className='auth-page-link font-medium'
                   >
                     {t('登录')}
                   </Link>
@@ -604,12 +621,29 @@ const RegisterForm = () => {
                 <div className='space-y-2 pt-2'>
                   <Button
                     theme='solid'
-                    className='w-full !rounded-full'
+                    className='w-full !rounded-full transition-colors auth-page-button-black'
+                    style={{
+                      backgroundColor: 'black',
+                      color: 'white',
+                      borderColor: 'black',
+                    }}
                     type='primary'
                     htmlType='submit'
                     onClick={handleSubmit}
                     loading={registerLoading}
                     disabled={(hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms}
+                    onMouseEnter={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = '#1f2937';
+                        e.currentTarget.style.borderColor = '#1f2937';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = 'black';
+                        e.currentTarget.style.borderColor = 'black';
+                      }
+                    }}
                   >
                     {t('注册')}
                   </Button>
@@ -631,9 +665,20 @@ const RegisterForm = () => {
                     <Button
                       theme='outline'
                       type='tertiary'
-                      className='w-full !rounded-full'
+                      className='w-full !rounded-full transition-colors auth-page-button-outline'
+                      style={{
+                        borderColor: '#d1d5db',
+                        color: '#111827',
+                        backgroundColor: 'transparent',
+                      }}
                       onClick={handleOtherRegisterOptionsClick}
                       loading={otherRegisterOptionsLoading}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                     >
                       {t('其他注册选项')}
                     </Button>
@@ -642,11 +687,11 @@ const RegisterForm = () => {
               )}
 
               <div className='mt-6 text-center text-sm'>
-                <Text>
+                <Text className='auth-page-link-text'>
                   {t('已有账户？')}{' '}
                   <Link
                     to='/login'
-                    className='text-blue-600 hover:text-blue-800 font-medium'
+                    className='auth-page-link font-medium'
                   >
                     {t('登录')}
                   </Link>

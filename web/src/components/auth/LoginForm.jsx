@@ -567,10 +567,27 @@ const LoginForm = () => {
                 <Button
                   theme='solid'
                   type='primary'
-                  className='w-full h-12 flex items-center justify-center bg-black text-white !rounded-full hover:bg-gray-800 transition-colors'
+                  className='w-full h-12 flex items-center justify-center !rounded-full transition-colors auth-page-button-black'
+                  style={{
+                    backgroundColor: 'black',
+                    color: 'white',
+                    borderColor: 'black',
+                  }}
                   icon={<IconMail size='large' />}
                   onClick={handleEmailLoginClick}
                   loading={emailLoginLoading}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = '#1f2937';
+                      e.currentTarget.style.borderColor = '#1f2937';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = 'black';
+                      e.currentTarget.style.borderColor = 'black';
+                    }
+                  }}
                 >
                   <span className='ml-3'>{t('使用 邮箱或用户名 登录')}</span>
                 </Button>
@@ -616,11 +633,11 @@ const LoginForm = () => {
 
               {!status.self_use_mode_enabled && (
                 <div className='mt-6 text-center text-sm'>
-                  <Text>
+                  <Text className='auth-page-link-text'>
                     {t('没有账户？')}{' '}
                     <Link
                       to='/register'
-                      className='text-blue-600 hover:text-blue-800 font-medium'
+                      className='auth-page-link font-medium'
                     >
                       {t('注册')}
                     </Link>
@@ -723,12 +740,29 @@ const LoginForm = () => {
                 <div className='space-y-2 pt-2'>
                   <Button
                     theme='solid'
-                    className='w-full !rounded-full'
+                    className='w-full !rounded-full transition-colors auth-page-button-black'
+                    style={{
+                      backgroundColor: 'black',
+                      color: 'white',
+                      borderColor: 'black',
+                    }}
                     type='primary'
                     htmlType='submit'
                     onClick={handleSubmit}
                     loading={loginLoading}
                     disabled={(hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms}
+                    onMouseEnter={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = '#1f2937';
+                        e.currentTarget.style.borderColor = '#1f2937';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = 'black';
+                        e.currentTarget.style.borderColor = 'black';
+                      }
+                    }}
                   >
                     {t('继续')}
                   </Button>
@@ -736,9 +770,18 @@ const LoginForm = () => {
                   <Button
                     theme='borderless'
                     type='tertiary'
-                    className='w-full !rounded-full'
+                    className='w-full !rounded-full transition-colors auth-page-button-borderless'
+                    style={{
+                      color: '#111827',
+                    }}
                     onClick={handleResetPasswordClick}
                     loading={resetPasswordLoading}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     {t('忘记密码？')}
                   </Button>
@@ -760,9 +803,20 @@ const LoginForm = () => {
                     <Button
                       theme='outline'
                       type='tertiary'
-                      className='w-full !rounded-full'
+                      className='w-full !rounded-full transition-colors auth-page-button-outline'
+                      style={{
+                        borderColor: '#d1d5db',
+                        color: '#111827',
+                        backgroundColor: 'transparent',
+                      }}
                       onClick={handleOtherLoginOptionsClick}
                       loading={otherLoginOptionsLoading}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                     >
                       {t('其他登录选项')}
                     </Button>
@@ -772,11 +826,11 @@ const LoginForm = () => {
 
               {!status.self_use_mode_enabled && (
                 <div className='mt-6 text-center text-sm'>
-                  <Text>
+                  <Text className='auth-page-link-text'>
                     {t('没有账户？')}{' '}
                     <Link
                       to='/register'
-                      className='text-blue-600 hover:text-blue-800 font-medium'
+                      className='auth-page-link font-medium'
                     >
                       {t('注册')}
                     </Link>

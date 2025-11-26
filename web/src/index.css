@@ -817,3 +817,71 @@ html.dark .with-pastel-balls::before {
 .semi-datepicker-range-input {
   border-radius: 10px !important;
 }
+
+/* ==================== 登录/注册页面按钮黑白样式 ==================== */
+/* 强制覆盖 Semi-UI 按钮的默认主题色 */
+.auth-page-button-black {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+.auth-page-button-black:hover:not(:disabled) {
+  background-color: #1f2937 !important;
+  border-color: #1f2937 !important;
+}
+
+.auth-page-button-white {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+.auth-page-button-white:hover {
+  background-color: #f9fafb !important;
+}
+
+.auth-page-button-outline {
+  background-color: transparent !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+.auth-page-button-outline:hover {
+  background-color: #f9fafb !important;
+}
+
+.auth-page-button-borderless {
+  background-color: transparent !important;
+  color: #111827 !important;
+}
+
+.auth-page-button-borderless:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* 登录/注册页面底部链接文字黑白样式 */
+.auth-page-link-text {
+  color: #000000 !important;
+}
+
+.dark .auth-page-link-text {
+  color: #ffffff !important;
+}
+
+.auth-page-link {
+  color: #000000 !important;
+  text-decoration: underline;
+}
+
+.auth-page-link:hover {
+  color: #1f2937 !important;
+}
+
+.dark .auth-page-link {
+  color: #ffffff !important;
+}
+
+.dark .auth-page-link:hover {
+  color: #e5e7eb !important;
+}
