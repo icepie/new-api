@@ -1,20 +1,63 @@
 <!doctype html>
-<html lang="zh">
+<html lang="zh" class="scroll-smooth">
   <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <meta name="theme-color" content="#6366f1" />
     <meta
       name="description"
-      content="OpenAI 接口聚合管理，支持多种渠道包括 Azure，可用于二次分发管理 key，仅单可执行文件，已打包好 Docker 镜像，一键部署，开箱即用"
+      content="NiceRouter - 新时代 AIGC 网关服务，提供稳定、快速、安全的 AI-API 解决方案"
     />
-    <title>New API</title>
+    <title>NiceRouter - 新时代 AIGC 网关服务</title>
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NiceRouter - 新时代 AIGC 网关服务" />
+    <meta property="og:description" content="NiceRouter - 新时代 AIGC 网关服务，提供稳定、快速、安全的 AI-API 解决方案" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:url" content="/og-image.png" />
+    <meta property="og:image:secure_url" content="/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="NiceRouter - 新时代 AIGC 网关服务" />
+    <meta property="og:site_name" content="NiceRouter" />
+    <meta property="og:locale" content="zh_CN" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NiceRouter - 新时代 AIGC 网关服务" />
+    <meta name="twitter:description" content="NiceRouter - 新时代 AIGC 网关服务，提供稳定、快速、安全的 AI-API 解决方案" />
+    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image:alt" content="NiceRouter - 新时代 AIGC 网关服务" />
+    
     <!--umami-->
     <!--Google Analytics-->
+    
+    <script is:inline>
+      // 立即处理 URL 参数 theme=dark/light，避免闪烁
+      (function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const themeParam = urlParams.get('theme');
+        
+        if (themeParam === 'dark' || themeParam === 'light') {
+          const root = document.documentElement;
+          
+          if (themeParam === 'dark') {
+            root.classList.add('dark');
+          } else {
+            root.classList.remove('dark');
+          }
+          
+          // 保存到 localStorage，以便后续页面也使用该主题
+          localStorage.setItem('theme', themeParam);
+        }
+      })();
+    </script>
   </head>
 
-  <body>
+  <body class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors min-h-screen">
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/index.jsx"></script>
