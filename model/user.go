@@ -10,6 +10,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/setting"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"gorm.io/gorm"
@@ -373,6 +374,36 @@ func (user *User) TransferAffQuotaToQuota(quota int) error {
 	return tx.Commit().Error
 }
 
+// createDefaultTokenForUser 为新用户创建默认令牌
+func createDefaultTokenForUser(userId int, username string) error {
+	key, err := common.GenerateKey()
+	if err != nil {
+		return fmt.Errorf("生成令牌密钥失败: %w", err)
+	}
+
+	token := Token{
+		UserId:             userId,
+		Name:               username + "的初始令牌",
+		Key:                key,
+		CreatedTime:        common.GetTimestamp(),
+		AccessedTime:       common.GetTimestamp(),
+		ExpiredTime:        -1,     // 永不过期
+		RemainQuota:        500000, // 默认额度
+		UnlimitedQuota:     true,
+		ModelLimitsEnabled: false,
+	}
+
+	if setting.DefaultUseAutoGroup {
+		token.Group = "auto"
+	}
+
+	if err := token.Insert(); err != nil {
+		return fmt.Errorf("插入令牌失败: %w", err)
+	}
+
+	return nil
+}
+
 func (user *User) Insert(inviterId int) error {
 	var err error
 	if user.Password != "" {
@@ -426,6 +457,13 @@ func (user *User) Insert(inviterId int) error {
 			_ = inviteUser(inviterId)
 		}
 	}
+
+	// 为新用户创建默认令牌
+	if err := createDefaultTokenForUser(user.Id, user.Username); err != nil {
+		common.SysLog(fmt.Sprintf("为新用户 %s (ID: %d) 创建默认令牌失败: %v", user.Username, user.Id, err))
+		// 不返回错误,因为令牌创建失败不应该影响用户注册
+	}
+
 	return nil
 }
 
