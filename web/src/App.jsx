@@ -40,6 +40,7 @@ import Chat from './pages/Chat';
 import Chat2Link from './pages/Chat2Link';
 import Midjourney from './pages/Midjourney';
 import Pricing from './pages/Pricing';
+const PricingNew = React.lazy(() => import('./pages/Pricing/PricingNew'));
 import Task from './pages/Task';
 import ModelPage from './pages/Model';
 import Playground from './pages/Playground';
@@ -287,6 +288,25 @@ function App() {
         />
         <Route
           path='/pricing'
+          element={
+            pricingRequireAuth ? (
+              <PrivateRoute>
+                <Suspense
+                  fallback={<Loading></Loading>}
+                  key={location.pathname}
+                >
+                  <PricingNew />
+                </Suspense>
+              </PrivateRoute>
+            ) : (
+              <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+                <PricingNew />
+              </Suspense>
+            )
+          }
+        />
+        <Route
+          path='/pricing-old'
           element={
             pricingRequireAuth ? (
               <PrivateRoute>
