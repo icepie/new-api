@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { API, showError } from '../../helpers';
+import { API, showError, getSystemName } from '../../helpers';
 import { StatusContext } from '../../context/Status';
 import ModelCard from '../../components/pricing/ModelCard';
 import ModelFilter from '../../components/pricing/ModelFilter';
@@ -497,6 +497,17 @@ export default function PricingNew() {
         usableGroup={usableGroup}
         autoGroups={autoGroups}
       />
+
+      {/* Footer Section */}
+      <footer className="pricing-page-footer">
+        <div className="pricing-page-footer-content">
+          <div className="pricing-page-footer-copyright">
+            <span className="pricing-page-footer-copyright-text">
+              © {new Date().getFullYear()} <span className={getSystemName() === 'NiceRouter' ? 'italic' : ''}>{getSystemName()}</span>
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
