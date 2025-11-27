@@ -394,7 +394,7 @@ export default function ModelDetailSidebar({
 
   // 获取模型名称（支持 model.name 或 model.model_name）
   const modelName = model.name || model.model_name || '';
-  
+
   // 计算模型属性
   const isPro = modelName.startsWith('Pro/');
   const currentModelName = isPro ? modelName.substring(4) : modelName;
@@ -616,7 +616,7 @@ export default function ModelDetailSidebar({
 
   // 获取文档 URL（从 StatusContext 获取）
   const getDocUrl = () => {
-    return statusState?.status?.doc_url || 'https://docs.quantumnous.com';
+    return statusState?.status?.docs_link || 'https://docs.quantumnous.com';
   };
 
   return (
@@ -702,6 +702,20 @@ export default function ModelDetailSidebar({
             </p>
           </div>
 
+          {/* Tags */}
+          {allTags.length > 0 && (
+            <div className="pricing-detail-tags">
+              {allTags.map((tag, index) => {
+                const tagColor = getTagColor(tag);
+                return (
+                  <span key={index} className={`pricing-model-tag ${tagColor.bg} ${tagColor.text}`}>
+                    {tag}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="pricing-detail-actions">
             <a
@@ -779,17 +793,17 @@ export default function ModelDetailSidebar({
                   <span className="pricing-detail-price-value">
                     {priceData && priceData.isPerToken
                       ? (
-                          <>
-                            <span className="pricing-detail-price-number">{priceData.inputPrice}</span>
-                            <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} Tokens</span>
-                          </>
-                        )
+                        <>
+                          <span className="pricing-detail-price-number">{priceData.inputPrice}</span>
+                          <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} Tokens</span>
+                        </>
+                      )
                       : (
-                          <>
-                            <span className="pricing-detail-price-number">${formatPrice(model.input)}</span>
-                            <span className="pricing-detail-price-unit"> / M Tokens</span>
-                          </>
-                        )}
+                        <>
+                          <span className="pricing-detail-price-number">${formatPrice(model.input)}</span>
+                          <span className="pricing-detail-price-unit"> / M Tokens</span>
+                        </>
+                      )}
                   </span>
                 </div>
                 <div className="pricing-detail-price-item">
@@ -799,17 +813,17 @@ export default function ModelDetailSidebar({
                   <span className="pricing-detail-price-value">
                     {priceData && priceData.isPerToken
                       ? (
-                          <>
-                            <span className="pricing-detail-price-number">{priceData.completionPrice || priceData.outputPrice}</span>
-                            <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} Tokens</span>
-                          </>
-                        )
+                        <>
+                          <span className="pricing-detail-price-number">{priceData.completionPrice || priceData.outputPrice}</span>
+                          <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} Tokens</span>
+                        </>
+                      )
                       : (
-                          <>
-                            <span className="pricing-detail-price-number">${formatPrice(model.output)}</span>
-                            <span className="pricing-detail-price-unit"> / M Tokens</span>
-                          </>
-                        )}
+                        <>
+                          <span className="pricing-detail-price-number">${formatPrice(model.output)}</span>
+                          <span className="pricing-detail-price-unit"> / M Tokens</span>
+                        </>
+                      )}
                   </span>
                 </div>
               </div>

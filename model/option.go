@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -195,8 +196,9 @@ func updateOptionMap(key string, value string) (err error) {
 	common.OptionMap[key] = value
 
 	// 检查是否是模型配置 - 使用更规范的方式处理
-	if handleConfigUpdate(key, value) {
-		return nil // 已由配置系统处理
+	handled, configErr := handleConfigUpdate(key, value)
+	if handled {
+		return configErr // 已由配置系统处理，返回可能的错误
 	}
 
 	// 处理传统配置项...
@@ -452,11 +454,11 @@ func updateOptionMap(key string, value string) (err error) {
 	return err
 }
 
-// handleConfigUpdate 处理分层配置更新，返回是否已处理
-func handleConfigUpdate(key, value string) bool {
+// handleConfigUpdate 处理分层配置更新，返回是否已处理，以及可能的错误
+func handleConfigUpdate(key, value string) (bool, error) {
 	parts := strings.SplitN(key, ".", 2)
 	if len(parts) != 2 {
-		return false // 不是分层配置
+		return false, nil // 不是分层配置
 	}
 
 	configName := parts[0]
@@ -465,14 +467,17 @@ func handleConfigUpdate(key, value string) bool {
 	// 获取配置对象
 	cfg := config.GlobalConfig.Get(configName)
 	if cfg == nil {
-		return false // 未注册的配置
+		return false, nil // 未注册的配置
 	}
 
 	// 更新配置
 	configMap := map[string]string{
 		configKey: value,
 	}
-	config.UpdateConfigFromMap(cfg, configMap)
+	err := config.UpdateConfigFromMap(cfg, configMap)
+	if err != nil {
+		return true, fmt.Errorf("config %s.%s: %v", configName, configKey, err)
+	}
 
-	return true // 已处理
+	return true, nil // 已处理
 }

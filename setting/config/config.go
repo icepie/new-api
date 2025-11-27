@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -174,6 +175,7 @@ func updateConfigFromMap(config interface{}, configMap map[string]string) error 
 	}
 
 	typ := val.Type()
+	var firstErr error
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Field(i)
 		fieldType := typ.Field(i)
@@ -206,24 +208,36 @@ func updateConfigFromMap(config interface{}, configMap map[string]string) error 
 		case reflect.Bool:
 			boolValue, err := strconv.ParseBool(strValue)
 			if err != nil {
+				if firstErr == nil {
+					firstErr = fmt.Errorf("field %s: %v", key, err)
+				}
 				continue
 			}
 			field.SetBool(boolValue)
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			intValue, err := strconv.ParseInt(strValue, 10, 64)
 			if err != nil {
+				if firstErr == nil {
+					firstErr = fmt.Errorf("field %s: %v", key, err)
+				}
 				continue
 			}
 			field.SetInt(intValue)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			uintValue, err := strconv.ParseUint(strValue, 10, 64)
 			if err != nil {
+				if firstErr == nil {
+					firstErr = fmt.Errorf("field %s: %v", key, err)
+				}
 				continue
 			}
 			field.SetUint(uintValue)
 		case reflect.Float32, reflect.Float64:
 			floatValue, err := strconv.ParseFloat(strValue, 64)
 			if err != nil {
+				if firstErr == nil {
+					firstErr = fmt.Errorf("field %s: %v", key, err)
+				}
 				continue
 			}
 			field.SetFloat(floatValue)
@@ -239,6 +253,9 @@ func updateConfigFromMap(config interface{}, configMap map[string]string) error 
 				// 反序列化到指针指向的值
 				err := json.Unmarshal([]byte(strValue), field.Interface())
 				if err != nil {
+					if firstErr == nil {
+						firstErr = fmt.Errorf("field %s (type %s): %v", key, field.Type().String(), err)
+					}
 					continue
 				}
 			}
@@ -246,12 +263,15 @@ func updateConfigFromMap(config interface{}, configMap map[string]string) error 
 			// 复杂类型使用JSON反序列化
 			err := json.Unmarshal([]byte(strValue), field.Addr().Interface())
 			if err != nil {
+				if firstErr == nil {
+					firstErr = fmt.Errorf("field %s (type %s): %v", key, field.Type().String(), err)
+				}
 				continue
 			}
 		}
 	}
 
-	return nil
+	return firstErr
 }
 
 // ConfigToMap 将配置对象转换为map（导出函数）
