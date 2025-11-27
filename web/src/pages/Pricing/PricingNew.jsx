@@ -17,8 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Empty } from '@douyinfe/semi-ui';
+import {
+  IllustrationNoResult,
+  IllustrationNoResultDark,
+} from '@douyinfe/semi-illustrations';
 import { API, showError, getSystemName } from '../../helpers';
 import { StatusContext } from '../../context/Status';
 import ModelCard from '../../components/pricing/ModelCard';
@@ -315,14 +320,39 @@ export default function PricingNew() {
 
   // 处理筛选器显示/隐藏
   const [filterToggleState, setFilterToggleState] = useState(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(() => {
+    // 移动端默认隐藏，PC端默认显示
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return false;
+  });
+  const filterToggleRef = useRef(null);
+
   useEffect(() => {
     const handleFilterToggleState = (event) => {
       setFilterToggleState(event.detail);
+      filterToggleRef.current = event.detail;
+      if (event.detail) {
+        setIsFilterOpen(event.detail.isOpen);
+      }
     };
 
     window.addEventListener('filterToggleState', handleFilterToggleState);
+
+    // 监听窗口大小变化，更新过滤器状态
+    const handleResize = () => {
+      const shouldBeOpen = window.innerWidth >= 1024;
+      if (filterToggleRef.current && filterToggleRef.current.setIsOpen) {
+        filterToggleRef.current.setIsOpen(shouldBeOpen);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
     return () => {
       window.removeEventListener('filterToggleState', handleFilterToggleState);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -364,11 +394,15 @@ export default function PricingNew() {
               <div className="pricing-page-search">
                 <button
                   id="show-filters-btn"
-                  className="pricing-page-show-filters-button"
+                  className={`pricing-page-show-filters-button ${!isFilterOpen ? 'pricing-page-show-filters-button-visible' : ''}`}
                   title={locale === 'zh' ? '显示筛选器' : 'Show Filters'}
                   onClick={() => {
-                    if (filterToggleState && filterToggleState.setIsOpen) {
-                      filterToggleState.setIsOpen(true);
+                    const toggleState = filterToggleState || filterToggleRef.current;
+                    if (toggleState && toggleState.setIsOpen) {
+                      toggleState.setIsOpen(true);
+                    } else {
+                      // 如果还没有接收到状态，尝试通过事件触发
+                      window.dispatchEvent(new CustomEvent('showFilters'));
                     }
                   }}
                 >
@@ -456,27 +490,17 @@ export default function PricingNew() {
                 </div>
               ) : (
                 <div id="no-results" className="pricing-page-no-results">
-                  <div className="pricing-page-no-results-content">
-                    <svg
-                      className="pricing-page-no-results-icon"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      ></path>
-                    </svg>
-                    <p className="pricing-page-no-results-title">
-                      {locale === 'zh' ? '未找到匹配的模型' : 'No matching models found'}
-                    </p>
-                    <p className="pricing-page-no-results-description">
-                      {locale === 'zh' ? '请尝试调整筛选条件' : 'Try adjusting your filters'}
-                    </p>
-                  </div>
+                  <Empty
+                    image={
+                      <IllustrationNoResult style={{ width: 150, height: 150 }} />
+                    }
+                    darkModeImage={
+                      <IllustrationNoResultDark style={{ width: 150, height: 150 }} />
+                    }
+                    title={locale === 'zh' ? '未找到匹配的模型' : 'No matching models found'}
+                    description={locale === 'zh' ? '请尝试调整筛选条件' : 'Try adjusting your filters'}
+                    style={{ padding: 30 }}
+                  />
                 </div>
               )}
             </div>

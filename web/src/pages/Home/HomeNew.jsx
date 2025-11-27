@@ -354,7 +354,7 @@ const HomeNew = () => {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-screen snap-section flex items-center justify-center">
-        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 relative z-10">
+        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 pt-16 sm:pt-20 md:pt-24 relative z-10">
           <div className="text-center max-w-4xl mx-auto animate-fade-in-up">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-5 leading-tight hero-title-shine">
               {t('hero.title')}
@@ -424,7 +424,7 @@ const HomeNew = () => {
 
       {/* Models Showcase Section */}
       <section className="relative min-h-screen snap-section flex items-center justify-center overflow-x-hidden">
-        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 scroll-animate overflow-x-hidden relative z-10">
+        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 pt-16 sm:pt-20 md:pt-24 scroll-animate overflow-x-hidden relative z-10">
           <div className="text-center mb-6 sm:mb-8 md:mb-12">
             <div className="text-sm sm:text-base font-medium text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
               {t('hero.partnersLabel')}
@@ -442,7 +442,7 @@ const HomeNew = () => {
 
       {/* Quick Start Section */}
       <section className="relative min-h-screen snap-section flex items-center justify-center">
-        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 relative z-10 scroll-animate">
+        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 pt-16 sm:pt-20 md:pt-24 relative z-10 scroll-animate">
           <div className="text-center mb-8 sm:mb-12 md:mb-16">
             <div className="text-sm sm:text-base font-medium text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
               {t('hero.quickStart.label')}
@@ -460,7 +460,7 @@ const HomeNew = () => {
 
       {/* Features Section */}
       <section className="min-h-screen snap-section flex items-center justify-center">
-        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 scroll-animate">
+        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 pt-16 sm:pt-20 md:pt-24 scroll-animate">
           <div className="text-left mb-8 sm:mb-12 md:mb-16">
             <div className="text-sm sm:text-base font-medium text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
               {t('hero.features.label')}

@@ -381,11 +381,22 @@ export default function ModelFilter({
 
   // 暴露 isOpen 和 setIsOpen 给父组件
   useEffect(() => {
+    const state = { isOpen, setIsOpen };
     window.dispatchEvent(
       new CustomEvent('filterToggleState', {
-        detail: { isOpen, setIsOpen }
+        detail: state
       })
     );
+
+    // 监听显示过滤器的请求
+    const handleShowFilters = () => {
+      setIsOpen(true);
+    };
+
+    window.addEventListener('showFilters', handleShowFilters);
+    return () => {
+      window.removeEventListener('showFilters', handleShowFilters);
+    };
   }, [isOpen]);
 
   return (
