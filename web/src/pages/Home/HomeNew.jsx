@@ -36,7 +36,6 @@ const HomeNew = () => {
   const locale = i18n.language.startsWith('zh') ? 'zh' : 'en';
   const isChinese = i18n.language.startsWith('zh');
 
-  const serverAddress = statusState?.status?.server_address || window.location.origin;
   const docsLink = statusState?.status?.docs_link || '';
 
   // 快速开始步骤
@@ -46,14 +45,14 @@ const HomeNew = () => {
       title: t('hero.quickStart.step1.title'),
       description: t('hero.quickStart.step1.description'),
       buttonText: t('hero.quickStart.step1.button'),
-      buttonLink: `${serverAddress}/login`,
+      buttonLink: '/login',
     },
     {
       number: '02',
       title: t('hero.quickStart.step2.title'),
       description: t('hero.quickStart.step2.description'),
       buttonText: t('hero.quickStart.step2.button'),
-      buttonLink: `${serverAddress}/console/token`,
+      buttonLink: '/console/token',
     },
     {
       number: '03',
@@ -367,7 +366,7 @@ const HomeNew = () => {
             </div>
             <div className="hero-buttons">
               <Link
-                to="/console"
+                to="/login"
                 className="hero-button-primary"
               >
                 {t('hero.cta')}

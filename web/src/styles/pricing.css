@@ -622,7 +622,7 @@
 
 @media (min-width: 640px) {
   .pricing-detail-content {
-    padding: 2rem;
+  padding: 2rem;
   }
 }
 
@@ -1044,6 +1044,25 @@
   max-width: 48rem;
   margin: 0 auto;
   text-align: center;
+  padding-top: 2rem;
+}
+
+@media (min-width: 640px) {
+  .pricing-page-header-content {
+    padding-top: 2.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .pricing-page-header-content {
+    padding-top: 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .pricing-page-header-content {
+    padding-top: 3.5rem;
+  }
 }
 
 .pricing-page-title {

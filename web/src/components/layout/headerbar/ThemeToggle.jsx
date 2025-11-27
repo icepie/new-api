@@ -17,13 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button, Dropdown } from '@douyinfe/semi-ui';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { useActualTheme } from '../../../context/Theme';
 
 const ThemeToggle = ({ theme, onThemeToggle, t }) => {
   const actualTheme = useActualTheme();
+  const [dropdownVisible, setDropdownVisible] = useState(false);
 
   const themeOptions = useMemo(
     () => [
@@ -62,17 +63,25 @@ const ThemeToggle = ({ theme, onThemeToggle, t }) => {
     return currentOption?.buttonIcon || themeOptions[2].buttonIcon;
   }, [theme, themeOptions]);
 
+  const handleThemeChange = (newTheme) => {
+    setDropdownVisible(false);
+    onThemeToggle(newTheme);
+  };
+
   return (
     <Dropdown
+      trigger='click'
       position='bottomRight'
+      visible={dropdownVisible}
+      onVisibleChange={(visible) => setDropdownVisible(visible)}
       render={
-        <Dropdown.Menu>
+        <Dropdown.Menu className='!bg-semi-color-bg-overlay !border-semi-color-border !shadow-lg !rounded-lg dark:!bg-gray-700 dark:!border-gray-600'>
           {themeOptions.map((option) => (
             <Dropdown.Item
               key={option.key}
               icon={option.icon}
-              onClick={() => onThemeToggle(option.key)}
-              className={getItemClassName(theme === option.key)}
+              onClick={() => handleThemeChange(option.key)}
+              className={`${getItemClassName(theme === option.key)} transition-colors`}
             >
               <div className='flex flex-col'>
                 <span>{option.label}</span>
@@ -100,7 +109,7 @@ const ThemeToggle = ({ theme, onThemeToggle, t }) => {
         aria-label={t('切换主题')}
         theme='borderless'
         type='tertiary'
-        className='!p-1.5 !text-current focus:!bg-semi-color-fill-1 !rounded-full !bg-semi-color-fill-0 hover:!bg-semi-color-fill-1'
+        className='!p-1.5 !text-current focus:!bg-semi-color-fill-1 dark:focus:!bg-gray-700 !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
       />
     </Dropdown>
   );
