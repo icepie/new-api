@@ -133,7 +133,7 @@ const filterModel = (model, filters) => {
 
 export default function PricingNew() {
   const { t, i18n } = useTranslation();
-  const locale = i18n.language || 'zh';
+  const locale = i18n.language?.startsWith('zh') ? 'zh' : (i18n.language || 'zh');
   const [statusState] = useContext(StatusContext);
 
   const [models, setModels] = useState([]);

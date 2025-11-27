@@ -1142,6 +1142,7 @@
     "模型: {{ratio}}": "Model: {{ratio}}",
     "模型专用区域": "Model-specific area",
     "模型价格": "Model price",
+    "查看所有可用 AI 模型的价格和详细信息": "View pricing and detailed information for all available AI models",
     "模型价格 {{symbol}}{{price}}，{{ratioType}} {{ratio}}": "Model price {{symbol}}{{price}}, {{ratioType}} {{ratio}}",
     "模型价格：{{symbol}}{{price}} * {{ratioType}}：{{ratio}} = {{symbol}}{{total}}": "Model price: {{symbol}}{{price}} * {{ratioType}}: {{ratio}} = {{symbol}}{{total}}",
     "模型倍率": "Model ratio",

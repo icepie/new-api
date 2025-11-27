@@ -61,20 +61,23 @@ const ModelEndpoints = ({ modelData, endpointMap = {}, t }) => {
     });
   };
 
+  const endpoints = renderAPIEndpoints();
+  if (!endpoints || endpoints.length === 0) return null;
+
   return (
-    <Card className='!rounded-2xl shadow-sm border-0 mb-6'>
+    <Card className='!rounded-2xl shadow-sm border-0'>
       <div className='flex items-center mb-4'>
         <Avatar size='small' color='purple' className='mr-2 shadow-md'>
           <IconLink size={16} />
         </Avatar>
         <div>
-          <Text className='text-lg font-medium'>{t('API端点')}</Text>
+          <Text className='text-base font-medium'>{t('API端点')}</Text>
           <div className='text-xs text-gray-600'>
             {t('模型支持的接口端点信息')}
           </div>
         </div>
       </div>
-      {renderAPIEndpoints()}
+      <div className='space-y-2'>{endpoints}</div>
     </Card>
   );
 };

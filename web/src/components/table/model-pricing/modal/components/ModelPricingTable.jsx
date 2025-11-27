@@ -51,13 +51,13 @@ const ModelPricingTable = ({
     const tableData = availableGroups.map((group) => {
       const priceData = modelData
         ? calculateModelPrice({
-            record: modelData,
-            selectedGroup: group,
-            groupRatio,
-            tokenUnit,
-            displayPrice,
-            currency,
-          })
+          record: modelData,
+          selectedGroup: group,
+          groupRatio,
+          tokenUnit,
+          displayPrice,
+          currency,
+        })
         : { inputPrice: '-', outputPrice: '-', price: '-' };
 
       // 获取分组倍率
@@ -181,6 +181,9 @@ const ModelPricingTable = ({
     );
   };
 
+  const table = renderGroupPriceTable();
+  if (!table || (table && table.props?.dataSource?.length === 0)) return null;
+
   return (
     <Card className='!rounded-2xl shadow-sm border-0'>
       <div className='flex items-center mb-4'>
@@ -188,28 +191,28 @@ const ModelPricingTable = ({
           <IconCoinMoneyStroked size={16} />
         </Avatar>
         <div>
-          <Text className='text-lg font-medium'>{t('分组价格')}</Text>
+          <Text className='text-base font-medium'>{t('分组价格')}</Text>
           <div className='text-xs text-gray-600'>
             {t('不同用户分组的价格信息')}
           </div>
         </div>
       </div>
       {autoChain.length > 0 && (
-        <div className='flex flex-wrap items-center gap-1 mb-4'>
-          <span className='text-sm text-gray-600'>{t('auto分组调用链路')}</span>
-          <span className='text-sm'>→</span>
+        <div className='flex flex-wrap items-center gap-1 mb-4 p-2 bg-gray-50 rounded-lg'>
+          <span className='text-xs text-gray-600'>{t('auto分组调用链路')}</span>
+          <span className='text-xs'>→</span>
           {autoChain.map((g, idx) => (
             <React.Fragment key={g}>
               <Tag color='white' size='small' shape='circle'>
                 {g}
                 {t('分组')}
               </Tag>
-              {idx < autoChain.length - 1 && <span className='text-sm'>→</span>}
+              {idx < autoChain.length - 1 && <span className='text-xs'>→</span>}
             </React.Fragment>
           ))}
         </div>
       )}
-      {renderGroupPriceTable()}
+      {table}
     </Card>
   );
 };

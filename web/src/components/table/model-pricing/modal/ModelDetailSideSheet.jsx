@@ -53,10 +53,11 @@ const ModelDetailSideSheet = ({
         <ModelHeader modelData={modelData} vendorsMap={vendorsMap} t={t} />
       }
       bodyStyle={{
-        padding: '0',
+        padding: '16px',
         display: 'flex',
         flexDirection: 'column',
-        borderBottom: '1px solid var(--semi-color-border)',
+        gap: '16px',
+        overflowY: 'auto',
       }}
       visible={visible}
       width={isMobile ? '100%' : 600}

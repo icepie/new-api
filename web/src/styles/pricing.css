@@ -617,15 +617,21 @@
 }
 
 .pricing-detail-content {
-  padding: 2rem;
+  padding: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .pricing-detail-content {
+    padding: 2rem;
+  }
 }
 
 .pricing-detail-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
   border-bottom: 1px solid rgb(229, 231, 235);
 }
 
@@ -738,7 +744,7 @@
 }
 
 .pricing-detail-description {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .pricing-detail-description-text {
@@ -773,7 +779,7 @@
 .pricing-detail-actions {
   display: flex;
   gap: 0.625rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .pricing-detail-action-button {
@@ -804,7 +810,7 @@
 }
 
 .pricing-detail-info {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .pricing-detail-info-title {
@@ -936,7 +942,7 @@
 }
 
 .pricing-detail-price {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .pricing-detail-price-container {
@@ -1038,28 +1044,28 @@
 }
 
 .pricing-page-title {
-  font-size: 1.5rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: rgb(17, 24, 39);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   letter-spacing: -0.025em;
 }
 
 @media (min-width: 640px) {
   .pricing-page-title {
-    font-size: 1.875rem;
+    font-size: 1.25rem;
   }
 }
 
 @media (min-width: 768px) {
   .pricing-page-title {
-    font-size: 2.25rem;
+    font-size: 1.375rem;
   }
 }
 
 @media (min-width: 1024px) {
   .pricing-page-title {
-    font-size: 3rem;
+    font-size: 1.5rem;
   }
 }
 
@@ -1068,20 +1074,20 @@
 }
 
 .pricing-page-description {
-  font-size: 0.875rem;
+  font-size: 0.6875rem;
   color: rgb(75, 85, 99);
   line-height: 1.625;
 }
 
 @media (min-width: 640px) {
   .pricing-page-description {
-    font-size: 1rem;
+    font-size: 0.75rem;
   }
 }
 
 @media (min-width: 768px) {
   .pricing-page-description {
-    font-size: 1.125rem;
+    font-size: 0.8125rem;
   }
 }
 
@@ -1369,8 +1375,8 @@
 
 /* API Endpoints */
 .pricing-detail-endpoints {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
   background-color: rgb(249, 250, 251);
   border-radius: 0.75rem;
   border: 1px solid rgb(229, 231, 235);
@@ -1481,8 +1487,8 @@
 
 /* Group Pricing */
 .pricing-detail-group-pricing-section {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
   background-color: rgb(249, 250, 251);
   border-radius: 0.75rem;
   border: 1px solid rgb(229, 231, 235);
