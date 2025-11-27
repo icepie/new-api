@@ -196,6 +196,10 @@ export default function PricingNew() {
 
   // 价格显示函数
   const displayPrice = (usdPrice) => {
+    // 检查 undefined 和 null
+    if (usdPrice === undefined || usdPrice === null || isNaN(usdPrice)) {
+      return '$0.000';
+    }
     let priceInUSD = usdPrice;
     // 如果需要考虑充值汇率，可以在这里处理
     // priceInUSD = (usdPrice * priceRate) / usdExchangeRate;

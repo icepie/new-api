@@ -409,6 +409,10 @@ export default function ModelDetailSidebar({
     : providerDisplayName;
 
   const formatPrice = (price) => {
+    // 检查 undefined 和 null
+    if (price === undefined || price === null || isNaN(price)) {
+      return freeLabel;
+    }
     if (price === 0) return freeLabel;
     return price.toFixed(2);
   };

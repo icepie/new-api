@@ -334,20 +334,24 @@ export default function ModelCard({
     if (quotaType === 0) {
       priceData = {
         isPerToken: true,
-        inputPrice: input === 0 ? freeLabel : `$${input.toFixed(2)}`,
-        completionPrice: output === 0 ? freeLabel : `$${output.toFixed(2)}`,
+        inputPrice: (input === undefined || input === null || isNaN(input) || input === 0) ? freeLabel : `$${(input || 0).toFixed(2)}`,
+        completionPrice: (output === undefined || output === null || isNaN(output) || output === 0) ? freeLabel : `$${(output || 0).toFixed(2)}`,
         unitLabel: tokenUnit === 'K' ? 'K' : 'M',
       };
     } else {
       const price = output || input;
       priceData = {
         isPerToken: false,
-        price: price === 0 ? freeLabel : `$${price.toFixed(2)}`,
+        price: (price === undefined || price === null || isNaN(price) || price === 0) ? freeLabel : `$${(price || 0).toFixed(2)}`,
       };
     }
   }
 
   const formatPrice = (price) => {
+    // 检查 undefined 和 null
+    if (price === undefined || price === null || isNaN(price)) {
+      return freeLabel;
+    }
     if (price === 0 || price === '-') return freeLabel;
     if (typeof price === 'string') {
       // 如果已经是格式化字符串，直接返回
@@ -375,7 +379,7 @@ export default function ModelCard({
       enable_groups: model?.enable_groups || [],
       supported_endpoint_types: model?.supported_endpoint_types || [],
     };
-    
+
     window.dispatchEvent(
       new CustomEvent('openModelDetail', {
         detail: modelData,
