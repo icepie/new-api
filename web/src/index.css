@@ -1,5 +1,5 @@
 /* ==================== Tailwind CSS 配置 ==================== */
-@layer tailwind-base, semi, tailwind-components, tailwind-utils;
+@layer tailwind-base, tailwind-components, tailwind-utils;
 
 @layer tailwind-base {
   @tailwind base;

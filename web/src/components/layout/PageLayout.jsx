@@ -37,6 +37,7 @@ import {
 import { UserContext } from '../../context/User';
 import { StatusContext } from '../../context/Status';
 import { useLocation } from 'react-router-dom';
+import HeroBackground from '../homepage/HeroBackground';
 const { Sider, Content, Header } = Layout;
 
 const PageLayout = () => {
@@ -193,6 +194,8 @@ const PageLayout = () => {
               position: 'relative',
             }}
           >
+            {/* 只在首页显示背景 */}
+            {location.pathname === '/' && <HeroBackground />}
             <App />
           </Content>
           {!shouldHideFooter && (

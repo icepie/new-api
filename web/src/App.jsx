@@ -48,33 +48,12 @@ import PersonalSetting from './components/settings/PersonalSetting';
 import Setup from './pages/Setup';
 import SetupCheck from './components/layout/SetupCheck';
 
-const Home = lazy(() => import('./pages/Home'));
+const HomeNew = lazy(() => import('./pages/Home/HomeNew'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const About = lazy(() => import('./pages/About'));
 const Docs = lazy(() => import('./pages/Docs'));
 const UserAgreement = lazy(() => import('./pages/UserAgreement'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
-
-// 首页重定向包装组件：如果设置了首页URL，重定向到控制台
-const HomeWithRedirect = () => {
-  const [statusState] = useContext(StatusContext);
-  const navigate = useNavigate();
-  const homeLink = statusState?.status?.home_link || '';
-
-  useEffect(() => {
-    // 如果设置了首页URL，重定向到控制台
-    if (homeLink && homeLink.trim() !== '') {
-      navigate('/console', { replace: true });
-    }
-  }, [homeLink, navigate]);
-
-  // 如果设置了首页URL，不渲染Home组件（会重定向）
-  if (homeLink && homeLink.trim() !== '') {
-    return null;
-  }
-
-  return <Home />;
-};
 
 function App() {
   const location = useLocation();
@@ -109,7 +88,7 @@ function App() {
           path='/'
           element={
             <Suspense fallback={<Loading></Loading>} key={location.pathname}>
-              <HomeWithRedirect />
+              <HomeNew />
             </Suspense>
           }
         />
