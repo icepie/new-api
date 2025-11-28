@@ -811,6 +811,31 @@ html.dark .with-pastel-balls::before {
 .semi-navigation-item,
 .semi-tag-closable,
 .semi-input-wrapper,
+/* Tabs 标签页文字垂直居中 */
+.semi-tabs-tab-button,
+.semi-tabs-tab {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1.5 !important;
+}
+
+.semi-tabs-tab-button > *,
+.semi-tabs-tab > *,
+.semi-tabs-tab-button span,
+.semi-tabs-tab span {
+  display: flex !important;
+  align-items: center !important;
+  line-height: 1.5 !important;
+}
+
+.semi-tabs-tab-button .semi-tabs-tab-text,
+.semi-tabs-tab .semi-tabs-tab-text {
+  display: flex !important;
+  align-items: center !important;
+  line-height: 1.5 !important;
+}
+
 .semi-tabs-tab-button,
 .semi-select,
 .semi-button,
