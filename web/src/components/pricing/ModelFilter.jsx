@@ -394,8 +394,28 @@ export default function ModelFilter({
     };
 
     window.addEventListener('showFilters', handleShowFilters);
+    
+    // 在移动端，防止滚动时自动关闭筛选器
+    // 只在用户明确点击关闭按钮时才关闭
+    const handleTouchStart = (e) => {
+      // 如果触摸事件发生在筛选器外部，不处理（让用户正常滚动页面）
+      // 只有在筛选器内部时才阻止默认行为
+      const filterContainer = e.target.closest('.pricing-filter-container');
+      if (filterContainer && isOpen) {
+        // 允许筛选器内部的滚动
+        e.stopPropagation();
+      }
+    };
+
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    }
+
     return () => {
       window.removeEventListener('showFilters', handleShowFilters);
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        document.removeEventListener('touchstart', handleTouchStart);
+      }
     };
   }, [isOpen]);
 

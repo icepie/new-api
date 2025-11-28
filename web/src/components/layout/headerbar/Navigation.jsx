@@ -111,6 +111,7 @@ const Navigation = ({
           position='bottomRight'
           visible={dropdownVisible}
           onVisibleChange={(visible) => setDropdownVisible(visible)}
+          clickToHide={true}
           render={
             <Dropdown.Menu className='!bg-semi-color-bg-overlay !border-semi-color-border !shadow-lg !rounded-lg dark:!bg-gray-700 dark:!border-gray-600'>
               {mainNavLinks.map((link) => (
@@ -130,6 +131,7 @@ const Navigation = ({
             aria-label='导航菜单'
             theme='borderless'
             type='tertiary'
+            onClick={() => setDropdownVisible(!dropdownVisible)}
             className='!p-1.5 !text-current focus:!bg-semi-color-fill-1 dark:focus:!bg-gray-700 !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
           />
         </Dropdown>

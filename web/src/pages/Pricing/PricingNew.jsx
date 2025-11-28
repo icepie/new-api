@@ -338,6 +338,7 @@ export default function PricingNew() {
     return false;
   });
   const filterToggleRef = useRef(null);
+  const userManuallyOpenedRef = useRef(false); // 记录用户是否手动打开过筛选器
 
   useEffect(() => {
     const handleFilterToggleState = (event) => {
@@ -345,17 +346,30 @@ export default function PricingNew() {
       filterToggleRef.current = event.detail;
       if (event.detail) {
         setIsFilterOpen(event.detail.isOpen);
+        // 如果用户在移动端手动打开了筛选器，记录这个状态
+        if (isMobile && event.detail.isOpen) {
+          userManuallyOpenedRef.current = true;
+        }
       }
     };
 
     window.addEventListener('filterToggleState', handleFilterToggleState);
 
     // 监听窗口大小变化，更新过滤器状态
+    // 只在从移动端切换到桌面端时自动打开，从桌面端切换到移动端时保持用户的选择
     const handleResize = () => {
-      const shouldBeOpen = window.innerWidth >= 1024;
-      if (filterToggleRef.current && filterToggleRef.current.setIsOpen) {
-        filterToggleRef.current.setIsOpen(shouldBeOpen);
+      const isNowDesktop = window.innerWidth >= 1024;
+      const wasDesktop = !isMobile;
+      
+      // 只在从移动端切换到桌面端时自动打开筛选器
+      if (isNowDesktop && !wasDesktop) {
+        if (filterToggleRef.current && filterToggleRef.current.setIsOpen) {
+          filterToggleRef.current.setIsOpen(true);
+          userManuallyOpenedRef.current = false; // 重置手动打开标记
+        }
       }
+      // 从桌面端切换到移动端时，如果用户之前手动打开过，保持打开状态
+      // 否则保持关闭状态（移动端默认关闭）
     };
 
     window.addEventListener('resize', handleResize);
@@ -364,7 +378,7 @@ export default function PricingNew() {
       window.removeEventListener('filterToggleState', handleFilterToggleState);
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [isMobile]);
 
   // 筛选后的模型列表
   const filteredModels = useMemo(() => {
@@ -425,10 +439,18 @@ export default function PricingNew() {
                   onClick={() => {
                     const toggleState = filterToggleState || filterToggleRef.current;
                     if (toggleState && toggleState.setIsOpen) {
-                      toggleState.setIsOpen(true);
+                      // 切换筛选器状态（如果已打开则关闭，如果已关闭则打开）
+                      const newState = !toggleState.isOpen;
+                      toggleState.setIsOpen(newState);
+                      if (isMobile && newState) {
+                        userManuallyOpenedRef.current = true;
+                      }
                     } else {
                       // 如果还没有接收到状态，尝试通过事件触发
                       window.dispatchEvent(new CustomEvent('showFilters'));
+                      if (isMobile) {
+                        userManuallyOpenedRef.current = true;
+                      }
                     }
                   }}
                 >
