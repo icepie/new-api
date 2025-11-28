@@ -799,13 +799,13 @@ export default function ModelDetailSidebar({
                       ? (
                         <>
                           <span className="pricing-detail-price-number">{priceData.inputPrice}</span>
-                          <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} Tokens</span>
+                          <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} tokens</span>
                         </>
                       )
                       : (
                         <>
                           <span className="pricing-detail-price-number">${formatPrice(model.input)}</span>
-                          <span className="pricing-detail-price-unit"> / M Tokens</span>
+                          <span className="pricing-detail-price-unit"> / M tokens</span>
                         </>
                       )}
                   </span>
@@ -819,13 +819,13 @@ export default function ModelDetailSidebar({
                       ? (
                         <>
                           <span className="pricing-detail-price-number">{priceData.completionPrice || priceData.outputPrice}</span>
-                          <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} Tokens</span>
+                          <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} tokens</span>
                         </>
                       )
                       : (
                         <>
                           <span className="pricing-detail-price-number">${formatPrice(model.output)}</span>
-                          <span className="pricing-detail-price-unit"> / M Tokens</span>
+                          <span className="pricing-detail-price-unit"> / M tokens</span>
                         </>
                       )}
                   </span>

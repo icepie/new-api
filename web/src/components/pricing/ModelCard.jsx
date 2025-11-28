@@ -21,23 +21,24 @@ import React from 'react';
 import ProviderIcon from './ProviderIcon';
 import { calculateModelPrice } from '../../helpers';
 
-// 为不同的 tag 生成不同的渐变颜色
+// 为不同的 tag 生成不同的渐变颜色 - 使用更协调的配色方案
 const getTagColor = (tag) => {
+  // 使用色轮上相邻的协调颜色，从蓝色到紫色到粉色，再到青色和绿色
   const gradients = [
     { bg: 'pricing-tag-blue', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-indigo', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-purple', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-violet', text: 'pricing-tag-text-white' },
+    { bg: 'pricing-tag-fuchsia', text: 'pricing-tag-text-white' },
+    { bg: 'pricing-tag-pink', text: 'pricing-tag-text-white' },
+    { bg: 'pricing-tag-rose', text: 'pricing-tag-text-white' },
+    { bg: 'pricing-tag-sky', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-cyan', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-teal', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-emerald', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-green', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-amber', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-orange', text: 'pricing-tag-text-white' },
-    { bg: 'pricing-tag-rose', text: 'pricing-tag-text-white' },
-    { bg: 'pricing-tag-pink', text: 'pricing-tag-text-white' },
-    { bg: 'pricing-tag-fuchsia', text: 'pricing-tag-text-white' },
-    { bg: 'pricing-tag-sky', text: 'pricing-tag-text-white' },
     { bg: 'pricing-tag-slate', text: 'pricing-tag-text-white' },
   ];
 

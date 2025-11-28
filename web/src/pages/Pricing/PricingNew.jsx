@@ -19,15 +19,18 @@ For commercial licensing, please contact support@quantumnous.com
 
 import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Empty } from '@douyinfe/semi-ui';
+import { Empty, Pagination } from '@douyinfe/semi-ui';
 import {
   IllustrationNoResult,
   IllustrationNoResultDark,
 } from '@douyinfe/semi-illustrations';
 import { API, showError, getSystemName } from '../../helpers';
 import { StatusContext } from '../../context/Status';
+import { useIsMobile } from '../../hooks/common/useIsMobile';
 import ModelCard from '../../components/pricing/ModelCard';
+import ModelCardSkeleton from '../../components/pricing/ModelCardSkeleton';
 import ModelFilter from '../../components/pricing/ModelFilter';
+import ModelFilterSkeleton from '../../components/pricing/ModelFilterSkeleton';
 import ModelDetailSidebar from '../../components/pricing/ModelDetailSidebar';
 import '../../styles/pricing.css';
 
@@ -140,6 +143,7 @@ export default function PricingNew() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language?.startsWith('zh') ? 'zh' : (i18n.language || 'zh');
   const [statusState] = useContext(StatusContext);
+  const isMobile = useIsMobile();
 
   const [models, setModels] = useState([]);
   const [vendorsMap, setVendorsMap] = useState({});
@@ -150,6 +154,8 @@ export default function PricingNew() {
   const [autoGroups, setAutoGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState('all');
   const [searchValue, setSearchValue] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [filters, setFilters] = useState({
     types: [],
     tags: [],
@@ -369,6 +375,18 @@ export default function PricingNew() {
     return models.filter((model) => filterModel(model, currentFilters));
   }, [models, filters, searchValue]);
 
+  // 分页后的模型列表
+  const paginatedModels = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredModels.slice(start, end);
+  }, [filteredModels, currentPage, pageSize]);
+
+  // 当筛选条件改变时，重置到第一页
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, searchValue]);
+
   // 页面标题和描述
   const pageTitle = locale === 'zh' ? '模型价格' : 'Model Pricing';
   const pageDescription =
@@ -392,7 +410,11 @@ export default function PricingNew() {
       <section className="pricing-page-content">
         <div className="pricing-page-content-container">
           <div className="pricing-page-layout">
-            <ModelFilter locale={locale} allModels={models} onFilterChange={setFilters} />
+            {loading ? (
+              <ModelFilterSkeleton />
+            ) : (
+              <ModelFilter locale={locale} allModels={models} onFilterChange={setFilters} />
+            )}
             <div className="pricing-page-main">
               {/* Search Box and Show Filters Button */}
               <div className="pricing-page-search">
@@ -446,12 +468,11 @@ export default function PricingNew() {
 
               {/* Models Grid */}
               {loading ? (
-                <div className="pricing-page-loading">
-                  <p>{locale === 'zh' ? '加载中...' : 'Loading...'}</p>
-                </div>
+                <ModelCardSkeleton count={12} />
               ) : filteredModels.length > 0 ? (
-                <div className="pricing-page-models-grid" id="models-grid">
-                  {filteredModels.map((model, index) => {
+                <>
+                  <div className="pricing-page-models-grid" id="models-grid">
+                    {paginatedModels.map((model, index) => {
                     // 计算基础价格（用于显示，ModelCard 内部会使用 calculateModelPrice 重新计算）
                     let input = 0;
                     let output = 0;
@@ -491,7 +512,8 @@ export default function PricingNew() {
                       </div>
                     );
                   })}
-                </div>
+                  </div>
+                </>
               ) : (
                 <div id="no-results" className="pricing-page-no-results">
                   <Empty
@@ -509,6 +531,26 @@ export default function PricingNew() {
               )}
             </div>
           </div>
+
+          {/* Pagination - 基于整个页面居中 */}
+          {!loading && filteredModels.length > pageSize && (
+            <div className="pricing-page-pagination">
+              <Pagination
+                currentPage={currentPage}
+                pageSize={pageSize}
+                total={filteredModels.length}
+                showSizeChanger={true}
+                pageSizeOptions={[10, 20, 50, 100]}
+                size={isMobile ? 'small' : 'default'}
+                showQuickJumper={isMobile}
+                onPageChange={(page) => setCurrentPage(page)}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          )}
         </div>
       </section>
 

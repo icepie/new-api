@@ -82,15 +82,15 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://nicerouter-api.geofun.cn:3000',
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
       '/mj': {
-        target: 'http://nicerouter-api.geofun.cn:3000',
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
       '/pg': {
-        target: 'http://127.0.0.1:3000',
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
     },
