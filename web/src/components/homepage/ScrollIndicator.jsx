@@ -23,14 +23,8 @@ import { useIsMobile } from '../../hooks/common/useIsMobile';
 const ScrollIndicator = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [sectionCount, setSectionCount] = useState(5);
-  const [animatedPosition, setAnimatedPosition] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animationStartPos, setAnimationStartPos] = useState(0);
-  const [animationTargetPos, setAnimationTargetPos] = useState(0);
   const indicatorRef = useRef(null);
   const observerRef = useRef(null);
-  const animationRef = useRef(null);
-  const previousPositionRef = useRef(0);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -146,85 +140,6 @@ const ScrollIndicator = () => {
     return (index / (total - 1)) * availableSpace;
   };
 
-  // 非线性缓动函数 (ease-in-out-quart)
-  const easeInOutQuart = (t) => {
-    return t < 0.5
-      ? 8 * t * t * t * t
-      : 1 - Math.pow(-2 * t + 2, 4) / 2;
-  };
-
-  // 当 activeIndex 改变时，动画移动发光指示器
-  useEffect(() => {
-    if (sectionCount <= 1) return;
-
-    const targetPosition = getDotPosition(activeIndex, sectionCount);
-    const startPosition = previousPositionRef.current;
-    const distance = targetPosition - startPosition;
-    const duration = 600; // 动画时长 600ms
-    const startTime = performance.now();
-
-    // 取消之前的动画
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-
-    // 如果距离很小，直接设置位置，不动画
-    if (Math.abs(distance) < 0.1) {
-      setAnimatedPosition(targetPosition);
-      previousPositionRef.current = targetPosition;
-      setIsAnimating(false);
-      setAnimationStartPos(targetPosition);
-      setAnimationTargetPos(targetPosition);
-      return;
-    }
-
-    // 开始动画
-    setIsAnimating(true);
-    setAnimationStartPos(startPosition);
-    setAnimationTargetPos(targetPosition);
-
-    const animate = (currentTime) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      
-      // 使用非线性缓动函数
-      const easedProgress = easeInOutQuart(progress);
-      
-      // 计算当前位置
-      const currentPosition = startPosition + distance * easedProgress;
-      setAnimatedPosition(currentPosition);
-
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(animate);
-      } else {
-        // 动画完成，确保精确到达目标位置
-        setAnimatedPosition(targetPosition);
-        previousPositionRef.current = targetPosition;
-        setIsAnimating(false);
-        setAnimationStartPos(targetPosition);
-        setAnimationTargetPos(targetPosition);
-      }
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [activeIndex, sectionCount]);
-
-  // 初始化位置
-  useEffect(() => {
-    if (sectionCount > 1) {
-      const initialPosition = getDotPosition(activeIndex, sectionCount);
-      setAnimatedPosition(initialPosition);
-      previousPositionRef.current = initialPosition;
-      setIsAnimating(false);
-    }
-  }, [sectionCount]);
-
   const dots = Array.from({ length: sectionCount }, (_, i) => i);
 
   // 在移动端或宽度不够时不显示指示器
@@ -232,74 +147,13 @@ const ScrollIndicator = () => {
     return null;
   }
 
-  // 计算发光指示器与目标点的距离
-  const targetPosition = getDotPosition(activeIndex, sectionCount);
-  const distanceToTarget = Math.abs(animatedPosition - targetPosition);
-  const isAtTarget = distanceToTarget < 1; // 到达目标点（1px 误差内）
-  
-  // 发光线条只在动画过程中显示，到达目标后隐藏
-  const showGlow = isAnimating && !isAtTarget;
-  
-  // 计算线条长度：离开起始位置时变长，接近目标时变短
-  const getGlowHeight = () => {
-    if (!isAnimating) return 24; // 默认长度
-    
-    const totalDistance = Math.abs(animationTargetPos - animationStartPos);
-    if (totalDistance < 1) return 24;
-    
-    const distanceFromStart = Math.abs(animatedPosition - animationStartPos);
-    const distanceFromTarget = Math.abs(animatedPosition - animationTargetPos);
-    
-    // 最小长度和最大长度
-    const minHeight = 8;
-    const maxHeight = 32;
-    
-    // 计算在起始位置和目标位置附近的淡入淡出区域（各占 20%）
-    const fadeZone = totalDistance * 0.2;
-    
-    let height = maxHeight;
-    
-    // 在起始位置附近：逐渐变长
-    if (distanceFromStart < fadeZone) {
-      const startProgress = distanceFromStart / fadeZone;
-      height = minHeight + (maxHeight - minHeight) * startProgress;
-    }
-    // 在目标位置附近：逐渐变短
-    else if (distanceFromTarget < fadeZone) {
-      const targetProgress = distanceFromTarget / fadeZone;
-      height = minHeight + (maxHeight - minHeight) * targetProgress;
-    }
-    // 中间区域：保持最大长度
-    else {
-      height = maxHeight;
-    }
-    
-    return height;
-  };
-  
-  const glowHeight = getGlowHeight();
-
   return (
     <div className="scroll-indicator" ref={indicatorRef}>
       <div className="scroll-indicator-track">
-        {/* 移动的发光指示器 - 只在动画过程中显示 */}
-        {showGlow && (
-          <div
-            className="scroll-indicator-glow"
-            style={{
-              top: `${animatedPosition + 4}px`, // 点的中心位置（点高度8px，中心在4px处）
-              height: `${glowHeight}px`,
-              transform: 'translateX(-50%) translateY(-50%)',
-            }}
-          />
-        )}
-        
-        {/* 静态的点 - 只在动画完成后显示激活的点 */}
+        {/* 静态的点 */}
         {dots.map((index) => {
           const dotPosition = getDotPosition(index, sectionCount);
           const isActive = index === activeIndex;
-          // 激活的点只在动画完成后显示
-          const shouldShow = isActive && !isAnimating;
           
           return (
             <div
@@ -309,8 +163,6 @@ const ScrollIndicator = () => {
               }`}
               style={{
                 top: `${dotPosition}px`,
-                opacity: shouldShow ? 1 : isActive ? 0 : 0.4,
-                transition: 'opacity 0.2s ease',
               }}
             >
               <div className="scroll-indicator-dot" />
