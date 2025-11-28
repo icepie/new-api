@@ -350,7 +350,6 @@ const HomeNew = () => {
 
   return (
     <div className="min-h-screen snap-scroll-container overflow-x-hidden relative" ref={containerRef}>
-
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-screen snap-section flex items-center justify-center">
         <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 pt-16 sm:pt-20 md:pt-24 relative z-10">

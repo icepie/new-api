@@ -1564,3 +1564,115 @@ html.has-snap-scroll::-webkit-scrollbar {
   text-shadow: 2px 0 #00fff9;
 }
 
+/* Scroll Indicator */
+.scroll-indicator {
+  position: fixed;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 50;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .scroll-indicator {
+    right: 0.75rem;
+  }
+}
+
+.scroll-indicator-track {
+  width: 1px;
+  height: 240px;
+  background: rgba(156, 163, 175, 0.15);
+  border-radius: 0.5px;
+  position: relative;
+  margin: 0 auto;
+}
+
+.dark .scroll-indicator-track {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.scroll-indicator-dot-wrapper {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.33, 1, 0.68, 1);
+  z-index: 1;
+}
+
+.scroll-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(156, 163, 175, 0.4);
+  transition: all 0.3s cubic-bezier(0.33, 1, 0.68, 1);
+  backface-visibility: hidden;
+}
+
+.dark .scroll-indicator-dot {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.scroll-indicator-dot-wrapper.active .scroll-indicator-dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(99, 102, 241, 0.9);
+  box-shadow: 
+    0 0 0 2px rgba(99, 102, 241, 0.2),
+    0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.dark .scroll-indicator-dot-wrapper.active .scroll-indicator-dot {
+  background: rgba(129, 140, 248, 0.95);
+  box-shadow: 
+    0 0 0 2px rgba(129, 140, 248, 0.25),
+    0 2px 8px rgba(129, 140, 248, 0.5);
+}
+
+/* 移动的发光指示器 */
+.scroll-indicator-glow {
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(99, 102, 241, 0.6) 20%,
+    rgba(99, 102, 241, 0.9) 50%,
+    rgba(99, 102, 241, 0.6) 80%,
+    transparent 100%
+  );
+  border-radius: 1px;
+  box-shadow: 
+    0 0 6px rgba(99, 102, 241, 0.5),
+    0 0 12px rgba(99, 102, 241, 0.3),
+    0 0 18px rgba(99, 102, 241, 0.15);
+  pointer-events: none;
+  will-change: top, height;
+  backface-visibility: hidden;
+  z-index: 2;
+  transition: height 0.1s ease-out;
+}
+
+.dark .scroll-indicator-glow {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(129, 140, 248, 0.7) 20%,
+    rgba(129, 140, 248, 0.95) 50%,
+    rgba(129, 140, 248, 0.7) 80%,
+    transparent 100%
+  );
+  box-shadow: 
+    0 0 6px rgba(129, 140, 248, 0.6),
+    0 0 12px rgba(129, 140, 248, 0.4),
+    0 0 18px rgba(129, 140, 248, 0.2);
+}
+
+
