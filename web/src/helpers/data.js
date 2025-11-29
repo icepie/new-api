@@ -69,6 +69,11 @@ export function setStatusData(data) {
   } else {
     localStorage.removeItem('pricing_link');
   }
+  if (data.api_docs_link) {
+    localStorage.setItem('api_docs_link', data.api_docs_link);
+  } else {
+    localStorage.removeItem('api_docs_link');
+  }
 }
 
 export function setUserData(data) {

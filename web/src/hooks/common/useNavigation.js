@@ -25,10 +25,12 @@ export const useNavigation = (
   homeLink,
   aboutLink,
   pricingLink,
+  apiDocsLink,
   docsLinkEmbed,
   homeLinkEmbed,
   aboutLinkEmbed,
   pricingLinkEmbed,
+  apiDocsLinkEmbed,
   headerNavModules,
 ) => {
   const mainNavLinks = useMemo(() => {
@@ -38,6 +40,7 @@ export const useNavigation = (
       console: true,
       pricing: true,
       docs: true,
+      apiDocs: true,
       about: true,
     };
 
@@ -77,7 +80,7 @@ export const useNavigation = (
       ...(docsLink
         ? [
             {
-              text: t('文档'),
+              text: t('使用教程'),
               itemKey: 'docs',
               // 如果开启了内嵌，则路由到页面；否则跳转到外部链接
               ...(docsLinkEmbed
@@ -85,6 +88,21 @@ export const useNavigation = (
                 : {
                     isExternal: true,
                     externalLink: docsLink,
+                  }),
+            },
+          ]
+        : []),
+      ...(apiDocsLink
+        ? [
+            {
+              text: t('接口文档'),
+              itemKey: 'apiDocs',
+              // 如果开启了内嵌，则路由到页面；否则跳转到外部链接
+              ...(apiDocsLinkEmbed
+                ? { to: '/api-docs' }
+                : {
+                    isExternal: true,
+                    externalLink: apiDocsLink,
                   }),
             },
           ]
@@ -108,6 +126,9 @@ export const useNavigation = (
       if (link.itemKey === 'docs') {
         return docsLink && modules.docs;
       }
+      if (link.itemKey === 'apiDocs') {
+        return apiDocsLink && modules.apiDocs;
+      }
       if (link.itemKey === 'pricing') {
         // 支持新的pricing配置格式
         return typeof modules.pricing === 'object'
@@ -122,10 +143,12 @@ export const useNavigation = (
     homeLink,
     aboutLink,
     pricingLink,
+    apiDocsLink,
     docsLinkEmbed,
     homeLinkEmbed,
     aboutLinkEmbed,
     pricingLinkEmbed,
+    apiDocsLinkEmbed,
     headerNavModules,
   ]);
 

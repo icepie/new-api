@@ -49,10 +49,12 @@ export default function GeneralSettings(props) {
     'general_setting.home_link': '',
     'general_setting.about_link': '',
     'general_setting.pricing_link': '',
+    'general_setting.api_docs_link': '',
     'general_setting.docs_link_embed': false,
     'general_setting.home_link_embed': false,
     'general_setting.about_link_embed': false,
     'general_setting.pricing_link_embed': false,
+    'general_setting.api_docs_link_embed': false,
     'general_setting.quota_display_type': 'USD',
     'general_setting.custom_currency_symbol': '¤',
     'general_setting.custom_currency_exchange_rate': '',
@@ -264,6 +266,25 @@ export default function GeneralSettings(props) {
                   checkedText='｜'
                   uncheckedText='〇'
                   onChange={handleFieldChange('general_setting.pricing_link_embed')}
+                  style={{ marginTop: 8 }}
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.Input
+                  field={'general_setting.api_docs_link'}
+                  label={t('接口文档地址')}
+                  initValue={''}
+                  placeholder={t('例如 https://docs.newapi.pro/api')}
+                  onChange={handleFieldChange('general_setting.api_docs_link')}
+                  showClear
+                />
+                <Form.Switch
+                  field={'general_setting.api_docs_link_embed'}
+                  label={t('接口文档地址内嵌')}
+                  size='default'
+                  checkedText='｜'
+                  uncheckedText='〇'
+                  onChange={handleFieldChange('general_setting.api_docs_link_embed')}
                   style={{ marginTop: 8 }}
                 />
               </Col>
