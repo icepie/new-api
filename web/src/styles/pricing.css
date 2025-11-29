@@ -1157,24 +1157,24 @@
 .pricing-page-header-container {
   max-width: 100%;
   margin: 0 auto;
-  padding: 4rem 1rem 2rem;
+  padding: 4rem 0.5rem 2rem;
 }
 
 @media (min-width: 640px) {
   .pricing-page-header-container {
-    padding: 5rem 1.5rem 2.5rem;
+    padding: 5rem 0.75rem 2.5rem;
   }
 }
 
 @media (min-width: 768px) {
   .pricing-page-header-container {
-    padding: 6rem 2rem 3rem;
+    padding: 6rem 1rem 3rem;
   }
 }
 
 @media (min-width: 1024px) {
   .pricing-page-header-container {
-    padding: 4rem 2rem 2rem;
+    padding: 4rem 1rem 2rem;
   }
 }
 
@@ -1258,36 +1258,36 @@
 .pricing-page-content {
   max-width: 100%;
   margin: 0 auto;
-  padding: 3rem 1rem;
+  padding: 3rem 0.5rem;
 }
 
 @media (min-width: 640px) {
   .pricing-page-content {
-    padding: 4rem 1.5rem;
+    padding: 4rem 0.75rem;
   }
 }
 
 @media (min-width: 768px) {
   .pricing-page-content {
-    padding: 5rem 2rem;
+    padding: 5rem 1rem;
   }
 }
 
 @media (min-width: 1024px) {
   .pricing-page-content {
-    padding: 3rem 3rem;
+    padding: 3rem 1.5rem;
   }
 }
 
 @media (min-width: 1280px) {
   .pricing-page-content {
-    padding: 3rem 4rem;
+    padding: 3rem 2rem;
   }
 }
 
 @media (min-width: 1536px) {
   .pricing-page-content {
-    padding: 3rem 5rem;
+    padding: 3rem 2.5rem;
   }
 }
 
@@ -1299,13 +1299,13 @@
 
 @media (min-width: 1024px) {
   .pricing-page-content-container {
-    padding: 0 2rem;
+    padding: 0 1rem;
   }
 }
 
 @media (min-width: 1536px) {
   .pricing-page-content-container {
-    padding: 0 3rem;
+    padding: 0 1.5rem;
   }
 }
 
