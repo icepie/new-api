@@ -23,7 +23,7 @@ import { useActualTheme } from '../../context/Theme';
 import { useTranslation } from 'react-i18next';
 
 const ApiDocs = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [statusState] = useContext(StatusContext);
   const actualTheme = useActualTheme();
   const apiDocsLink = statusState?.status?.api_docs_link || '';
@@ -66,7 +66,7 @@ const ApiDocs = () => {
   // 如果没有设置接口文档URL或没有开启内嵌，显示空状态或重定向
   return (
     <div className='flex justify-center items-center h-screen'>
-      <p>接口文档未配置或未启用内嵌模式</p>
+      <p>{t('接口文档未配置或未启用内嵌模式')}</p>
     </div>
   );
 };
