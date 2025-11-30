@@ -123,6 +123,7 @@ func GetStatus(c *gin.Context) {
 		"setup":                       constant.Setup,
 		"user_agreement_enabled":      legalSetting.UserAgreement != "",
 		"privacy_policy_enabled":      legalSetting.PrivacyPolicy != "",
+		"star_user_system_enabled":    common.StarUserSystemEnabled && common.StarBackendAddress != "",
 	}
 
 	// 根据启用状态注入可选内容

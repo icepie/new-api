@@ -76,6 +76,8 @@ const SystemSetting = () => {
     WeChatServerAddress: '',
     WeChatServerToken: '',
     WeChatAccountQRCodeImageURL: '',
+    StarUserSystemEnabled: '',
+    StarBackendAddress: '',
     TurnstileCheckEnabled: '',
     TurnstileSiteKey: '',
     TurnstileSecretKey: '',
@@ -175,6 +177,7 @@ const SystemSetting = () => {
           case 'EmailVerificationEnabled':
           case 'GitHubOAuthEnabled':
           case 'WeChatAuthEnabled':
+          case 'StarUserSystemEnabled':
           case 'TelegramOAuthEnabled':
           case 'RegisterEnabled':
           case 'TurnstileCheckEnabled':
@@ -448,6 +451,21 @@ const SystemSetting = () => {
       options.push({
         key: 'WeChatServerToken',
         value: inputs.WeChatServerToken,
+      });
+    }
+
+    if (options.length > 0) {
+      await updateOptions(options);
+    }
+  };
+
+  const submitStar = async () => {
+    const options = [];
+
+    if (originInputs['StarBackendAddress'] !== inputs.StarBackendAddress) {
+      options.push({
+        key: 'StarBackendAddress',
+        value: removeTrailingSlash(inputs.StarBackendAddress),
       });
     }
 
@@ -1067,6 +1085,15 @@ const SystemSetting = () => {
                         {t('允许通过微信登录 & 注册')}
                       </Form.Checkbox>
                       <Form.Checkbox
+                        field='StarUserSystemEnabled'
+                        noLabel
+                        onChange={(e) =>
+                          handleCheckboxChange('StarUserSystemEnabled', e)
+                        }
+                      >
+                        {t('允许通过 Star 用户系统登录 & 注册')}
+                      </Form.Checkbox>
+                      <Form.Checkbox
                         field='TelegramOAuthEnabled'
                         noLabel
                         onChange={(e) =>
@@ -1559,6 +1586,45 @@ const SystemSetting = () => {
                   </Row>
                   <Button onClick={submitWeChat}>
                     {t('保存 WeChat Server 设置')}
+                  </Button>
+                </Form.Section>
+              </Card>
+
+              <Card>
+                <Form.Section text={t('配置 Star 用户系统')}>
+                  <Text>{t('用以支持通过 Star 用户系统进行登录注册')}</Text>
+                  <Row
+                    gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+                  >
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Checkbox
+                        field='StarUserSystemEnabled'
+                        noLabel
+                        onChange={(e) =>
+                          handleCheckboxChange('StarUserSystemEnabled', e)
+                        }
+                      >
+                        {t('启用 Star 用户系统')}
+                      </Form.Checkbox>
+                    </Col>
+                  </Row>
+                  <Row
+                    gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+                    style={{ marginTop: 16 }}
+                  >
+                    <Col xs={24} sm={24} md={24} lg={24} xl={24}>
+                      <Form.Input
+                        field='StarBackendAddress'
+                        label={t('Star 后端地址')}
+                        placeholder='https://node6.nice188.com'
+                        extraText={t(
+                          'Star 用户系统的后端服务器地址，用于登录验证和用户同步',
+                        )}
+                      />
+                    </Col>
+                  </Row>
+                  <Button onClick={submitStar}>
+                    {t('保存 Star 用户系统设置')}
                   </Button>
                 </Form.Section>
               </Card>

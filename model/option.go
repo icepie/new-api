@@ -101,6 +101,8 @@ func InitOptionMap() {
 	common.OptionMap["WeChatServerAddress"] = ""
 	common.OptionMap["WeChatServerToken"] = ""
 	common.OptionMap["WeChatAccountQRCodeImageURL"] = ""
+	common.OptionMap["StarUserSystemEnabled"] = strconv.FormatBool(common.StarUserSystemEnabled)
+	common.OptionMap["StarBackendAddress"] = common.StarBackendAddress
 	common.OptionMap["TurnstileSiteKey"] = ""
 	common.OptionMap["TurnstileSecretKey"] = ""
 	common.OptionMap["QuotaForNewUser"] = strconv.Itoa(common.QuotaForNewUser)
@@ -230,6 +232,8 @@ func updateOptionMap(key string, value string) (err error) {
 			common.LinuxDOOAuthEnabled = boolValue
 		case "WeChatAuthEnabled":
 			common.WeChatAuthEnabled = boolValue
+		case "StarUserSystemEnabled":
+			common.StarUserSystemEnabled = boolValue
 		case "TelegramOAuthEnabled":
 			common.TelegramOAuthEnabled = boolValue
 		case "TurnstileCheckEnabled":
@@ -380,6 +384,10 @@ func updateOptionMap(key string, value string) (err error) {
 		common.WeChatServerToken = value
 	case "WeChatAccountQRCodeImageURL":
 		common.WeChatAccountQRCodeImageURL = value
+	case "StarUserSystemEnabled":
+		common.StarUserSystemEnabled = value == "true"
+	case "StarBackendAddress":
+		common.StarBackendAddress = value
 	case "TelegramBotToken":
 		common.TelegramBotToken = value
 	case "TelegramBotName":

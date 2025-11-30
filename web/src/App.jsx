@@ -24,6 +24,9 @@ import User from './pages/User';
 import { AuthRedirect, PrivateRoute, AdminRoute } from './helpers';
 import RegisterForm from './components/auth/RegisterForm';
 import LoginForm from './components/auth/LoginForm';
+import StarLoginForm from './components/auth/StarLoginForm';
+import StarRegisterForm from './components/auth/StarRegisterForm';
+import StarPasswordResetForm from './components/auth/StarPasswordResetForm';
 import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
 import Setting from './pages/Setting';
@@ -46,6 +49,7 @@ import ModelPage from './pages/Model';
 import Playground from './pages/Playground';
 import OAuth2Callback from './components/auth/OAuth2Callback';
 import PersonalSetting from './components/settings/PersonalSetting';
+import StarPersonalSetting from './components/settings/StarPersonalSetting';
 import Setup from './pages/Setup';
 import SetupCheck from './components/layout/SetupCheck';
 
@@ -60,6 +64,11 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 function App() {
   const location = useLocation();
   const [statusState] = useContext(StatusContext);
+
+  // 检查是否启用 Star 用户系统
+  const starUserSystemEnabled = useMemo(() => {
+    return statusState?.status?.star_user_system_enabled === true;
+  }, [statusState?.status?.star_user_system_enabled]);
 
   // 获取模型广场权限配置
   const pricingRequireAuth = useMemo(() => {
@@ -164,7 +173,7 @@ function App() {
           element={
             <Suspense fallback={<Loading></Loading>} key={location.pathname}>
               <AuthRedirect>
-                <LoginForm />
+                {starUserSystemEnabled ? <StarLoginForm /> : <LoginForm />}
               </AuthRedirect>
             </Suspense>
           }
@@ -174,7 +183,7 @@ function App() {
           element={
             <Suspense fallback={<Loading></Loading>} key={location.pathname}>
               <AuthRedirect>
-                <RegisterForm />
+                {starUserSystemEnabled ? <StarRegisterForm /> : <RegisterForm />}
               </AuthRedirect>
             </Suspense>
           }
@@ -183,7 +192,7 @@ function App() {
           path='/reset'
           element={
             <Suspense fallback={<Loading></Loading>} key={location.pathname}>
-              <PasswordResetForm />
+              {starUserSystemEnabled ? <StarPasswordResetForm /> : <PasswordResetForm />}
             </Suspense>
           }
         />
@@ -234,7 +243,11 @@ function App() {
           element={
             <PrivateRoute>
               <Suspense fallback={<Loading></Loading>} key={location.pathname}>
-                <PersonalSetting />
+                {starUserSystemEnabled ? (
+                  <StarPersonalSetting />
+                ) : (
+                  <PersonalSetting />
+                )}
               </Suspense>
             </PrivateRoute>
           }

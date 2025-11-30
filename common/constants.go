@@ -87,6 +87,9 @@ var LinuxDOClientSecret = ""
 var LinuxDOMinimumTrustLevel = 0
 
 var WeChatServerAddress = ""
+
+var StarUserSystemEnabled = false
+var StarBackendAddress = ""
 var WeChatServerToken = ""
 var WeChatAccountQRCodeImageURL = ""
 

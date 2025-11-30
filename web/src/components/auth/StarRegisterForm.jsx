@@ -1,0 +1,302 @@
+/*
+Copyright (C) 2025 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import {
+  getLogo,
+  getSystemName,
+  showError,
+  showSuccess,
+} from '../../helpers';
+import {
+  starRegisterAdapter,
+  starSendEmailCodeAdapter,
+} from '../../helpers/starAuthAdapter';
+import { Button, Card, Form, Input, Spin } from '@douyinfe/semi-ui';
+import Title from '@douyinfe/semi-ui/lib/es/typography/title';
+import Text from '@douyinfe/semi-ui/lib/es/typography/text';
+import { IconEyeOpened, IconEyeClosed, IconMail, IconLock } from '@douyinfe/semi-icons';
+import LogoImage from '../common/logo/LogoImage';
+import HeroBackground from '../homepage/HeroBackground';
+
+const StarRegisterForm = () => {
+  let navigate = useNavigate();
+  const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const formApiRef = useRef(null);
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  // 邮箱格式验证
+  const validateEmail = (value) => {
+    const emailRegex = /^[\w-.+]+@([\w-]+\.)+[\w-]{2,4}$/;
+    if (!value || emailRegex.test(value)) {
+      setEmailError('');
+      return true;
+    } else {
+      setEmailError(t('请输入有效的邮箱地址'));
+      return false;
+    }
+  };
+
+  // 发送验证码
+  const handleSendCode = async () => {
+    if (!validateEmail(email)) return;
+    setIsSendingCode(true);
+    try {
+      const res = await starSendEmailCodeAdapter(email, 'register');
+      if (res.success) {
+        showSuccess(t('验证码已发送到您的邮箱，请在邮箱中查看！若没有收到邮件请检查邮箱是否正确，或前往垃圾箱确认'));
+        setCountdown(60);
+        const timer = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev === 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        showError(res.message || t('发送验证码失败'));
+      }
+    } catch (error) {
+      showError(t('发送验证码失败，请重试'));
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  // 注册
+  const handleRegister = async (values) => {
+    // 防止重复提交
+    if (isRegistering) {
+      return;
+    }
+    
+    const { email: formEmail, code: formCode, password: formPassword } = values || {};
+    
+    // 验证邮箱
+    if (emailError || !formEmail || !validateEmail(formEmail)) {
+      showError(t('请填写有效的邮箱地址'));
+      return;
+    }
+    
+    if (!formCode || !formPassword) {
+      showError(t('请填写完整的注册信息'));
+      return;
+    }
+    
+    setIsRegistering(true);
+    try {
+      const res = await starRegisterAdapter(formEmail, formCode, formPassword);
+      if (res.success) {
+        showSuccess(t('注册成功！'));
+        navigate(`/login${searchParams.toString() ? '?' + searchParams.toString() : ''}`);
+      } else {
+        // 优化错误提示
+        let errorMessage = res.message || t('注册失败，请重试');
+        
+        // 解析后端返回的错误信息，提取更友好的提示
+        if (errorMessage.includes('邮箱已被注册') || errorMessage.includes('邮箱已存在')) {
+          errorMessage = t('该邮箱已被注册，请使用其他邮箱或直接登录');
+        } else if (errorMessage.includes('验证码错误') || errorMessage.includes('验证码不正确')) {
+          errorMessage = t('验证码错误，请检查后重试');
+        } else if (errorMessage.includes('验证码已过期') || errorMessage.includes('验证码过期')) {
+          errorMessage = t('验证码已过期，请重新获取');
+        } else if (errorMessage.includes('密码') && errorMessage.includes('长度')) {
+          errorMessage = t('密码长度不符合要求，请检查密码规则');
+        } else if (errorMessage.includes('邮箱格式') || errorMessage.includes('邮箱无效')) {
+          errorMessage = t('邮箱格式不正确，请检查邮箱地址');
+        }
+        
+        showError(errorMessage);
+      }
+    } catch (error) {
+      let errorMessage = t('注册失败，请重试');
+      if (error.message) {
+        if (error.message.includes('网络') || error.message.includes('Network')) {
+          errorMessage = t('网络连接失败，请检查网络后重试');
+        } else if (error.message.includes('超时') || error.message.includes('timeout')) {
+          errorMessage = t('请求超时，请稍后重试');
+        }
+      }
+      showError(errorMessage);
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const logo = getLogo();
+  const systemName = getSystemName();
+
+  return (
+    <div className="min-h-screen flex items-center justify-center relative py-12 px-4 sm:px-6 lg:px-8">
+      <HeroBackground />
+      <div className="relative z-10 flex flex-col items-center w-full">
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center mb-6 gap-2">
+            <LogoImage src={logo} alt="Logo" className="h-10 rounded-full" />
+            <Title heading={3} className={`!text-gray-800 ${systemName === 'NiceRouter' ? '!italic' : ''}`}>
+              {systemName}
+            </Title>
+          </div>
+
+          <Card className="border-0 !rounded-2xl overflow-hidden">
+            <div className="flex justify-center pt-6 pb-2">
+              <Title heading={3} className="text-gray-800 dark:text-gray-200">
+                {t('注 册')}
+              </Title>
+            </div>
+            <div className="px-2 py-8">
+              <Form 
+                className="space-y-3" 
+                getFormApi={(formApi) => { formApiRef.current = formApi; }}
+                onSubmit={handleRegister}
+              >
+                <Form.Input
+                  field="email"
+                  label={t('邮箱')}
+                  type="email"
+                  placeholder={t('请输入您的邮箱地址')}
+                  value={email}
+                  onChange={(value) => {
+                    setEmail(value);
+                    validateEmail(value);
+                  }}
+                  onBlur={() => validateEmail(email)}
+                  validateStatus={emailError ? 'error' : ''}
+                  rules={[{ required: true, message: t('请输入邮箱') }]}
+                  prefix={<IconMail />}
+                />
+                {emailError && (
+                  <Text className="text-red-500 text-xs mt-1">{emailError}</Text>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+                  <div className="flex-1">
+                    <Form.Input
+                      field="code"
+                      label={t('邮箱验证码')}
+                      placeholder={t('请输入验证码')}
+                      value={code}
+                      onChange={(value) => setCode(value)}
+                      rules={[{ required: true, message: t('请输入验证码') }]}
+                    />
+                  </div>
+                  <div className="sm:pb-[12px]">
+                    <Button
+                      type="button"
+                      onClick={handleSendCode}
+                      disabled={!!emailError || !email || isSendingCode || countdown > 0}
+                      loading={isSendingCode && countdown === 0}
+                      className="w-full sm:w-auto whitespace-nowrap"
+                    >
+                      {isSendingCode && countdown === 0 ? t('发送中...') : countdown > 0 ? `${countdown}s` : t('发送验证码')}
+                    </Button>
+                  </div>
+                </div>
+
+                <Form.Input
+                  field="password"
+                  label={t('密码')}
+                  mode="password"
+                  placeholder={t('请输入您的密码')}
+                  value={password}
+                  onChange={(value) => setPassword(value)}
+                  rules={[{ required: true, message: t('请输入密码') }]}
+                  prefix={<IconLock />}
+                />
+
+                <div className="space-y-2 pt-2">
+                  <Button
+                    theme="solid"
+                    type="primary"
+                    className="w-full !rounded-full transition-colors auth-page-button-black"
+                    style={{
+                      backgroundColor: 'black',
+                      color: 'white',
+                      borderColor: 'black',
+                    }}
+                    loading={isRegistering}
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!formApiRef.current) {
+                        showError(t('表单未初始化'));
+                        return;
+                      }
+                      // 防止重复提交
+                      if (isRegistering) {
+                        return;
+                      }
+                      try {
+                        const values = await formApiRef.current.validate();
+                        await handleRegister(values);
+                      } catch (errors) {
+                        // 验证失败，Semi Design 会自动显示错误信息
+                      }
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = '#1f2937';
+                        e.currentTarget.style.borderColor = '#1f2937';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = 'black';
+                        e.currentTarget.style.borderColor = 'black';
+                      }
+                    }}
+                  >
+                    {t('注册')}
+                  </Button>
+                </div>
+              </Form>
+
+              <div className="text-center mt-6 text-sm">
+                <Text className="auth-page-link-text">
+                  {t('已有账户？')}{' '}
+                  <Link
+                    to={`/login${searchParams.toString() ? '?' + searchParams.toString() : ''}`}
+                    className="auth-page-link font-medium"
+                  >
+                    {t('登录')}
+                  </Link>
+                </Text>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default StarRegisterForm;
+

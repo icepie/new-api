@@ -115,3 +115,10 @@ func DownloadRateLimit() func(c *gin.Context) {
 func UploadRateLimit() func(c *gin.Context) {
 	return rateLimitFactory(common.UploadRateLimitNum, common.UploadRateLimitDuration, "UP")
 }
+
+// QRStatusRateLimit 二维码状态检查限流 - 允许更频繁的请求（每分钟60次，支持2秒轮询）
+func QRStatusRateLimit() func(c *gin.Context) {
+	// 每分钟 60 次请求，足够支持 2 秒轮询（每分钟 30 次）
+	// 设置为 60 次是为了留有余量，避免边界情况
+	return rateLimitFactory(60, 60, "QR")
+}

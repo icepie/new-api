@@ -1,19 +1,25 @@
 package controller
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	"gorm.io/gorm"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -91,6 +97,1638 @@ func Login(c *gin.Context) {
 	setupLogin(&user, c)
 }
 
+// callExternalLoginAPI 调用外部登录接口
+// 返回: (是否成功, email, star_user_id, xtoken, 错误)
+// 注意: password 参数应该是已经 base64 编码的密码（前端已编码）
+func callExternalLoginAPI(username, password string) (bool, string, string, string, error) {
+	// 使用配置的 Star 后端地址
+	externalAPIURL := common.StarBackendAddress
+	if !strings.HasSuffix(externalAPIURL, "/") {
+		externalAPIURL += "/"
+	}
+	externalAPIURL += "u/login"
+
+	// 前端已经对密码进行了 base64 编码，这里直接使用
+	// 构建请求体
+	requestBody := map[string]string{
+		"email":    username, // 使用username作为email
+		"password": password, // 前端已编码，直接使用
+	}
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		return false, "", "", "", fmt.Errorf("构建请求体失败: %w", err)
+	}
+
+	// 创建HTTP请求
+	req, err := http.NewRequest("POST", externalAPIURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return false, "", "", "", fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+
+	// 创建HTTP客户端
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// 发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, "", "", "", fmt.Errorf("请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, "", "", "", fmt.Errorf("读取响应失败: %w", err)
+	}
+
+	// 检查HTTP状态码
+	if resp.StatusCode != http.StatusOK {
+		return false, "", "", "", fmt.Errorf("外部API返回错误状态码: %d", resp.StatusCode)
+	}
+
+	// 解析响应
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return false, "", "", "", fmt.Errorf("解析响应失败: %w", err)
+	}
+
+	// 检查响应中的成功标志（根据实际API响应格式调整）
+	// 假设响应格式为 {"code": 20000, "msg": "ok", "data": {...}}
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 尝试从响应中获取email、star_user_id和xtoken
+			email := ""
+			starUserId := ""
+			xtoken := ""
+			if data, ok := response["data"].(map[string]interface{}); ok {
+				if emailVal, ok := data["email"].(string); ok {
+					email = emailVal
+				}
+				// 从 xuserid 字段获取 star_user_id（star_id）
+				if xuseridVal, ok := data["xuserid"]; ok {
+					starUserId = fmt.Sprintf("%v", xuseridVal)
+				} else if idVal, ok := data["id"]; ok {
+					// 兼容旧格式：尝试 id 字段
+					starUserId = fmt.Sprintf("%v", idVal)
+				} else if userIdVal, ok := data["user_id"]; ok {
+					// 兼容旧格式：尝试 user_id 字段
+					starUserId = fmt.Sprintf("%v", userIdVal)
+				}
+				// 获取 xtoken
+				if xtokenVal, ok := data["xtoken"].(string); ok {
+					xtoken = xtokenVal
+				}
+			}
+			return true, email, starUserId, xtoken, nil
+		} else {
+			// code不是20000，登录失败
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			return false, "", "", "", fmt.Errorf("外部API返回错误: code=%v, msg=%s", code, msg)
+		}
+	}
+
+	// 如果响应中没有code字段，认为登录失败
+	return false, "", "", "", fmt.Errorf("外部API响应格式异常，缺少code字段")
+}
+
+// StarUserInfo 存储从 Star 后端获取的用户信息
+type StarUserInfo struct {
+	Username          string `json:"username"`
+	Email             string `json:"email"`
+	Status            int    `json:"status"`
+	InviterUser       string `json:"inviter_user"`
+	CreatedAt         string `json:"created_at"`
+	WechatOpenid      string `json:"wechat_openid"`
+	UserActivePackages struct {
+		PackageId   string `json:"package_id"`
+		PackageName string `json:"package_name"`
+		Level       string `json:"level"`
+		Priority    string `json:"priority"`
+		ExpiryDate  string `json:"expiry_date"`
+	} `json:"user_active_packages"`
+}
+
+// callGetUserInfoAPI 调用外部获取用户信息接口
+// 返回: (是否成功, 用户信息, 错误)
+func callGetUserInfoAPI(xuserid, xtoken string) (bool, *StarUserInfo, error) {
+	// 使用配置的 Star 后端地址
+	externalAPIURL := common.StarBackendAddress
+	if !strings.HasSuffix(externalAPIURL, "/") {
+		externalAPIURL += "/"
+	}
+	externalAPIURL += "u/get_user_info"
+
+	// 创建HTTP请求
+	req, err := http.NewRequest("GET", externalAPIURL, nil)
+	if err != nil {
+		return false, nil, fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("xuserid", xuserid)
+	req.Header.Set("xtoken", xtoken)
+
+	// 创建HTTP客户端
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// 发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, nil, fmt.Errorf("请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, nil, fmt.Errorf("读取响应失败: %w", err)
+	}
+
+	// 检查HTTP状态码
+	if resp.StatusCode != http.StatusOK {
+		return false, nil, fmt.Errorf("外部API返回错误状态码: %d", resp.StatusCode)
+	}
+
+	// 解析响应
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return false, nil, fmt.Errorf("解析响应失败: %w", err)
+	}
+
+	// 检查响应中的成功标志
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 解析用户信息
+			var userInfo StarUserInfo
+			if data, ok := response["data"].(map[string]interface{}); ok {
+				// 将 data 转换为 JSON 再解析，确保类型正确
+				dataBytes, err := json.Marshal(data)
+				if err != nil {
+					return false, nil, fmt.Errorf("序列化用户信息失败: %w", err)
+				}
+				if err := json.Unmarshal(dataBytes, &userInfo); err != nil {
+					return false, nil, fmt.Errorf("解析用户信息失败: %w", err)
+				}
+				// Star 后端的 get_user_info 可能不返回 wechat_openid，需要从原始数据中提取
+				// 如果 data 中有 wechat_openid，直接使用；否则保持为空（会在后续从数据库更新）
+				if wechatOpenid, ok := data["wechat_openid"].(string); ok && wechatOpenid != "" {
+					userInfo.WechatOpenid = wechatOpenid
+				}
+				return true, &userInfo, nil
+			}
+			return false, nil, fmt.Errorf("响应中缺少data字段")
+		} else {
+			// code不是20000，获取失败
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			return false, nil, fmt.Errorf("外部API返回错误: code=%v, msg=%s", code, msg)
+		}
+	}
+
+	// 如果响应中没有code字段，认为获取失败
+	return false, nil, fmt.Errorf("外部API响应格式异常，缺少code字段")
+}
+
+// callStarBackendAPI 通用函数：调用 Star 后端 API
+// method: HTTP 方法 (GET, POST 等)
+// endpoint: API 端点 (如 "u/register")
+// requestBody: 请求体 (POST/PUT 时使用，nil 表示无请求体)
+// headers: 额外的请求头
+// 返回: (响应数据, 错误)
+func callStarBackendAPI(method, endpoint string, requestBody map[string]interface{}, headers map[string]string) (map[string]interface{}, error) {
+	// 使用配置的 Star 后端地址
+	externalAPIURL := common.StarBackendAddress
+	if !strings.HasSuffix(externalAPIURL, "/") {
+		externalAPIURL += "/"
+	}
+	externalAPIURL += endpoint
+
+	var req *http.Request
+	var err error
+
+	if requestBody != nil {
+		jsonData, err := json.Marshal(requestBody)
+		if err != nil {
+			return nil, fmt.Errorf("构建请求体失败: %w", err)
+		}
+		req, err = http.NewRequest(method, externalAPIURL, bytes.NewBuffer(jsonData))
+	} else {
+		req, err = http.NewRequest(method, externalAPIURL, nil)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+
+	// 添加额外的请求头
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	// 创建HTTP客户端
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// 发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应失败: %w", err)
+	}
+
+	// 检查HTTP状态码
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("外部API返回错误状态码: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	// 解析响应
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("解析响应失败: %w", err)
+	}
+
+	return response, nil
+}
+
+// StarLogin 登录接口 - 使用 Star 用户系统登录逻辑
+func StarLogin(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	var request struct {
+		Email    string `json:"email" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	username := request.Email
+	password := request.Password
+
+	// 先调用外部登录接口
+	externalLoginSuccess, email, starUserId, xtoken, err := callExternalLoginAPI(username, password)
+	if err != nil {
+		common.SysLog(fmt.Sprintf("调用外部登录接口失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "外部登录验证失败: " + err.Error(),
+		})
+		return
+	}
+
+	if !externalLoginSuccess {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户名或密码错误",
+		})
+		return
+	}
+
+	// 外部登录成功，检查本地是否存在用户
+	// 使用email查找用户，如果username是email格式则使用username，否则使用从外部API获取的email
+	userEmail := username
+	if !strings.Contains(username, "@") && email != "" {
+		userEmail = email
+	}
+
+	var user model.User
+	err = model.DB.Where("email = ? OR username = ?", userEmail, username).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 用户不存在，先尝试获取 Star 用户信息
+			var starUserInfo *StarUserInfo
+			if starUserId != "" && xtoken != "" {
+				success, info, err := callGetUserInfoAPI(starUserId, xtoken)
+				if err != nil {
+					common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
+				} else if success && info != nil {
+					starUserInfo = info
+				}
+			}
+
+			// 生成复杂的默认密码
+			defaultPassword, err := common.GenerateRandomCharsKey(32)
+			if err != nil {
+				common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "系统错误，请稍后重试",
+				})
+				return
+			}
+
+			// 创建新用户，优先使用从 Star 获取的信息
+			newUser := model.User{
+				Password:    defaultPassword,
+				Role:        common.RoleCommonUser,
+				Status:      common.UserStatusEnabled,
+			}
+
+			// 使用 Star 用户信息（如果可用）
+			if starUserInfo != nil {
+				if starUserInfo.Username != "" {
+					newUser.Username = starUserInfo.Username
+					newUser.DisplayName = starUserInfo.Username
+				} else {
+					newUser.Username = username
+					newUser.DisplayName = username
+				}
+				if starUserInfo.Email != "" {
+					newUser.Email = starUserInfo.Email
+				} else if strings.Contains(username, "@") {
+					newUser.Email = username
+				} else if email != "" {
+					newUser.Email = email
+				}
+				if starUserInfo.WechatOpenid != "" {
+					newUser.WeChatId = starUserInfo.WechatOpenid
+				}
+				// 根据 Star 系统的状态设置用户状态
+				if starUserInfo.Status == 0 {
+					newUser.Status = common.UserStatusDisabled
+				}
+			} else {
+				// 没有 Star 用户信息，使用原有逻辑
+				newUser.Username = username
+				newUser.DisplayName = username
+				if strings.Contains(username, "@") {
+					newUser.Email = username
+				} else if email != "" {
+					newUser.Email = email
+				}
+			}
+
+			// 检查是否是第一个绑定的 star 用户
+			if starUserId != "" {
+				var count int64
+				err = model.DB.Model(&model.User{}).Where("star_user_id != ? AND star_user_id != ?", "", "0").Count(&count).Error
+				if err != nil {
+					common.SysLog(fmt.Sprintf("检查 star 用户数量失败: %v", err))
+				} else {
+					// 如果是第一个绑定的 star 用户，设置为 root 用户
+					if count == 0 {
+						newUser.Role = common.RoleRootUser
+						common.SysLog(fmt.Sprintf("第一个 Star 用户 %s (star_user_id: %s) 被设置为 root 用户", newUser.Username, starUserId))
+					}
+				}
+				newUser.StarUserId = starUserId
+			}
+
+			// 插入用户（无需校验密码，因为使用的是自动生成的复杂密码）
+			if err := newUser.Insert(0); err != nil {
+				common.SysLog(fmt.Sprintf("自动注册用户失败: %v", err))
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "自动注册失败，请稍后重试",
+				})
+				return
+			}
+
+			// 重新获取创建的用户
+			err = model.DB.Where("email = ? OR username = ?", newUser.Email, newUser.Username).First(&user).Error
+			if err != nil {
+				common.SysLog(fmt.Sprintf("获取新创建用户失败: %v", err))
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "用户创建成功但登录失败，请稍后重试",
+				})
+				return
+			}
+		} else {
+			// 其他数据库错误
+			common.SysLog(fmt.Sprintf("查询用户失败: %v", err))
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "数据库错误，请稍后重试",
+			})
+			return
+		}
+	}
+
+	// 检查用户状态
+	if user.Status != common.UserStatusEnabled {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户已被封禁",
+		})
+		return
+	}
+
+	// 绑定 star_user_id（如果用户已存在但还没有绑定）
+	if starUserId != "" && user.StarUserId == "" {
+		// 检查是否是第一个绑定的 star 用户
+		var count int64
+		err = model.DB.Model(&model.User{}).Where("star_user_id != ? AND star_user_id != ?", "", "0").Count(&count).Error
+		if err != nil {
+			common.SysLog(fmt.Sprintf("检查 star 用户数量失败: %v", err))
+		} else {
+			// 如果是第一个绑定的 star 用户，设置为 root 用户
+			if count == 0 {
+				user.Role = common.RoleRootUser
+				common.SysLog(fmt.Sprintf("第一个 Star 用户 %s (star_user_id: %s) 被设置为 root 用户", user.Username, starUserId))
+			}
+		}
+
+		// 更新 star_user_id
+		updates := map[string]interface{}{
+			"star_user_id": starUserId,
+		}
+		if user.Role == common.RoleRootUser {
+			updates["role"] = common.RoleRootUser
+		}
+		if err := model.DB.Model(&user).Updates(updates).Error; err != nil {
+			common.SysLog(fmt.Sprintf("更新 star_user_id 失败: %v", err))
+		} else {
+			// 重新获取用户以获取最新信息
+			model.DB.Where("id = ?", user.Id).First(&user)
+		}
+	}
+
+	// 如果有 star_user_id 和 xtoken，获取并更新用户信息
+	if starUserId != "" && xtoken != "" {
+		success, starUserInfo, err := callGetUserInfoAPI(starUserId, xtoken)
+		if err != nil {
+			common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
+		} else if success && starUserInfo != nil {
+			// 更新用户信息
+			updates := map[string]interface{}{}
+			
+			// 更新用户名（如果不同）
+			if starUserInfo.Username != "" && starUserInfo.Username != user.Username {
+				updates["username"] = starUserInfo.Username
+				updates["display_name"] = starUserInfo.Username
+			}
+			
+			// 更新邮箱（如果不同且不为空）
+			if starUserInfo.Email != "" && starUserInfo.Email != user.Email {
+				updates["email"] = starUserInfo.Email
+			}
+			
+			// 更新微信ID（如果不同且不为空）
+			if starUserInfo.WechatOpenid != "" && starUserInfo.WechatOpenid != user.WeChatId {
+				updates["wechat_id"] = starUserInfo.WechatOpenid
+			}
+			
+			// 更新状态（根据 Star 系统的状态）
+			if starUserInfo.Status == 0 && user.Status == common.UserStatusEnabled {
+				updates["status"] = common.UserStatusDisabled
+			} else if starUserInfo.Status == 1 && user.Status == common.UserStatusDisabled {
+				updates["status"] = common.UserStatusEnabled
+			}
+			
+			// 更新密码：使用 Star 登录时传入的密码（base64 解码后哈希）
+			// 注意：password 参数是 base64 编码的，需要先解码
+			if password != "" {
+				// 解码 base64 密码
+				decodedPassword, err := base64.StdEncoding.DecodeString(password)
+				if err == nil {
+					// 哈希化密码
+					hashedPassword, err := common.Password2Hash(string(decodedPassword))
+					if err == nil {
+						updates["password"] = hashedPassword
+						common.SysLog(fmt.Sprintf("更新用户 %s (star_user_id: %s) 的密码", user.Username, starUserId))
+					} else {
+						common.SysLog(fmt.Sprintf("密码哈希化失败: %v", err))
+					}
+				} else {
+					common.SysLog(fmt.Sprintf("密码 base64 解码失败: %v", err))
+				}
+			}
+			
+			// 如果有更新，执行更新操作
+			if len(updates) > 0 {
+				if err := model.DB.Model(&user).Updates(updates).Error; err != nil {
+					common.SysLog(fmt.Sprintf("更新用户信息失败: %v", err))
+				} else {
+					// 重新获取用户以获取最新信息
+					model.DB.Where("id = ?", user.Id).First(&user)
+					common.SysLog(fmt.Sprintf("成功更新用户 %s (star_user_id: %s) 的信息", user.Username, starUserId))
+				}
+			}
+		}
+	}
+
+	// 设置 Star 认证 cookies（如果存在）
+	// 注意：xy_uuid_token 需要从 callExternalLoginAPI 的响应中获取，这里暂时不设置
+	if starUserId != "" && xtoken != "" {
+		c.SetCookie("xuserid", starUserId, 60*60*24*3, "/", "", false, true) // 3天
+		c.SetCookie("xtoken", xtoken, 60*60*24*3, "/", "", false, true)     // 3天
+	}
+
+	// 调用 setupLogin 设置会话并返回用户信息
+	setupLogin(&user, c)
+}
+
+// StarRegister 注册接口 - 返回 new-api 格式
+func StarRegister(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	var request struct {
+		Email     string `json:"email" binding:"required"`
+		Password  string `json:"password" binding:"required"`
+		EmailCode string `json:"email_code" binding:"required"`
+		Username  string `json:"username,omitempty"` // 可选用户名参数
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	// 调用 Star 后端注册接口
+	response, err := callStarBackendAPI("POST", "u/register", map[string]interface{}{
+		"email":      request.Email,
+		"password":   request.Password,
+		"email_code": request.EmailCode,
+	}, nil)
+
+	if err != nil {
+		common.SysLog(fmt.Sprintf("调用 Star 注册接口失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "注册失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 将 Star 后端的响应转换为 new-api 格式
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 注册成功，如果提供了用户名，则调用更新用户名接口
+			if request.Username != "" && strings.TrimSpace(request.Username) != "" {
+				// 从注册响应中获取 xuserid 和 xtoken
+				var xuserid string
+				var xtoken string
+				if data, ok := response["data"].(map[string]interface{}); ok {
+					if xuseridVal, ok := data["xuserid"]; ok {
+						xuserid = fmt.Sprintf("%v", xuseridVal)
+					}
+					if xtokenVal, ok := data["xtoken"].(string); ok {
+						xtoken = xtokenVal
+					}
+				}
+
+				// 如果获取到了认证信息，调用更新用户名接口
+				if xuserid != "" && xtoken != "" {
+					headers := map[string]string{
+						"xuserid": xuserid,
+						"xtoken":  xtoken,
+					}
+					updateResponse, updateErr := callStarBackendAPI("POST", "u/change_user_info", map[string]interface{}{
+						"change_type": "username",
+						"username":    strings.TrimSpace(request.Username),
+					}, headers)
+
+					if updateErr != nil {
+						common.SysLog(fmt.Sprintf("注册成功后更新用户名失败: %v", updateErr))
+						// 用户名更新失败不影响注册成功，只记录日志
+					} else if updateCode, ok := updateResponse["code"].(float64); ok {
+						if updateCode == 20000 {
+							common.SysLog(fmt.Sprintf("注册成功后成功更新用户名: %s", strings.TrimSpace(request.Username)))
+						} else {
+							updateMsg := ""
+							if msgVal, ok := updateResponse["msg"].(string); ok {
+								updateMsg = msgVal
+							}
+							common.SysLog(fmt.Sprintf("注册成功后更新用户名失败: code=%v, msg=%s", updateCode, updateMsg))
+						}
+					}
+				} else {
+					common.SysLog("注册响应中未找到认证信息，无法更新用户名")
+				}
+			}
+
+			// 成功，转换为 new-api 格式
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "注册成功",
+				"data":    response["data"],
+			})
+		} else {
+			// 失败，转换为 new-api 格式
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": msg,
+			})
+		}
+	} else {
+		// 直接返回原响应
+		c.JSON(http.StatusOK, response)
+	}
+}
+
+// StarSendEmail 发送邮箱验证码接口 - 返回 new-api 格式
+func StarSendEmail(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	var request struct {
+		Email string `json:"email" binding:"required"`
+		Type  string `json:"type_" binding:"required"` // register 或 back_password
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	// 调用 Star 后端发送邮箱验证码接口
+	response, err := callStarBackendAPI("POST", "u/send_email", map[string]interface{}{
+		"email": request.Email,
+		"type_": request.Type,
+	}, nil)
+
+	if err != nil {
+		common.SysLog(fmt.Sprintf("调用 Star 发送邮箱验证码接口失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "发送验证码失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 将 Star 后端的响应转换为 new-api 格式
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 成功，转换为 new-api 格式
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "验证码发送成功",
+			})
+		} else {
+			// 失败，转换为 new-api 格式
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": msg,
+			})
+		}
+	} else {
+		// 直接返回原响应
+		c.JSON(http.StatusOK, response)
+	}
+}
+
+// StarBackPassword 找回密码接口 - 返回 new-api 格式
+func StarBackPassword(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	var request struct {
+		Email     string `json:"email" binding:"required"`
+		Password  string `json:"password" binding:"required"`
+		EmailCode string `json:"email_code" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	// 调用 Star 后端找回密码接口
+	response, err := callStarBackendAPI("POST", "u/back_password", map[string]interface{}{
+		"email":      request.Email,
+		"password":   request.Password,
+		"email_code": request.EmailCode,
+	}, nil)
+
+	if err != nil {
+		common.SysLog(fmt.Sprintf("调用 Star 找回密码接口失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "找回密码失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 将 Star 后端的响应转换为 new-api 格式
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 成功，转换为 new-api 格式
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "密码重置成功",
+			})
+		} else {
+			// 失败，转换为 new-api 格式
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": msg,
+			})
+		}
+	} else {
+		// 直接返回原响应
+		c.JSON(http.StatusOK, response)
+	}
+}
+
+// StarWechatLoginQR 获取微信登录二维码接口 - 返回 new-api 格式
+func StarWechatLoginQR(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	mode := c.Query("mode") // login 或 bind
+	if mode == "" {
+		mode = "login"
+	}
+
+	// 调用 Star 后端获取微信登录二维码接口
+	endpoint := "u/wechat_login_qr"
+	if mode != "" {
+		endpoint += "?mode=" + url.QueryEscape(mode)
+	}
+
+	response, err := callStarBackendAPI("GET", endpoint, nil, nil)
+
+	if err != nil {
+		common.SysLog(fmt.Sprintf("调用 Star 获取微信登录二维码接口失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取二维码失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 将 Star 后端的响应转换为 new-api 格式
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 成功，转换为 new-api 格式
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "",
+				"data":    response["data"],
+			})
+		} else {
+			// 失败，转换为 new-api 格式
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": msg,
+			})
+		}
+	} else {
+		// 直接返回原响应
+		c.JSON(http.StatusOK, response)
+	}
+}
+
+// StarQRLoginStatus 检查微信二维码登录状态接口 - 在后端统一处理登录和绑定流程
+func StarQRLoginStatus(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	ticket := c.Query("ticket")
+	if ticket == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误: ticket 不能为空",
+		})
+		return
+	}
+
+	// 检查是否是绑定场景（用户已登录）
+	id := c.GetInt("id")
+	isBindMode := false
+
+	if id > 0 {
+		// 用户已登录，检查是否是绑定场景
+		var user model.User
+		if err := model.DB.Where("id = ?", id).First(&user).Error; err == nil && user.StarUserId != "" {
+			// 尝试从 cookies 获取 xtoken
+			if cookieXtoken, err := c.Cookie("xtoken"); err == nil && cookieXtoken != "" {
+				isBindMode = true // 用户已登录且有 star_user_id 和 xtoken，这是绑定场景
+			}
+		}
+	}
+
+	// 调用 Star 后端检查微信二维码登录状态接口
+	endpoint := "u/qr_login_status?ticket=" + url.QueryEscape(ticket)
+	response, err := callStarBackendAPI("GET", endpoint, nil, nil)
+
+	if err != nil {
+		common.SysLog(fmt.Sprintf("调用 Star 检查微信二维码登录状态接口失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "检查登录状态失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 检查响应
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 成功，检查返回的数据
+			data, ok := response["data"].(map[string]interface{})
+			if !ok {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "响应数据格式错误",
+				})
+				return
+			}
+
+			// 如果直接返回了登录凭证（老用户），直接处理登录
+			if xuseridVal, ok := data["xuserid"]; ok {
+				xuseridStr := fmt.Sprintf("%v", xuseridVal)
+				xtoken, _ := data["xtoken"].(string)
+				xy_uuid_token, _ := data["xy_uuid_token"].(string)
+
+				if xuseridStr != "" && xtoken != "" {
+					if isBindMode {
+						// 绑定场景：更新当前用户的微信信息
+						handleStarWechatBind(c, id, xuseridStr, xtoken, xy_uuid_token)
+					} else {
+						// 登录场景：处理登录
+						handleStarWechatLogin(c, xuseridStr, xtoken, xy_uuid_token)
+					}
+					return
+				}
+			}
+
+			// 如果有 wechat_temp_token（新用户），返回给前端让前端调用绑定接口
+			if wechatTempToken, ok := data["wechat_temp_token"].(string); ok && wechatTempToken != "" {
+				// 绑定场景：返回 wechat_temp_token 让前端调用绑定接口
+				// 登录场景：自动调用绑定接口创建新用户
+				if isBindMode {
+					// 绑定场景：返回 wechat_temp_token，让前端调用 /u/wechat_bind
+					c.JSON(http.StatusOK, gin.H{
+						"success": true,
+						"message": "",
+						"data":    data, // 包含 wechat_temp_token
+					})
+					return
+				} else {
+					// 登录场景：自动调用绑定接口创建新用户
+					bindRequestBody := map[string]interface{}{
+						"is_bind":          false,
+						"wechat_temp_token": wechatTempToken,
+					}
+
+					// 调用绑定接口
+					bindResponse, err := callStarBackendAPI("POST", "u/wechat_bind", bindRequestBody, nil)
+
+					if err != nil {
+						common.SysLog(fmt.Sprintf("调用 Star 微信绑定接口失败: %v", err))
+						c.JSON(http.StatusOK, gin.H{
+							"success": false,
+							"message": "微信绑定失败: " + err.Error(),
+						})
+						return
+					}
+
+					// 检查绑定响应
+					if bindCode, ok := bindResponse["code"].(float64); ok && bindCode == 20000 {
+						if bindData, ok := bindResponse["data"].(map[string]interface{}); ok {
+							xuseridVal := bindData["xuserid"]
+							xuseridStr := fmt.Sprintf("%v", xuseridVal)
+							xtoken, _ := bindData["xtoken"].(string)
+							xy_uuid_token, _ := bindData["xy_uuid_token"].(string)
+
+							if xuseridStr != "" && xtoken != "" {
+								// 登录场景：处理登录
+								handleStarWechatLogin(c, xuseridStr, xtoken, xy_uuid_token)
+								return
+							}
+						}
+					}
+
+					// 绑定失败
+					msg := ""
+					if msgVal, ok := bindResponse["msg"].(string); ok {
+						msg = msgVal
+					}
+					c.JSON(http.StatusOK, gin.H{
+						"success": false,
+						"message": msg,
+					})
+					return
+				}
+			}
+
+			// 未扫码或等待确认，返回原始数据让前端继续轮询
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "",
+				"data":    data,
+			})
+		} else {
+			// 失败，转换为 new-api 格式
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": msg,
+			})
+		}
+	} else {
+		// 直接返回原响应
+		c.JSON(http.StatusOK, response)
+	}
+}
+
+// handleStarWechatBind 处理 Star 微信绑定（更新已登录用户的微信信息）
+func handleStarWechatBind(c *gin.Context, userId int, starUserId, xtoken, xy_uuid_token string) {
+	// 获取 Star 用户信息
+	var starUserInfo *StarUserInfo
+	if starUserId != "" && xtoken != "" {
+		success, info, err := callGetUserInfoAPI(starUserId, xtoken)
+		if err != nil {
+			common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
+		} else if success && info != nil {
+			starUserInfo = info
+		}
+	}
+
+	// 查找当前用户
+	var user model.User
+	if err := model.DB.Where("id = ?", userId).First(&user).Error; err != nil {
+		common.SysLog(fmt.Sprintf("查找用户失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户不存在",
+		})
+		return
+	}
+
+	// 更新用户的微信信息
+	updates := map[string]interface{}{}
+
+	if starUserInfo != nil && starUserInfo.WechatOpenid != "" {
+		updates["wechat_id"] = starUserInfo.WechatOpenid
+	}
+
+	// 更新 star_user_id（如果还没有）
+	if user.StarUserId == "" && starUserId != "" {
+		updates["star_user_id"] = starUserId
+	}
+
+	if len(updates) > 0 {
+		if err := model.DB.Model(&user).Updates(updates).Error; err != nil {
+			common.SysLog(fmt.Sprintf("更新用户微信信息失败: %v", err))
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "更新微信信息失败",
+			})
+			return
+		}
+		// 重新获取用户信息
+		model.DB.Where("id = ?", userId).First(&user)
+	}
+
+	// 更新 Star 认证 cookies
+	if starUserId != "" && xtoken != "" {
+		c.SetCookie("xuserid", starUserId, 60*60*24*3, "/", "", false, true) // 3天
+		c.SetCookie("xtoken", xtoken, 60*60*24*3, "/", "", false, true)     // 3天
+		if xy_uuid_token != "" {
+			c.SetCookie("xy_uuid_token", xy_uuid_token, 60*60*24*90, "/", "", false, true) // 90天
+		}
+	}
+
+	// 返回当前用户信息（绑定成功）
+	setupLogin(&user, c)
+}
+
+// handleStarWechatLogin 处理 Star 微信登录（创建或查找用户，设置 session）
+func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token string) {
+	// 获取 Star 用户信息
+	var starUserInfo *StarUserInfo
+	if starUserId != "" && xtoken != "" {
+		success, info, err := callGetUserInfoAPI(starUserId, xtoken)
+		if err != nil {
+			common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
+		} else if success && info != nil {
+			starUserInfo = info
+		}
+	}
+
+	// 查找或创建用户
+	var user model.User
+
+	// 使用 star_user_id 查找用户
+	err := model.DB.Where("star_user_id = ?", starUserId).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 用户不存在，创建新用户
+			defaultPassword, err := common.GenerateRandomCharsKey(32)
+			if err != nil {
+				common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "系统错误，请稍后重试",
+				})
+				return
+			}
+
+			newUser := model.User{
+				Password:    defaultPassword,
+				Role:        common.RoleCommonUser,
+				Status:      common.UserStatusEnabled,
+				StarUserId:  starUserId,
+			}
+
+			// 使用 Star 用户信息
+			if starUserInfo != nil {
+				if starUserInfo.Username != "" {
+					newUser.Username = starUserInfo.Username
+					newUser.DisplayName = starUserInfo.Username
+				} else {
+					newUser.Username = "wechat_user_" + starUserId
+					newUser.DisplayName = "微信用户"
+				}
+				if starUserInfo.Email != "" {
+					newUser.Email = starUserInfo.Email
+				}
+				if starUserInfo.WechatOpenid != "" {
+					newUser.WeChatId = starUserInfo.WechatOpenid
+				}
+				if starUserInfo.Status == 0 {
+					newUser.Status = common.UserStatusDisabled
+				}
+			} else {
+				newUser.Username = "wechat_user_" + starUserId
+				newUser.DisplayName = "微信用户"
+			}
+
+			// 检查是否是第一个绑定的 star 用户
+			var count int64
+			err = model.DB.Model(&model.User{}).Where("star_user_id != ? AND star_user_id != ?", "", "0").Count(&count).Error
+			if err != nil {
+				common.SysLog(fmt.Sprintf("检查 star 用户数量失败: %v", err))
+			} else {
+				if count == 0 {
+					newUser.Role = common.RoleRootUser
+					common.SysLog(fmt.Sprintf("第一个 Star 用户 %s (star_user_id: %s) 被设置为 root 用户", newUser.Username, starUserId))
+				}
+			}
+
+			// 插入用户
+			if err := newUser.Insert(0); err != nil {
+				common.SysLog(fmt.Sprintf("自动注册用户失败: %v", err))
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "自动注册失败，请稍后重试",
+				})
+				return
+			}
+
+			// 重新获取创建的用户
+			err = model.DB.Where("star_user_id = ?", starUserId).First(&user).Error
+			if err != nil {
+				common.SysLog(fmt.Sprintf("获取新创建用户失败: %v", err))
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "用户创建成功但登录失败，请稍后重试",
+				})
+				return
+			}
+		} else {
+			common.SysLog(fmt.Sprintf("查询用户失败: %v", err))
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "数据库错误，请稍后重试",
+			})
+			return
+		}
+	}
+
+	// 检查用户状态
+	if user.Status != common.UserStatusEnabled {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户已被封禁",
+		})
+		return
+	}
+
+	// 更新用户信息（如果有 Star 用户信息）
+	if starUserInfo != nil {
+		updates := map[string]interface{}{}
+
+		if starUserInfo.Username != "" && starUserInfo.Username != user.Username {
+			updates["username"] = starUserInfo.Username
+			updates["display_name"] = starUserInfo.Username
+		}
+
+		if starUserInfo.Email != "" && starUserInfo.Email != user.Email {
+			updates["email"] = starUserInfo.Email
+		}
+
+		if starUserInfo.WechatOpenid != "" && starUserInfo.WechatOpenid != user.WeChatId {
+			updates["wechat_id"] = starUserInfo.WechatOpenid
+		}
+
+		if starUserInfo.Status == 0 && user.Status == common.UserStatusEnabled {
+			updates["status"] = common.UserStatusDisabled
+		} else if starUserInfo.Status == 1 && user.Status == common.UserStatusDisabled {
+			updates["status"] = common.UserStatusEnabled
+		}
+
+		if len(updates) > 0 {
+			if err := model.DB.Model(&user).Updates(updates).Error; err != nil {
+				common.SysLog(fmt.Sprintf("更新用户信息失败: %v", err))
+			} else {
+				model.DB.Where("id = ?", user.Id).First(&user)
+			}
+		}
+	}
+
+	// 设置 Star 认证 cookies
+	if starUserId != "" && xtoken != "" {
+		c.SetCookie("xuserid", starUserId, 60*60*24*3, "/", "", false, true) // 3天
+		c.SetCookie("xtoken", xtoken, 60*60*24*3, "/", "", false, true)     // 3天
+		if xy_uuid_token != "" {
+			c.SetCookie("xy_uuid_token", xy_uuid_token, 60*60*24*90, "/", "", false, true) // 90天
+		}
+	}
+
+	// 检查是否启用2FA
+	if model.IsTwoFAEnabled(user.Id) {
+		session := sessions.Default(c)
+		session.Set("pending_username", user.Username)
+		session.Set("pending_user_id", user.Id)
+		err := session.Save()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "无法保存会话信息，请重试",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "请输入两步验证码",
+			"data": map[string]interface{}{
+				"require_2fa": true,
+			},
+		})
+		return
+	}
+
+	// 调用 setupLogin 设置会话并返回用户信息
+	setupLogin(&user, c)
+}
+
+// StarWechatBind 微信绑定/登录接口 - 返回 new-api 格式
+func StarWechatBind(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	var request struct {
+		IsBind         bool   `json:"is_bind"`
+		WechatTempToken string `json:"wechat_temp_token" binding:"required"`
+		Xuserid        *int   `json:"xuserid,omitempty"`
+		Xtoken         string `json:"xtoken,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	// 如果是绑定场景，需要用户已登录
+	var userId int
+	if request.IsBind {
+		userId = c.GetInt("id")
+		if userId == 0 {
+			// 尝试从 session 获取
+			session := sessions.Default(c)
+			if id := session.Get("id"); id != nil {
+				if idInt, ok := id.(int); ok {
+					userId = idInt
+				}
+			}
+		}
+		if userId == 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "请先登录",
+			})
+			return
+		}
+	}
+
+	requestBody := map[string]interface{}{
+		"is_bind":          request.IsBind,
+		"wechat_temp_token": request.WechatTempToken,
+	}
+	if request.Xuserid != nil {
+		requestBody["xuserid"] = *request.Xuserid
+	}
+	if request.Xtoken != "" {
+		requestBody["xtoken"] = request.Xtoken
+	}
+
+	// 调用 Star 后端微信绑定接口
+	response, err := callStarBackendAPI("POST", "u/wechat_bind", requestBody, nil)
+
+	if err != nil {
+		common.SysLog(fmt.Sprintf("调用 Star 微信绑定接口失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "微信绑定失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 将 Star 后端的响应转换为 new-api 格式
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 成功，检查是否是绑定场景
+			if request.IsBind && userId > 0 {
+				// 绑定场景：更新本地数据库的微信信息
+				if bindData, ok := response["data"].(map[string]interface{}); ok {
+					xuseridVal := bindData["xuserid"]
+					xuseridStr := fmt.Sprintf("%v", xuseridVal)
+					xtoken, _ := bindData["xtoken"].(string)
+					xy_uuid_token, _ := bindData["xy_uuid_token"].(string)
+
+					if xuseridStr != "" && xtoken != "" {
+						// 更新当前用户的微信信息
+						handleStarWechatBind(c, userId, xuseridStr, xtoken, xy_uuid_token)
+						return
+					}
+				}
+			}
+
+			// 登录场景或绑定场景但不需要更新本地数据库：直接返回
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "",
+				"data":    response["data"],
+			})
+		} else {
+			// 失败，转换为 new-api 格式
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": msg,
+			})
+		}
+	} else {
+		// 直接返回原响应
+		c.JSON(http.StatusOK, response)
+	}
+}
+
+// StarGetUserInfo 获取 Star 用户信息接口 - 返回 new-api 格式
+func StarGetUserInfo(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	// 优先从 session 获取当前登录用户
+	id := c.GetInt("id")
+	var xuserid string
+	var xtoken string
+
+	if id > 0 {
+		// 从数据库获取用户的 star_user_id
+		var user model.User
+		if err := model.DB.Where("id = ?", id).First(&user).Error; err == nil && user.StarUserId != "" {
+			xuserid = user.StarUserId
+			// 尝试从 cookies 获取 xtoken
+			if cookieXtoken, err := c.Cookie("xtoken"); err == nil {
+				xtoken = cookieXtoken
+			}
+		}
+	}
+
+	// 如果 session 中没有，尝试从请求头获取
+	if xuserid == "" || xtoken == "" {
+		xuserid = c.GetHeader("xuserid")
+		xtoken = c.GetHeader("xtoken")
+	}
+
+	// 如果请求头没有，尝试从 cookies 获取
+	if xuserid == "" || xtoken == "" {
+		if cookieXuserid, err := c.Cookie("xuserid"); err == nil {
+			xuserid = cookieXuserid
+		}
+		if cookieXtoken, err := c.Cookie("xtoken"); err == nil {
+			xtoken = cookieXtoken
+		}
+	}
+
+	if xuserid == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户未绑定 Star 账户，请先登录 Star 系统",
+		})
+		return
+	}
+	
+	if xtoken == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 认证 token 已过期，请重新登录",
+		})
+		return
+	}
+
+	// 调用 Star 后端获取用户信息
+	success, starUserInfo, err := callGetUserInfoAPI(xuserid, xtoken)
+	if err != nil {
+		common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取用户信息失败: " + err.Error(),
+		})
+		return
+	}
+
+	if !success || starUserInfo == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取用户信息失败",
+		})
+		return
+	}
+
+	// 转换为 new-api 格式
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    starUserInfo,
+	})
+}
+
+// StarChangeUserInfo 修改 Star 用户信息接口 - 返回 new-api 格式
+func StarChangeUserInfo(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	// 优先从 session 获取当前登录用户
+	id := c.GetInt("id")
+	var xuserid string
+	var xtoken string
+
+	if id > 0 {
+		// 从数据库获取用户的 star_user_id
+		var user model.User
+		if err := model.DB.Where("id = ?", id).First(&user).Error; err == nil && user.StarUserId != "" {
+			xuserid = user.StarUserId
+			// 尝试从 cookies 获取 xtoken
+			if cookieXtoken, err := c.Cookie("xtoken"); err == nil {
+				xtoken = cookieXtoken
+			}
+		}
+	}
+
+	// 如果 session 中没有，尝试从请求头获取
+	if xuserid == "" || xtoken == "" {
+		xuserid = c.GetHeader("xuserid")
+		xtoken = c.GetHeader("xtoken")
+	}
+
+	// 如果请求头没有，尝试从 cookies 获取
+	if xuserid == "" || xtoken == "" {
+		if cookieXuserid, err := c.Cookie("xuserid"); err == nil {
+			xuserid = cookieXuserid
+		}
+		if cookieXtoken, err := c.Cookie("xtoken"); err == nil {
+			xtoken = cookieXtoken
+		}
+	}
+
+	if xuserid == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户未绑定 Star 账户，请先登录 Star 系统",
+		})
+		return
+	}
+	
+	if xtoken == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 认证 token 已过期，请重新登录",
+		})
+		return
+	}
+
+	var request struct {
+		ChangeType string `json:"change_type" binding:"required"`
+		Username   string `json:"username,omitempty"`
+		Email      string `json:"email,omitempty"`
+		EmailCode  string `json:"email_code,omitempty"`
+		Tel        string `json:"tel,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	// 构建请求体
+	requestBody := map[string]interface{}{
+		"change_type": request.ChangeType,
+	}
+	if request.Username != "" {
+		requestBody["username"] = request.Username
+	}
+	if request.Email != "" {
+		requestBody["email"] = request.Email
+	}
+	if request.EmailCode != "" {
+		requestBody["email_code"] = request.EmailCode
+	}
+	if request.Tel != "" {
+		requestBody["tel"] = request.Tel
+	}
+
+	// 调用 Star 后端修改用户信息接口
+	headers := map[string]string{
+		"xuserid": xuserid,
+		"xtoken":  xtoken,
+	}
+	response, err := callStarBackendAPI("POST", "u/change_user_info", requestBody, headers)
+
+	if err != nil {
+		common.SysLog(fmt.Sprintf("调用 Star 修改用户信息接口失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "修改用户信息失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 将 Star 后端的响应转换为 new-api 格式
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 成功，同步更新本地数据库
+			if id > 0 {
+				// 重新获取 Star 用户信息以同步到本地数据库
+				success, starUserInfo, err := callGetUserInfoAPI(xuserid, xtoken)
+				if err == nil && success && starUserInfo != nil {
+					// 从数据库获取用户
+					var user model.User
+					if err := model.DB.Where("id = ?", id).First(&user).Error; err == nil {
+						updates := map[string]interface{}{}
+						
+						// 更新用户名（如果 Star 中的用户名与本地不同）
+						if starUserInfo.Username != "" && starUserInfo.Username != user.Username {
+							updates["username"] = starUserInfo.Username
+							updates["display_name"] = starUserInfo.Username
+							common.SysLog(fmt.Sprintf("同步更新用户 %d 的用户名: %s -> %s", user.Id, user.Username, starUserInfo.Username))
+						}
+						
+						// 更新邮箱（如果 Star 中的邮箱与本地不同）
+						if starUserInfo.Email != "" && starUserInfo.Email != user.Email {
+							updates["email"] = starUserInfo.Email
+							common.SysLog(fmt.Sprintf("同步更新用户 %d 的邮箱: %s -> %s", user.Id, user.Email, starUserInfo.Email))
+						}
+						
+						// 如果有更新，执行更新操作
+						if len(updates) > 0 {
+							if err := model.DB.Model(&user).Updates(updates).Error; err != nil {
+								common.SysLog(fmt.Sprintf("同步更新用户信息到数据库失败: %v", err))
+							} else {
+								common.SysLog(fmt.Sprintf("成功同步更新用户 %d 的信息到数据库", user.Id))
+							}
+						}
+					}
+				} else {
+					common.SysLog(fmt.Sprintf("获取 Star 用户信息失败，无法同步到数据库: %v", err))
+				}
+			}
+			
+			// 转换为 new-api 格式
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": msg,
+				"data":    response["data"],
+			})
+		} else {
+			// 失败，转换为 new-api 格式
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			common.SysLog(fmt.Sprintf("Star 修改用户信息失败: code=%v, msg=%s", code, msg))
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": msg,
+			})
+		}
+	} else {
+		// 直接返回原响应
+		common.SysLog(fmt.Sprintf("Star 修改用户信息响应格式异常: %v", response))
+		c.JSON(http.StatusOK, response)
+	}
+}
+
 // setup session & cookies and then return user info
 func setupLogin(user *model.User, c *gin.Context) {
 	session := sessions.Default(c)
@@ -107,6 +1745,8 @@ func setupLogin(user *model.User, c *gin.Context) {
 		})
 		return
 	}
+	// 返回用户数据（不包含敏感信息如密码）
+	// 注意：不要返回 Password 和 OriginalPassword 字段
 	cleanUser := model.User{
 		Id:          user.Id,
 		Username:    user.Username,
@@ -114,6 +1754,24 @@ func setupLogin(user *model.User, c *gin.Context) {
 		Role:        user.Role,
 		Status:      user.Status,
 		Group:       user.Group,
+		Email:       user.Email,
+		Quota:       user.Quota,
+		UsedQuota:   user.UsedQuota,
+		RequestCount: user.RequestCount,
+		AffCode:     user.AffCode,
+		AffCount:    user.AffCount,
+		AffQuota:    user.AffQuota,
+		AffHistoryQuota: user.AffHistoryQuota,
+		InviterId:   user.InviterId,
+		StarUserId:  user.StarUserId,
+		WeChatId:    user.WeChatId,
+		GitHubId:    user.GitHubId,
+		DiscordId:   user.DiscordId,
+		OidcId:      user.OidcId,
+		TelegramId:  user.TelegramId,
+		LinuxDOId:   user.LinuxDOId,
+		Setting:     user.Setting,
+		StripeCustomer: user.StripeCustomer,
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "",
@@ -412,6 +2070,7 @@ func GetSelf(c *gin.Context) {
 		"oidc_id":           user.OidcId,
 		"wechat_id":         user.WeChatId,
 		"telegram_id":       user.TelegramId,
+		"star_user_id":      user.StarUserId,
 		"group":             user.Group,
 		"quota":             user.Quota,
 		"used_quota":        user.UsedQuota,
