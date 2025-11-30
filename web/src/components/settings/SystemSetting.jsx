@@ -76,9 +76,6 @@ const SystemSetting = () => {
     WeChatServerAddress: '',
     WeChatServerToken: '',
     WeChatAccountQRCodeImageURL: '',
-    WeChatAppID: '',
-    WeChatAppSecret: '',
-    WeChatCallbackURL: '',
     TurnstileCheckEnabled: '',
     TurnstileSiteKey: '',
     TurnstileSecretKey: '',
@@ -451,36 +448,6 @@ const SystemSetting = () => {
       options.push({
         key: 'WeChatServerToken',
         value: inputs.WeChatServerToken,
-      });
-    }
-
-    if (options.length > 0) {
-      await updateOptions(options);
-    }
-  };
-
-  const submitWeChatQR = async () => {
-    const options = [];
-
-    if (originInputs['WeChatAppID'] !== inputs.WeChatAppID) {
-      options.push({
-        key: 'WeChatAppID',
-        value: inputs.WeChatAppID,
-      });
-    }
-    if (
-      originInputs['WeChatAppSecret'] !== inputs.WeChatAppSecret &&
-      inputs.WeChatAppSecret !== ''
-    ) {
-      options.push({
-        key: 'WeChatAppSecret',
-        value: inputs.WeChatAppSecret,
-      });
-    }
-    if (originInputs['WeChatCallbackURL'] !== inputs.WeChatCallbackURL) {
-      options.push({
-        key: 'WeChatCallbackURL',
-        value: removeTrailingSlash(inputs.WeChatCallbackURL),
       });
     }
 
@@ -1592,50 +1559,6 @@ const SystemSetting = () => {
                   </Row>
                   <Button onClick={submitWeChat}>
                     {t('保存 WeChat Server 设置')}
-                  </Button>
-                </Form.Section>
-              </Card>
-
-              <Card>
-                <Form.Section text={t('配置微信二维码登录')}>
-                  <Text>
-                    {t(
-                      '配置微信公众平台二维码登录，用户可通过扫描二维码进行登录。需要配置微信公众平台的 AppID、AppSecret 和服务器回调地址。',
-                    )}
-                  </Text>
-                  <Row
-                    gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
-                  >
-                    <Col xs={24} sm={24} md={8} lg={8} xl={8}>
-                      <Form.Input
-                        field='WeChatAppID'
-                        label={t('微信 AppID')}
-                        placeholder={t('微信公众平台的 AppID')}
-                        extraText={t('在微信公众平台 -> 开发 -> 基本配置中获取')}
-                      />
-                    </Col>
-                    <Col xs={24} sm={24} md={8} lg={8} xl={8}>
-                      <Form.Input
-                        field='WeChatAppSecret'
-                        label={t('微信 AppSecret')}
-                        type='password'
-                        placeholder={t('敏感信息不会发送到前端显示')}
-                        extraText={t('在微信公众平台 -> 开发 -> 基本配置中获取')}
-                      />
-                    </Col>
-                    <Col xs={24} sm={24} md={8} lg={8} xl={8}>
-                      <Form.Input
-                        field='WeChatCallbackURL'
-                        label={t('微信服务器回调地址')}
-                        placeholder='https://yourdomain.com/api/oauth/wechat/qrcode/callback'
-                        extraText={t(
-                          '需要在微信公众平台 -> 开发 -> 基本配置 -> 服务器配置中配置此地址',
-                        )}
-                      />
-                    </Col>
-                  </Row>
-                  <Button onClick={submitWeChatQR}>
-                    {t('保存微信二维码登录设置')}
                   </Button>
                 </Form.Section>
               </Card>

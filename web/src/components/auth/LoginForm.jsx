@@ -36,9 +36,6 @@ import {
   prepareCredentialRequestOptions,
   buildAssertionResult,
   isPasskeySupported,
-  getWeChatQRCode,
-  checkWeChatQRStatus,
-  wechatQRBind,
 } from '../../helpers';
 import Turnstile from 'react-turnstile';
 import { Button, Card, Checkbox, Divider, Form, Icon, Modal } from '@douyinfe/semi-ui';
@@ -77,16 +74,8 @@ const LoginForm = () => {
   const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [showWeChatLoginModal, setShowWeChatLoginModal] = useState(false);
-  const [showWeChatQRLoginModal, setShowWeChatQRLoginModal] = useState(false);
-  const [showWeChatMethodSelect, setShowWeChatMethodSelect] = useState(false);
   const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [wechatLoading, setWechatLoading] = useState(false);
-  const [wechatQRCodeUrl, setWechatQRCodeUrl] = useState('');
-  const [wechatQRTicket, setWechatQRTicket] = useState('');
-  const [wechatQRStatus, setWechatQRStatus] = useState('loading'); // loading, active, expired, scanned
-  const [wechatQRPolling, setWechatQRPolling] = useState(false);
-  const wechatQRPollingIntervalRef = useRef(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [discordLoading, setDiscordLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
@@ -149,159 +138,15 @@ const LoginForm = () => {
     }
   }, []);
 
-  // 检测暗色模式
-  useEffect(() => {
-    const checkDarkMode = () => {
-      const isDark = document.documentElement.classList.contains('dark') || 
-                    window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDarkMode(isDark);
-    };
-    
-    checkDarkMode();
-    
-    // 监听暗色模式变化
-    const observer = new MutationObserver(checkDarkMode);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-    
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    mediaQuery.addEventListener('change', checkDarkMode);
-    
-    return () => {
-      observer.disconnect();
-      mediaQuery.removeEventListener('change', checkDarkMode);
-    };
-  }, []);
-
   const onWeChatLoginClicked = () => {
     if ((hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms) {
       showInfo(t('请先阅读并同意用户协议和隐私政策'));
       return;
     }
     setWechatLoading(true);
-    // 如果两种方式都配置了，显示选择界面
-    // 否则直接使用已配置的方式
-    const hasQRCode = status.wechat_app_id;
-    const hasVerificationCode = status.wechat_server_address;
-    
-    if (hasQRCode && hasVerificationCode) {
-      // 两种方式都配置了，显示选择界面
-      setShowWeChatMethodSelect(true);
-    } else if (hasQRCode) {
-      // 只配置了二维码登录
-      setShowWeChatQRLoginModal(true);
-      fetchWeChatQRCode();
-    } else if (hasVerificationCode) {
-      // 只配置了验证码登录
-      setShowWeChatLoginModal(true);
-    } else {
-      showError(t('微信登录未配置，请联系管理员'));
-    }
+    setShowWeChatLoginModal(true);
     setWechatLoading(false);
   };
-
-  // 获取微信二维码
-  const fetchWeChatQRCode = async () => {
-    setWechatQRStatus('loading');
-    setWechatQRCodeUrl('');
-    setWechatQRTicket('');
-
-    // 清除之前的轮询
-    if (wechatQRPollingIntervalRef.current) {
-      clearInterval(wechatQRPollingIntervalRef.current);
-      wechatQRPollingIntervalRef.current = null;
-    }
-
-    try {
-      const data = await getWeChatQRCode();
-      setWechatQRCodeUrl(data.qr_code_url);
-      setWechatQRTicket(data.ticket);
-      setWechatQRStatus('active');
-      startWeChatQRPolling(data.ticket);
-    } catch (error) {
-      showError(error.message || '获取二维码失败');
-      setWechatQRStatus('expired');
-    }
-  };
-
-  // 开始轮询检查二维码状态
-  const startWeChatQRPolling = (ticket) => {
-    if (wechatQRPollingIntervalRef.current) {
-      clearInterval(wechatQRPollingIntervalRef.current);
-    }
-
-    setWechatQRPolling(true);
-    wechatQRPollingIntervalRef.current = setInterval(async () => {
-      try {
-        const statusData = await checkWeChatQRStatus(ticket);
-        if (statusData) {
-          setWechatQRStatus('scanned');
-          // 清除轮询
-          if (wechatQRPollingIntervalRef.current) {
-            clearInterval(wechatQRPollingIntervalRef.current);
-            wechatQRPollingIntervalRef.current = null;
-          }
-
-          if (statusData.user_id) {
-            // 老用户，后端已经设置了 session，获取用户信息并登录
-            try {
-              const res = await API.get('/api/user/self');
-              const { success, data: userData } = res.data;
-              if (success) {
-                userDispatch({ type: 'login', payload: userData });
-                setUserData(userData);
-                updateAPI();
-                showSuccess('登录成功！');
-                setShowWeChatQRLoginModal(false);
-                navigate('/console');
-              } else {
-                // 如果获取失败，刷新页面
-                window.location.href = '/console';
-              }
-            } catch (error) {
-              // 如果获取失败，刷新页面
-              window.location.href = '/console';
-            }
-          } else if (statusData.wechat_temp_token) {
-            // 新用户，需要绑定
-            try {
-              const data = await wechatQRBind(statusData.wechat_temp_token, false);
-              userDispatch({ type: 'login', payload: data });
-              setUserData(data);
-              updateAPI();
-              showSuccess('登录成功！');
-              setShowWeChatQRLoginModal(false);
-              navigate('/console');
-            } catch (error) {
-              showError(error.message || '登录失败');
-              setWechatQRStatus('expired');
-            }
-          }
-        }
-      } catch (error) {
-        if (error.message?.includes('二维码已过期')) {
-          setWechatQRStatus('expired');
-          if (wechatQRPollingIntervalRef.current) {
-            clearInterval(wechatQRPollingIntervalRef.current);
-            wechatQRPollingIntervalRef.current = null;
-          }
-        }
-      } finally {
-        setWechatQRPolling(false);
-      }
-    }, 2000); // 每2秒检查一次
-  };
-
-  // 清理轮询
-  useEffect(() => {
-    return () => {
-      if (wechatQRPollingIntervalRef.current) {
-        clearInterval(wechatQRPollingIntervalRef.current);
-      }
-    };
-  }, []);
 
   const onSubmitWeChatVerificationCode = async () => {
     if (turnstileEnabled && turnstileToken === '') {
@@ -956,28 +801,26 @@ const LoginForm = () => {
                     </Divider>
 
                     <div className='mt-4 text-center'>
-                      <button
-                        type='button'
-                        className={`w-full h-12 rounded-full border transition-colors ${
-                          isDarkMode
-                            ? 'border-gray-600 text-gray-200 hover:bg-gray-800 hover:border-gray-500'
-                            : 'border-gray-300 text-gray-900 hover:bg-gray-50'
-                        } ${otherLoginOptionsLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        onClick={handleOtherLoginOptionsClick}
-                        disabled={otherLoginOptionsLoading}
+                      <Button
+                        theme='outline'
+                        type='tertiary'
+                        className='w-full !rounded-full transition-colors auth-page-button-outline'
                         style={{
+                          borderColor: '#d1d5db',
+                          color: '#111827',
                           backgroundColor: 'transparent',
                         }}
+                        onClick={handleOtherLoginOptionsClick}
+                        loading={otherLoginOptionsLoading}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f9fafb';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
                       >
-                        {otherLoginOptionsLoading ? (
-                          <span className='flex items-center justify-center'>
-                            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2'></div>
-                            {t('其他登录选项')}
-                          </span>
-                        ) : (
-                          t('其他登录选项')
-                        )}
-                      </button>
+                        {t('其他登录选项')}
+                      </Button>
                     </div>
                   </>
                 )}
@@ -1002,11 +845,11 @@ const LoginForm = () => {
     );
   };
 
-  // 微信登录模态框（验证码方式）
+  // 微信登录模态框
   const renderWeChatLoginModal = () => {
     return (
       <Modal
-        title={t('微信验证码登录')}
+        title={t('微信扫码登录')}
         visible={showWeChatLoginModal}
         maskClosable={true}
         onOk={onSubmitWeChatVerificationCode}
@@ -1016,40 +859,6 @@ const LoginForm = () => {
         okButtonProps={{
           loading: wechatCodeSubmitLoading,
         }}
-        footer={
-          status.wechat_app_id ? (
-            <div className='flex justify-between items-center'>
-              <Button
-                theme='borderless'
-                type='tertiary'
-                onClick={() => {
-                  setShowWeChatLoginModal(false);
-                  setShowWeChatQRLoginModal(true);
-                  fetchWeChatQRCode();
-                }}
-              >
-                {t('使用二维码登录')}
-              </Button>
-              <div>
-                <Button
-                  theme='borderless'
-                  type='tertiary'
-                  onClick={() => setShowWeChatLoginModal(false)}
-                >
-                  {t('取消')}
-                </Button>
-                <Button
-                  theme='solid'
-                  type='primary'
-                  onClick={onSubmitWeChatVerificationCode}
-                  loading={wechatCodeSubmitLoading}
-                >
-                  {t('登录')}
-                </Button>
-              </div>
-            </div>
-          ) : undefined
-        }
       >
         <div className='flex flex-col items-center'>
           <img src={status.wechat_qrcode} alt='微信二维码' className='mb-4' />
@@ -1072,191 +881,6 @@ const LoginForm = () => {
             }
           />
         </Form>
-      </Modal>
-    );
-  };
-
-  // 微信二维码登录模态框
-  const renderWeChatQRLoginModal = () => {
-    return (
-      <Modal
-        title={t('微信扫码登录')}
-        visible={showWeChatQRLoginModal}
-        maskClosable={true}
-        onCancel={() => {
-          setShowWeChatQRLoginModal(false);
-          if (wechatQRPollingIntervalRef.current) {
-            clearInterval(wechatQRPollingIntervalRef.current);
-            wechatQRPollingIntervalRef.current = null;
-          }
-        }}
-        footer={
-          status.wechat_server_address ? (
-            <div className='text-center'>
-              <Button
-                theme='borderless'
-                type='tertiary'
-                onClick={() => {
-                  setShowWeChatQRLoginModal(false);
-                  if (wechatQRPollingIntervalRef.current) {
-                    clearInterval(wechatQRPollingIntervalRef.current);
-                    wechatQRPollingIntervalRef.current = null;
-                  }
-                  setShowWeChatLoginModal(true);
-                }}
-              >
-                {t('使用验证码登录')}
-              </Button>
-            </div>
-          ) : null
-        }
-        centered={true}
-        width={400}
-      >
-        <div className='flex flex-col items-center py-4'>
-          <div className='relative mb-4'>
-            {wechatQRStatus === 'loading' && (
-              <div className='w-48 h-48 flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg'>
-                <div className='text-center'>
-                  <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto'></div>
-                  <p className='text-sm text-gray-500 mt-2'>生成二维码中...</p>
-                </div>
-              </div>
-            )}
-            {wechatQRStatus === 'active' && (
-              <div className='relative'>
-                <img
-                  src={wechatQRCodeUrl}
-                  alt='微信登录二维码'
-                  className='w-48 h-48 border rounded-lg'
-                />
-                {wechatQRPolling && (
-                  <div className='absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg'>
-                    <div className='text-center text-white'>
-                      <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto'></div>
-                      <p className='text-sm mt-2'>登录中...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            {wechatQRStatus === 'scanned' && (
-              <div className='w-48 h-48 flex items-center justify-center bg-green-50 border-2 border-green-300 rounded-lg'>
-                <div className='text-center'>
-                  <div className='w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2'>
-                    <svg
-                      className='w-6 h-6 text-white'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth='2'
-                        d='M5 13l4 4L19 7'
-                      />
-                    </svg>
-                  </div>
-                  <p className='text-sm text-green-600'>扫码成功</p>
-                  <p className='text-xs text-green-500'>正在登录中...</p>
-                </div>
-              </div>
-            )}
-            {wechatQRStatus === 'expired' && (
-              <div className='w-48 h-48 flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg'>
-                <div className='text-center'>
-                  <p className='text-sm text-gray-500 mb-2'>二维码已过期</p>
-                  <Button
-                    size='small'
-                    theme='solid'
-                    onClick={fetchWeChatQRCode}
-                  >
-                    刷新二维码
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className='text-center space-y-2'>
-            <p className='text-sm text-gray-600'>
-              {wechatQRStatus === 'active'
-                ? '使用微信扫描上方二维码即可登录'
-                : wechatQRStatus === 'expired'
-                  ? '二维码已过期，请刷新后重试'
-                  : '正在生成二维码...'}
-            </p>
-            {wechatQRStatus === 'active' && (
-              <Button
-                size='small'
-                theme='borderless'
-                onClick={fetchWeChatQRCode}
-              >
-                刷新二维码
-              </Button>
-            )}
-          </div>
-        </div>
-      </Modal>
-    );
-  };
-
-  // 微信登录方式选择模态框
-  const renderWeChatMethodSelectModal = () => {
-    return (
-      <Modal
-        title={t('选择微信登录方式')}
-        visible={showWeChatMethodSelect}
-        maskClosable={true}
-        onCancel={() => setShowWeChatMethodSelect(false)}
-        footer={null}
-        centered={true}
-        width={400}
-      >
-        <div className='flex flex-col space-y-3 py-4'>
-          {status.wechat_app_id && (
-            <Button
-              theme='solid'
-              type='primary'
-              className='w-full h-12'
-              onClick={() => {
-                setShowWeChatMethodSelect(false);
-                setShowWeChatQRLoginModal(true);
-                fetchWeChatQRCode();
-              }}
-            >
-              <div className='flex items-center justify-center'>
-                <Icon svg={<WeChatIcon />} style={{ color: '#07C160', marginRight: '8px' }} />
-                <span>{t('二维码登录')}</span>
-              </div>
-            </Button>
-          )}
-          {status.wechat_server_address && (
-            <Button
-              theme='outline'
-              type='tertiary'
-              className='w-full h-12'
-              onClick={() => {
-                setShowWeChatMethodSelect(false);
-                setShowWeChatLoginModal(true);
-              }}
-            >
-              <div className='flex items-center justify-center'>
-                <Icon svg={<WeChatIcon />} style={{ color: '#07C160', marginRight: '8px' }} />
-                <span>{t('验证码登录')}</span>
-              </div>
-            </Button>
-          )}
-          <Button
-            theme='borderless'
-            type='tertiary'
-            className='w-full'
-            onClick={() => setShowWeChatMethodSelect(false)}
-          >
-            {t('取消')}
-          </Button>
-        </div>
       </Modal>
     );
   };
@@ -1315,8 +939,6 @@ const LoginForm = () => {
           ? renderEmailLoginForm()
           : renderOAuthOptions()}
         {renderWeChatLoginModal()}
-        {renderWeChatQRLoginModal()}
-        {renderWeChatMethodSelectModal()}
         {render2FAModal()}
 
         {turnstileEnabled && (
