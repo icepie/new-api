@@ -419,10 +419,10 @@ const StarLoginForm = () => {
           {loginMethod === 'wechat' && (
             <div className="space-y-4">
               <div className="text-center">
-                <Text className="text-gray-600 dark:text-gray-400 mb-6 text-sm sm:text-base max-w-xs mx-auto px-2 leading-relaxed">
+                <Text className="text-gray-600 dark:text-gray-400 mb-8 text-sm sm:text-base max-w-xs mx-auto px-2 leading-relaxed">
                   {t('使用微信扫描下方二维码即可快速登录')}
                 </Text>
-                <div className="flex justify-center">
+                <div className="flex justify-center mt-2">
                   <div className="relative inline-block">
                     {qrStatus === 'loading' || isLoadingQR ? (
                       <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">

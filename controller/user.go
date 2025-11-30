@@ -1233,18 +1233,6 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 				newUser.DisplayName = "微信用户"
 			}
 
-			// 检查是否是第一个绑定的 star 用户
-			var count int64
-			err = model.DB.Model(&model.User{}).Where("star_user_id != ? AND star_user_id != ?", "", "0").Count(&count).Error
-			if err != nil {
-				common.SysLog(fmt.Sprintf("检查 star 用户数量失败: %v", err))
-			} else {
-				if count == 0 {
-					newUser.Role = common.RoleRootUser
-					common.SysLog(fmt.Sprintf("第一个 Star 用户 %s (star_user_id: %s) 被设置为 root 用户", newUser.Username, starUserId))
-				}
-			}
-
 			// 插入用户
 			if err := newUser.Insert(0); err != nil {
 				common.SysLog(fmt.Sprintf("自动注册用户失败: %v", err))
