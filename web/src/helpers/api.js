@@ -302,3 +302,57 @@ export function getChannelModels(type) {
   }
   return [];
 }
+
+// 微信二维码登录相关 API
+
+/**
+ * 获取微信二维码
+ * @returns {Promise<{qr_code_url: string, ticket: string}>}
+ */
+export async function getWeChatQRCode() {
+  const res = await API.get('/api/oauth/wechat/qrcode');
+  const { success, message, data } = res.data;
+  if (!success) {
+    throw new Error(message || '获取二维码失败');
+  }
+  return data;
+}
+
+/**
+ * 查询微信二维码扫码状态
+ * @param {string} ticket - 二维码 ticket
+ * @returns {Promise<{user_id?: number, wechat_temp_token?: string} | null>}
+ */
+export async function checkWeChatQRStatus(ticket) {
+  const res = await API.get(`/api/oauth/wechat/qrcode/status?ticket=${ticket}`);
+  const { success, message, data } = res.data;
+  if (!success) {
+    if (message === '二维码已过期') {
+      throw new Error(message);
+    }
+    throw new Error(message || '查询状态失败');
+  }
+  // 如果 message 是 "无数据"，说明用户还没扫码
+  if (message === '无数据' || !data) {
+    return null;
+  }
+  return data;
+}
+
+/**
+ * 微信新用户绑定/登录
+ * @param {string} wechatTempToken - 临时 token
+ * @param {boolean} isBind - 是否绑定已有账号（默认 false，创建新账号）
+ * @returns {Promise<{id: number, username: string, display_name: string, ...}>}
+ */
+export async function wechatQRBind(wechatTempToken, isBind = false) {
+  const res = await API.post('/api/oauth/wechat/qrcode/bind', {
+    wechat_temp_token: wechatTempToken,
+    is_bind: isBind,
+  });
+  const { success, message, data } = res.data;
+  if (!success) {
+    throw new Error(message || '绑定失败');
+  }
+  return data;
+}

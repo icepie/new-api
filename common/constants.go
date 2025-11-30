@@ -89,6 +89,9 @@ var LinuxDOMinimumTrustLevel = 0
 var WeChatServerAddress = ""
 var WeChatServerToken = ""
 var WeChatAccountQRCodeImageURL = ""
+var WeChatAppID = ""
+var WeChatAppSecret = ""
+var WeChatCallbackURL = ""
 
 var TurnstileSiteKey = ""
 var TurnstileSecretKey = ""
