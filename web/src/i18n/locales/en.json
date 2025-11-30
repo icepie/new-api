@@ -2286,6 +2286,7 @@
     "该邮箱已被注册，请使用其他邮箱或直接登录": "This email is already registered, please use another email or log in directly",
     "该邮箱未注册，请检查邮箱地址": "This email is not registered, please check the email address",
     "请输入有效的邮箱地址": "Please enter a valid email address",
-    "发送中...": "Sending..."
+    "发送中...": "Sending...",
+    "默认补全倍率": "Default completion ratio"
   }
 }
