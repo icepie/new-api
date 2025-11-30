@@ -1815,6 +1815,14 @@ func Logout(c *gin.Context) {
 }
 
 func Register(c *gin.Context) {
+	// 如果启用了 Star 用户系统，禁用原有的注册功能
+	if common.StarUserSystemEnabled && common.StarBackendAddress != "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "已启用 Star 用户系统，请使用 Star 注册接口进行注册",
+		})
+		return
+	}
 	if !common.RegisterEnabled {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "管理员关闭了新用户注册",
