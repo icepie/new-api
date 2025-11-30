@@ -968,22 +968,8 @@ func StarQRLoginStatus(c *gin.Context) {
 		return
 	}
 
-	// 检查是否是绑定场景（用户已登录）
-	id := c.GetInt("id")
-	isBindMode := false
-
-	if id > 0 {
-		// 用户已登录，检查是否是绑定场景
-		var user model.User
-		if err := model.DB.Where("id = ?", id).First(&user).Error; err == nil && user.StarUserId != "" {
-			// 尝试从 cookies 获取 xtoken
-			if cookieXtoken, err := c.Cookie("xtoken"); err == nil && cookieXtoken != "" {
-				isBindMode = true // 用户已登录且有 star_user_id 和 xtoken，这是绑定场景
-			}
-		}
-	}
-
-	// 调用 Star 后端检查微信二维码登录状态接口
+	// 先调用 Star 后端检查微信二维码登录状态接口
+	// 只有在 star 接口调用成功后才进行数据库操作
 	endpoint := "u/qr_login_status?ticket=" + url.QueryEscape(ticket)
 	response, err := callStarBackendAPI("GET", endpoint, nil, nil)
 
@@ -999,6 +985,22 @@ func StarQRLoginStatus(c *gin.Context) {
 	// 检查响应
 	if code, ok := response["code"].(float64); ok {
 		if code == 20000 {
+			// Star 接口调用成功，现在可以安全地进行数据库操作
+			// 检查是否是绑定场景（用户已登录）
+			id := c.GetInt("id")
+			isBindMode := false
+
+			if id > 0 {
+				// 用户已登录，检查是否是绑定场景
+				var user model.User
+				if err := model.DB.Where("id = ?", id).First(&user).Error; err == nil && user.StarUserId != "" {
+					// 尝试从 cookies 获取 xtoken
+					if cookieXtoken, err := c.Cookie("xtoken"); err == nil && cookieXtoken != "" {
+						isBindMode = true // 用户已登录且有 star_user_id 和 xtoken，这是绑定场景
+					}
+				}
+			}
+
 			// 成功，检查返回的数据
 			data, ok := response["data"].(map[string]interface{})
 			if !ok {
@@ -1313,30 +1315,6 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 		}
 	}
 
-	// 检查是否启用2FA
-	if model.IsTwoFAEnabled(user.Id) {
-		session := sessions.Default(c)
-		session.Set("pending_username", user.Username)
-		session.Set("pending_user_id", user.Id)
-		err := session.Save()
-		if err != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无法保存会话信息，请重试",
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "请输入两步验证码",
-			"data": map[string]interface{}{
-				"require_2fa": true,
-			},
-		})
-		return
-	}
-
 	// 调用 setupLogin 设置会话并返回用户信息
 	setupLogin(&user, c)
 }
@@ -1464,28 +1442,13 @@ func StarGetUserInfo(c *gin.Context) {
 		return
 	}
 
-	// 优先从 session 获取当前登录用户
-	id := c.GetInt("id")
+	// 先尝试从请求头或 cookies 获取认证信息（不进行数据库查询）
 	var xuserid string
 	var xtoken string
 
-	if id > 0 {
-		// 从数据库获取用户的 star_user_id
-		var user model.User
-		if err := model.DB.Where("id = ?", id).First(&user).Error; err == nil && user.StarUserId != "" {
-			xuserid = user.StarUserId
-			// 尝试从 cookies 获取 xtoken
-			if cookieXtoken, err := c.Cookie("xtoken"); err == nil {
-				xtoken = cookieXtoken
-			}
-		}
-	}
-
-	// 如果 session 中没有，尝试从请求头获取
-	if xuserid == "" || xtoken == "" {
-		xuserid = c.GetHeader("xuserid")
-		xtoken = c.GetHeader("xtoken")
-	}
+	// 尝试从请求头获取
+	xuserid = c.GetHeader("xuserid")
+	xtoken = c.GetHeader("xtoken")
 
 	// 如果请求头没有，尝试从 cookies 获取
 	if xuserid == "" || xtoken == "" {
@@ -1494,6 +1457,22 @@ func StarGetUserInfo(c *gin.Context) {
 		}
 		if cookieXtoken, err := c.Cookie("xtoken"); err == nil {
 			xtoken = cookieXtoken
+		}
+	}
+
+	// 如果仍然没有，尝试从 session 获取（需要数据库查询，但这是读取操作）
+	if xuserid == "" || xtoken == "" {
+		id := c.GetInt("id")
+		if id > 0 {
+			// 从数据库获取用户的 star_user_id（读取操作，不影响业务逻辑）
+			var user model.User
+			if err := model.DB.Where("id = ?", id).First(&user).Error; err == nil && user.StarUserId != "" {
+				xuserid = user.StarUserId
+				// 尝试从 cookies 获取 xtoken
+				if cookieXtoken, err := c.Cookie("xtoken"); err == nil {
+					xtoken = cookieXtoken
+				}
+			}
 		}
 	}
 
@@ -1513,7 +1492,8 @@ func StarGetUserInfo(c *gin.Context) {
 		return
 	}
 
-	// 调用 Star 后端获取用户信息
+	// 先调用 Star 后端获取用户信息
+	// 只有在 star 接口调用成功后才进行数据库操作
 	success, starUserInfo, err := callGetUserInfoAPI(xuserid, xtoken)
 	if err != nil {
 		common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
@@ -1660,27 +1640,76 @@ func StarChangeUserInfo(c *gin.Context) {
 					var user model.User
 					if err := model.DB.Where("id = ?", id).First(&user).Error; err == nil {
 						updates := map[string]interface{}{}
+						syncErrors := []string{}
 						
 						// 更新用户名（如果 Star 中的用户名与本地不同）
 						if starUserInfo.Username != "" && starUserInfo.Username != user.Username {
-							updates["username"] = starUserInfo.Username
-							updates["display_name"] = starUserInfo.Username
-							common.SysLog(fmt.Sprintf("同步更新用户 %d 的用户名: %s -> %s", user.Id, user.Username, starUserInfo.Username))
+							// 检查新用户名是否已被其他用户使用（排除当前用户，包括软删除的用户）
+							// 使用 Unscoped() 因为数据库唯一性约束包括软删除的记录
+							var existingUser model.User
+							err := model.DB.Unscoped().Where("username = ? AND id != ?", starUserInfo.Username, user.Id).First(&existingUser).Error
+							if err != nil {
+								if errors.Is(err, gorm.ErrRecordNotFound) {
+									// 用户名可用，可以更新
+									updates["username"] = starUserInfo.Username
+									updates["display_name"] = starUserInfo.Username
+									common.SysLog(fmt.Sprintf("同步更新用户 %d 的用户名: %s -> %s", user.Id, user.Username, starUserInfo.Username))
+								} else {
+									// 数据库查询错误
+									syncErrors = append(syncErrors, fmt.Sprintf("检查用户名唯一性失败: %v", err))
+									common.SysLog(fmt.Sprintf("检查用户名唯一性失败: %v", err))
+								}
+							} else {
+								// 用户名已被其他用户使用（包括已删除的用户）
+								syncErrors = append(syncErrors, fmt.Sprintf("用户名 %s 已被其他用户使用，无法同步", starUserInfo.Username))
+								common.SysLog(fmt.Sprintf("用户名 %s 已被其他用户使用（用户ID: %d），无法同步到用户 %d", starUserInfo.Username, existingUser.Id, user.Id))
+							}
 						}
 						
 						// 更新邮箱（如果 Star 中的邮箱与本地不同）
 						if starUserInfo.Email != "" && starUserInfo.Email != user.Email {
-							updates["email"] = starUserInfo.Email
-							common.SysLog(fmt.Sprintf("同步更新用户 %d 的邮箱: %s -> %s", user.Id, user.Email, starUserInfo.Email))
+							// 检查新邮箱是否已被其他用户使用（排除当前用户，包括软删除的用户）
+							// 使用 Unscoped() 因为数据库唯一性约束包括软删除的记录
+							var existingUser model.User
+							err := model.DB.Unscoped().Where("email = ? AND id != ?", starUserInfo.Email, user.Id).First(&existingUser).Error
+							if err != nil {
+								if errors.Is(err, gorm.ErrRecordNotFound) {
+									// 邮箱可用，可以更新
+									updates["email"] = starUserInfo.Email
+									common.SysLog(fmt.Sprintf("同步更新用户 %d 的邮箱: %s -> %s", user.Id, user.Email, starUserInfo.Email))
+								} else {
+									// 数据库查询错误
+									syncErrors = append(syncErrors, fmt.Sprintf("检查邮箱唯一性失败: %v", err))
+									common.SysLog(fmt.Sprintf("检查邮箱唯一性失败: %v", err))
+								}
+							} else {
+								// 邮箱已被其他用户使用（包括已删除的用户）
+								syncErrors = append(syncErrors, fmt.Sprintf("邮箱 %s 已被其他用户使用，无法同步", starUserInfo.Email))
+								common.SysLog(fmt.Sprintf("邮箱 %s 已被其他用户使用（用户ID: %d），无法同步到用户 %d", starUserInfo.Email, existingUser.Id, user.Id))
+							}
 						}
 						
 						// 如果有更新，执行更新操作
 						if len(updates) > 0 {
 							if err := model.DB.Model(&user).Updates(updates).Error; err != nil {
-								common.SysLog(fmt.Sprintf("同步更新用户信息到数据库失败: %v", err))
+								// 检查是否是唯一性约束冲突
+								if strings.Contains(err.Error(), "Duplicate entry") || strings.Contains(err.Error(), "UNIQUE constraint") {
+									syncErrors = append(syncErrors, "用户名或邮箱已被使用，可能存在并发冲突")
+									common.SysLog(fmt.Sprintf("同步更新用户信息到数据库失败（唯一性冲突）: %v", err))
+								} else {
+									syncErrors = append(syncErrors, fmt.Sprintf("数据库更新失败: %v", err))
+									common.SysLog(fmt.Sprintf("同步更新用户信息到数据库失败: %v", err))
+								}
 							} else {
 								common.SysLog(fmt.Sprintf("成功同步更新用户 %d 的信息到数据库", user.Id))
 							}
+						}
+						
+						// 如果有同步错误，在响应消息中提示用户
+						if len(syncErrors) > 0 {
+							common.SysLog(fmt.Sprintf("用户 %d 信息同步部分失败: %v", user.Id, syncErrors))
+							// 注意：这里不返回错误，因为 Star 系统已经成功修改，只是本地同步失败
+							// 可以在响应消息中添加警告信息
 						}
 					}
 				} else {
