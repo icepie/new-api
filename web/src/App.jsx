@@ -67,8 +67,15 @@ function App() {
 
   // 检查是否启用 Star 用户系统
   const starUserSystemEnabled = useMemo(() => {
+    // 检查 URL 参数，如果 force_legacy=true 或 1，强制使用原始登录
+    const urlParams = new URLSearchParams(location.search);
+    const forceLegacy = urlParams.get('force_legacy');
+    if (forceLegacy === 'true' || forceLegacy === '1') {
+      return false;
+    }
+    // 否则使用配置的值
     return statusState?.status?.star_user_system_enabled === true;
-  }, [statusState?.status?.star_user_system_enabled]);
+  }, [statusState?.status?.star_user_system_enabled, location.search]);
 
   // 获取模型广场权限配置
   const pricingRequireAuth = useMemo(() => {
