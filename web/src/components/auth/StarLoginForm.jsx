@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useContext, useEffect, useState, useRef } from 'react';
+import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../../context/User';
@@ -49,6 +49,23 @@ const StarLoginForm = () => {
   let navigate = useNavigate();
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
+  const [isDark, setIsDark] = useState(false);
+  const [isWechatLogoHovered, setIsWechatLogoHovered] = useState(false);
+
+  useEffect(() => {
+    // 检测dark模式
+    const checkDarkMode = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    checkDarkMode();
+    // 监听dark模式变化
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    return () => observer.disconnect();
+  }, []);
   // 移动端默认使用账号密码登录
   const [loginMethod, setLoginMethod] = useState(() => {
     // 检测是否为移动端
@@ -71,6 +88,12 @@ const StarLoginForm = () => {
   const qrCheckIntervalRef = useRef(null);
   const qrTimeoutRef = useRef(null);
   const pollingCountRef = useRef(0); // 轮询次数，用于动态调整间隔
+  
+  // 标签按钮的 ref
+  const wechatButtonRef = useRef(null);
+  const emailButtonRef = useRef(null);
+  const tabContainerRef = useRef(null);
+  const [activeUnderlineStyle, setActiveUnderlineStyle] = useState({});
 
   const logo = getLogo();
   const systemName = getSystemName();
@@ -213,7 +236,70 @@ const StarLoginForm = () => {
       // 停止轮询
       stopPolling();
     }
+    // 更新下划线位置
+    updateUnderlinePosition(method);
   };
+
+  // 更新下划线位置（使用 useCallback 优化）
+  const updateUnderlinePosition = useCallback((method) => {
+    const buttonRef = method === 'wechat' ? wechatButtonRef : emailButtonRef;
+    if (buttonRef.current && tabContainerRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const containerRect = tabContainerRef.current.getBoundingClientRect();
+      const left = rect.left - containerRect.left;
+      const width = rect.width;
+      setActiveUnderlineStyle({
+        left: `${left}px`,
+        width: `${width}px`,
+      });
+    }
+  }, []);
+
+  // 防抖函数（使用 useRef 存储 timeout，避免闭包问题）
+  const debounceTimeoutRef = useRef(null);
+  const debouncedUpdateUnderline = useCallback((method) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      updateUnderlinePosition(method);
+    }, 150);
+  }, [updateUnderlinePosition]);
+
+  // 响应式更新下划线位置
+  useEffect(() => {
+    // 延迟执行以确保 DOM 已渲染
+    const timer = setTimeout(() => {
+      updateUnderlinePosition(loginMethod);
+    }, 0);
+
+    // 窗口大小改变时更新下划线位置（防抖处理）
+    const handleResize = () => {
+      debouncedUpdateUnderline(loginMethod);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // 使用 ResizeObserver 监听容器大小变化
+    let resizeObserver = null;
+    if (tabContainerRef.current && window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(() => {
+        updateUnderlinePosition(loginMethod);
+      });
+      resizeObserver.observe(tabContainerRef.current);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [loginMethod, updateUnderlinePosition, debouncedUpdateUnderline]);
 
   // 账号登录（支持用户名和邮箱）
   const handleEmailLogin = async (values) => {
@@ -400,31 +486,101 @@ const StarLoginForm = () => {
             <div className="px-4 sm:px-6 pb-8">
 
               {/* 登录方式选择 */}
-              <div className="relative mb-6">
-                <div className="flex items-center justify-center space-x-1 bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-lg">
+              <div style={{ marginBottom: '24px' }}>
+                <div ref={tabContainerRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', paddingBottom: '8px' }}>
+                  {/* 连续的下划线背景 - 覆盖整个容器宽度 */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '2px',
+                      backgroundColor: isDark ? '#374151' : '#e5e7eb',
+                    }}
+                  ></div>
+                  {/* 激活状态的下划线 - 滑动效果 */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      height: '2px',
+                      backgroundColor: isDark ? '#f3f4f6' : '#111827',
+                      transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out',
+                      ...activeUnderlineStyle,
+                    }}
+                  ></div>
                   <button
+                    ref={wechatButtonRef}
                     onClick={() => handleLoginMethodChange('wechat')}
-                    className={`relative flex-1 flex items-center justify-center py-2 px-3 sm:px-4 text-xs sm:text-sm font-medium transition-all duration-200 ease-in-out rounded-md ${
-                      loginMethod === 'wechat'
-                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                    }`}
+                    style={{
+                      position: 'relative',
+                      flex: 1,
+                      paddingBottom: '0',
+                      paddingLeft: '4px',
+                      paddingRight: '4px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      transition: 'color 0.2s ease-in-out',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      color: loginMethod === 'wechat' 
+                        ? (isDark ? '#f3f4f6' : '#111827')
+                        : (isDark ? '#9ca3af' : '#9ca3af'),
+                    }}
+                    onMouseEnter={(e) => {
+                      if (loginMethod !== 'wechat') {
+                        e.currentTarget.style.color = isDark ? '#f3f4f6' : '#111827';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (loginMethod !== 'wechat') {
+                        e.currentTarget.style.color = isDark ? '#9ca3af' : '#9ca3af';
+                      }
+                    }}
                   >
-                    <span className="whitespace-nowrap">{t('微信登录')}</span>
+                    <span style={{ whiteSpace: 'nowrap' }}>{t('微信登录')}</span>
                   </button>
                   <button
+                    ref={emailButtonRef}
                     onClick={() => handleLoginMethodChange('email')}
-                    className={`relative flex-1 flex items-center justify-center py-2 px-3 sm:px-4 text-xs sm:text-sm font-medium transition-all duration-200 ease-in-out rounded-md ${
-                      loginMethod === 'email'
-                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                    }`}
+                    style={{
+                      position: 'relative',
+                      flex: 1,
+                      paddingBottom: '0',
+                      paddingLeft: '4px',
+                      paddingRight: '4px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      transition: 'color 0.2s ease-in-out',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      color: loginMethod === 'email' 
+                        ? (isDark ? '#f3f4f6' : '#111827')
+                        : (isDark ? '#9ca3af' : '#9ca3af'),
+                    }}
+                    onMouseEnter={(e) => {
+                      if (loginMethod !== 'email') {
+                        e.currentTarget.style.color = isDark ? '#f3f4f6' : '#111827';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (loginMethod !== 'email') {
+                        e.currentTarget.style.color = isDark ? '#9ca3af' : '#9ca3af';
+                      }
+                    }}
                   >
-                    <span className="whitespace-nowrap">{t('账号登录')}</span>
+                    <span style={{ whiteSpace: 'nowrap' }}>{t('账号登录')}</span>
                   </button>
                 </div>
               </div>
 
+              {/* 内容区域 - 设置固定高度避免切换时拉伸 */}
+              <div style={{ position: 'relative', height: '340px' }}>
           {/* 微信二维码登录 */}
           {loginMethod === 'wechat' && (
             <div className="space-y-4">
@@ -435,24 +591,27 @@ const StarLoginForm = () => {
                 <div className="flex justify-center mt-2">
                   <div className="relative inline-block">
                     {qrStatus === 'loading' || isLoadingQR ? (
-                      <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 rounded-xl">
+                      <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-xl">
                         <Spin size="large" />
                       </div>
                     ) : qrStatus === 'active' ? (
-                      <div className="relative bg-white dark:bg-gray-800/50 p-2 rounded-xl">
-                        <img
-                          src={qrCodeUrl}
-                          alt={t('微信登录二维码')}
-                          className="w-40 h-40 sm:w-48 sm:h-48 rounded-lg"
-                        />
-                        {isWechatBinding && (
-                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-xl">
-                            <div className="text-center text-white">
-                              <Spin size="large" />
-                              <Text className="text-white mt-2">{t('登录中...')}</Text>
+                      <div className="flex flex-col items-center">
+                        <div className="relative bg-white dark:bg-gray-800/50 p-2 rounded-xl">
+                          <img
+                            src={qrCodeUrl}
+                            alt={t('微信登录二维码')}
+                            className="w-40 h-40 sm:w-48 sm:h-48 rounded-lg object-contain"
+                            style={{ display: 'block' }}
+                          />
+                          {isWechatBinding && (
+                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-xl">
+                              <div className="text-center text-white">
+                                <Spin size="large" />
+                                <Text className="text-white mt-2">{t('登录中...')}</Text>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     ) : qrStatus === 'scanned' ? (
                       <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-xl shadow-sm">
@@ -478,15 +637,51 @@ const StarLoginForm = () => {
                   </div>
                 </div>
               </div>
-              <div className="text-center">
-                <Button
-                  size="small"
-                  onClick={refreshQRCode}
-                  disabled={isLoadingQR || qrStatus === 'loading'}
-                >
-                  {isLoadingQR ? <Spin /> : t('刷新二维码')}
-                </Button>
-              </div>
+              {(
+                <div className="text-center space-y-3">
+                  <Button
+                    size="small"
+                    onClick={refreshQRCode}
+                    disabled={isLoadingQR || qrStatus === 'loading'}
+                  >
+                    {isLoadingQR ? <Spin /> : t('刷新二维码')}
+                  </Button>
+                  <div className="flex justify-center pt-3">
+                    <div
+                      className="cursor-pointer transition-all duration-300 ease-in-out"
+                      style={{
+                        transform: isWechatLogoHovered ? 'scale(1.1)' : 'scale(1)',
+                        filter: isWechatLogoHovered 
+                          ? 'drop-shadow(0 4px 8px rgba(7, 193, 96, 0.4))' 
+                          : 'drop-shadow(0 2px 4px rgba(7, 193, 96, 0.2))',
+                      }}
+                      onMouseEnter={() => setIsWechatLogoHovered(true)}
+                      onMouseLeave={() => setIsWechatLogoHovered(false)}
+                      onClick={(e) => {
+                        // 点击时的缩放动画
+                        e.currentTarget.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                          e.currentTarget.style.transform = isWechatLogoHovered ? 'scale(1.1)' : 'scale(1)';
+                        }, 150);
+                        // 可以添加点击事件，比如打开微信官网等
+                      }}
+                    >
+                      <svg
+                        role="img"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-8 h-8 transition-all duration-300"
+                        style={{ 
+                          fill: isWechatLogoHovered ? '#06AD56' : '#07C160',
+                        }}
+                      >
+                        <title>WeChat</title>
+                        <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -619,6 +814,7 @@ const StarLoginForm = () => {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           </Card>
         </div>
