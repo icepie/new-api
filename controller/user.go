@@ -439,20 +439,46 @@ func StarLogin(c *gin.Context) {
 				}
 			}
 
-			// 生成复杂的默认密码
-			defaultPassword, err := common.GenerateRandomCharsKey(32)
-			if err != nil {
-				common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
-				c.JSON(http.StatusOK, gin.H{
-					"success": false,
-					"message": "系统错误，请稍后重试",
-				})
-				return
+			// 使用 Star 系统的密码（base64 解码后使用）
+			// 注意：password 参数是 base64 编码的，需要先解码
+			var userPassword string
+			if password != "" {
+				// 解码 base64 密码
+				decodedPassword, err := base64.StdEncoding.DecodeString(password)
+				if err == nil {
+					userPassword = string(decodedPassword)
+					common.SysLog(fmt.Sprintf("使用 Star 系统密码创建新用户"))
+				} else {
+					// 如果解码失败，生成随机密码作为后备
+					common.SysLog(fmt.Sprintf("密码 base64 解码失败，使用随机密码: %v", err))
+					randomPassword, err := common.GenerateRandomCharsKey(32)
+					if err != nil {
+						common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
+						c.JSON(http.StatusOK, gin.H{
+							"success": false,
+							"message": "系统错误，请稍后重试",
+						})
+						return
+					}
+					userPassword = randomPassword
+				}
+			} else {
+				// 如果没有密码，生成随机密码
+				randomPassword, err := common.GenerateRandomCharsKey(32)
+				if err != nil {
+					common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
+					c.JSON(http.StatusOK, gin.H{
+						"success": false,
+						"message": "系统错误，请稍后重试",
+					})
+					return
+				}
+				userPassword = randomPassword
 			}
 
 			// 创建新用户，优先使用从 Star 获取的信息
 			newUser := model.User{
-				Password:    defaultPassword,
+				Password:    userPassword,
 				Role:        common.RoleCommonUser,
 				Status:      common.UserStatusEnabled,
 			}
@@ -577,15 +603,15 @@ func StarLogin(c *gin.Context) {
 		}
 	}
 
+	// 更新用户信息（包括密码同步）
+	updates := map[string]interface{}{}
+	
 	// 如果有 star_user_id 和 xtoken，获取并更新用户信息
 	if starUserId != "" && xtoken != "" {
 		success, starUserInfo, err := callGetUserInfoAPI(starUserId, xtoken)
 		if err != nil {
 			common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
 		} else if success && starUserInfo != nil {
-			// 更新用户信息
-			updates := map[string]interface{}{}
-			
 			// 更新用户名（如果不同）
 			if starUserInfo.Username != "" && starUserInfo.Username != user.Username {
 				updates["username"] = starUserInfo.Username
@@ -608,36 +634,37 @@ func StarLogin(c *gin.Context) {
 			} else if starUserInfo.Status == 1 && user.Status == common.UserStatusDisabled {
 				updates["status"] = common.UserStatusEnabled
 			}
-			
-			// 更新密码：使用 Star 登录时传入的密码（base64 解码后哈希）
-			// 注意：password 参数是 base64 编码的，需要先解码
-			if password != "" {
-				// 解码 base64 密码
-				decodedPassword, err := base64.StdEncoding.DecodeString(password)
-				if err == nil {
-					// 哈希化密码
-					hashedPassword, err := common.Password2Hash(string(decodedPassword))
-					if err == nil {
-						updates["password"] = hashedPassword
-						common.SysLog(fmt.Sprintf("更新用户 %s (star_user_id: %s) 的密码", user.Username, starUserId))
-					} else {
-						common.SysLog(fmt.Sprintf("密码哈希化失败: %v", err))
-					}
-				} else {
-					common.SysLog(fmt.Sprintf("密码 base64 解码失败: %v", err))
-				}
+		}
+	}
+	
+	// 同步密码：使用 Star 登录时传入的密码（base64 解码后哈希）
+	// 注意：password 参数是 base64 编码的，需要先解码
+	// 无论是否获取到 starUserInfo，都同步密码
+	if password != "" {
+		// 解码 base64 密码
+		decodedPassword, err := base64.StdEncoding.DecodeString(password)
+		if err == nil {
+			// 哈希化密码
+			hashedPassword, err := common.Password2Hash(string(decodedPassword))
+			if err == nil {
+				updates["password"] = hashedPassword
+				common.SysLog(fmt.Sprintf("同步用户 %s (star_user_id: %s) 的密码", user.Username, starUserId))
+			} else {
+				common.SysLog(fmt.Sprintf("密码哈希化失败: %v", err))
 			}
-			
-			// 如果有更新，执行更新操作
-			if len(updates) > 0 {
-				if err := model.DB.Model(&user).Updates(updates).Error; err != nil {
-					common.SysLog(fmt.Sprintf("更新用户信息失败: %v", err))
-				} else {
-					// 重新获取用户以获取最新信息
-					model.DB.Where("id = ?", user.Id).First(&user)
-					common.SysLog(fmt.Sprintf("成功更新用户 %s (star_user_id: %s) 的信息", user.Username, starUserId))
-				}
-			}
+		} else {
+			common.SysLog(fmt.Sprintf("密码 base64 解码失败: %v", err))
+		}
+	}
+	
+	// 如果有更新，执行更新操作
+	if len(updates) > 0 {
+		if err := model.DB.Model(&user).Updates(updates).Error; err != nil {
+			common.SysLog(fmt.Sprintf("更新用户信息失败: %v", err))
+		} else {
+			// 重新获取用户以获取最新信息
+			model.DB.Where("id = ?", user.Id).First(&user)
+			common.SysLog(fmt.Sprintf("成功更新用户 %s (star_user_id: %s) 的信息", user.Username, starUserId))
 		}
 	}
 
