@@ -33,7 +33,7 @@ import {
 import { Button, Card, Form, Input } from '@douyinfe/semi-ui';
 import Title from '@douyinfe/semi-ui/lib/es/typography/title';
 import Text from '@douyinfe/semi-ui/lib/es/typography/text';
-import { IconEyeOpened, IconEyeClosed, IconMail, IconLock } from '@douyinfe/semi-icons';
+import { IconEyeOpened, IconEyeClosed, IconMail, IconLock, IconKey } from '@douyinfe/semi-icons';
 import LogoImage from '../common/logo/LogoImage';
 import HeroBackground from '../homepage/HeroBackground';
 
@@ -82,7 +82,13 @@ const StarPasswordResetForm = () => {
           });
         }, 1000);
       } else {
-        showError(res.message || t('发送验证码失败'));
+        const errorMsg = res.message || '';
+        if (errorMsg) {
+          // 尝试翻译错误消息，如果没有翻译键则显示原文
+          showError(t(errorMsg) !== errorMsg ? t(errorMsg) : errorMsg);
+        } else {
+          showError(t('发送验证码失败'));
+        }
       }
     } catch (error) {
       showError(t('发送验证码失败，请重试'));
@@ -119,19 +125,30 @@ const StarPasswordResetForm = () => {
         navigate(`/login${searchParams.toString() ? '?' + searchParams.toString() : ''}`);
       } else {
         // 优化错误提示
-        let errorMessage = res.message || t('密码重置失败，请重试');
+        let errorMessage = res.message || '';
         
         // 解析后端返回的错误信息，提取更友好的提示
-        if (errorMessage.includes('验证码错误') || errorMessage.includes('验证码不正确')) {
+        if (errorMessage.includes('验证码错误') || errorMessage.includes('验证码不正确') || 
+            errorMessage.includes('verification code error') || errorMessage.includes('invalid code')) {
           errorMessage = t('验证码错误，请检查后重试');
-        } else if (errorMessage.includes('验证码已过期') || errorMessage.includes('验证码过期')) {
+        } else if (errorMessage.includes('验证码已过期') || errorMessage.includes('验证码过期') || 
+                   errorMessage.includes('code expired') || errorMessage.includes('verification expired')) {
           errorMessage = t('验证码已过期，请重新获取');
-        } else if (errorMessage.includes('账号不存在') || errorMessage.includes('用户不存在') || errorMessage.includes('邮箱不存在')) {
+        } else if (errorMessage.includes('账号不存在') || errorMessage.includes('用户不存在') || 
+                   errorMessage.includes('邮箱不存在') || errorMessage.includes('account not found') || 
+                   errorMessage.includes('user not found') || errorMessage.includes('email not found')) {
           errorMessage = t('该邮箱未注册，请检查邮箱地址');
-        } else if (errorMessage.includes('密码') && errorMessage.includes('长度')) {
+        } else if ((errorMessage.includes('密码') && errorMessage.includes('长度')) || 
+                   errorMessage.includes('password length') || errorMessage.includes('password too')) {
           errorMessage = t('密码长度不符合要求，请检查密码规则');
-        } else if (errorMessage.includes('邮箱格式') || errorMessage.includes('邮箱无效')) {
+        } else if (errorMessage.includes('邮箱格式') || errorMessage.includes('邮箱无效') || 
+                   errorMessage.includes('invalid email') || errorMessage.includes('email format')) {
           errorMessage = t('邮箱格式不正确，请检查邮箱地址');
+        } else if (errorMessage) {
+          // 对于其他未知错误，尝试使用 t() 处理，如果没有翻译键则显示原文
+          errorMessage = t(errorMessage) !== errorMessage ? t(errorMessage) : errorMessage;
+        } else {
+          errorMessage = t('密码重置失败，请重试');
         }
         
         showError(errorMessage);
@@ -191,6 +208,8 @@ const StarPasswordResetForm = () => {
                   onBlur={() => validateEmail(email)}
                   validateStatus={emailError ? 'error' : ''}
                   rules={[{ required: true, message: t('请输入邮箱') }]}
+                  size="large"
+                  className="!rounded-lg"
                   prefix={<IconMail />}
                 />
                 {emailError && (
@@ -206,17 +225,22 @@ const StarPasswordResetForm = () => {
                       value={code}
                       onChange={(value) => setCode(value)}
                       rules={[{ required: true, message: t('请输入验证码') }]}
+                      size="large"
+                      className="!rounded-lg flex-1"
+                      prefix={<IconKey />}
                     />
                   </div>
-                  <div className="sm:pb-[12px]">
+                  <div className="flex items-end sm:pb-[12px]">
                     <Button
-                      type="button"
                       onClick={handleSendCode}
                       disabled={!!emailError || !email || isSendingCode || countdown > 0}
                       loading={isSendingCode && countdown === 0}
-                      className="w-full sm:w-auto whitespace-nowrap"
+                      size="large"
+                      className="!rounded-lg w-full sm:w-auto whitespace-nowrap"
+                      type="primary"
+                      theme="outline"
                     >
-                      {isSendingCode && countdown === 0 ? t('发送中...') : countdown > 0 ? `${countdown}s` : t('发送验证码')}
+                      {isSendingCode && countdown === 0 ? t('发送中...') : countdown > 0 ? `${t('重新发送')} (${countdown})` : t('获取验证码')}
                     </Button>
                   </div>
                 </div>
@@ -229,6 +253,8 @@ const StarPasswordResetForm = () => {
                   value={password}
                   onChange={(value) => setPassword(value)}
                   rules={[{ required: true, message: t('请输入新密码') }]}
+                  size="large"
+                  className="!rounded-lg"
                   prefix={<IconLock />}
                 />
 

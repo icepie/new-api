@@ -201,17 +201,17 @@ const StarAccountManagement = ({
                   <div className='flex-shrink-0'>
                     {/* 已绑定微信的用户，注释修改绑定的按钮 */}
                     {!(starUserInfo?.wechat_openid || isBound(userState.user?.wechat_id)) && (
-                      <Button
-                        type='primary'
-                        theme='outline'
-                        size='small'
-                        onClick={() => setShowWeChatBindModal()}
-                      >
+                    <Button
+                      type='primary'
+                      theme='outline'
+                      size='small'
+                      onClick={() => setShowWeChatBindModal()}
+                    >
                         {t('绑定')}
                       </Button>
                     )}
                     {/* {starUserInfo?.wechat_openid || isBound(userState.user?.wechat_id)
-                      ? t('修改绑定')
+                        ? t('修改绑定')
                       : t('绑定')} */}
                   </div>
                 </div>

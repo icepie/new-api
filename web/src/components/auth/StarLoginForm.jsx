@@ -203,7 +203,6 @@ const StarLoginForm = () => {
     }
   };
 
-
   // 切换登录方式
   const handleLoginMethodChange = (method) => {
     setLoginMethod(method);
@@ -251,29 +250,40 @@ const StarLoginForm = () => {
         navigate('/console');
       } else {
         // 优化错误提示
-        let errorMessage = res.message || t('登录失败，请重试');
+        let errorMessage = res.message || '';
         
         // 解析后端返回的错误信息，提取更友好的提示
-        if (errorMessage.includes('账号或密码错误')) {
+        if (errorMessage.includes('账号或密码错误') || errorMessage.includes('account or password error') || 
+            errorMessage.includes('invalid credentials') || errorMessage.includes('wrong password')) {
           errorMessage = t('账号或密码错误，请检查后重试');
-        } else if (errorMessage.includes('外部登录验证失败')) {
+        } else if (errorMessage.includes('外部登录验证失败') || errorMessage.includes('external login failed')) {
           // 尝试从错误信息中提取更具体的错误
           const match = errorMessage.match(/msg=([^,]+)/);
           if (match && match[1]) {
-            errorMessage = match[1].trim();
+            errorMessage = t(match[1].trim()) || match[1].trim();
           } else {
             errorMessage = t('登录验证失败，请检查账号和密码');
           }
-        } else if (errorMessage.includes('账号不存在') || errorMessage.includes('用户不存在')) {
+        } else if (errorMessage.includes('账号不存在') || errorMessage.includes('用户不存在') || 
+                   errorMessage.includes('account not found') || errorMessage.includes('user not found')) {
           errorMessage = t('账号不存在，请检查用户名或邮箱');
-        } else if (errorMessage.includes('密码错误')) {
+        } else if (errorMessage.includes('密码错误') || errorMessage.includes('password error') || 
+                   errorMessage.includes('incorrect password')) {
           errorMessage = t('密码错误，请重新输入');
-        } else if (errorMessage.includes('账号已被禁用') || errorMessage.includes('账号已禁用')) {
+        } else if (errorMessage.includes('账号已被禁用') || errorMessage.includes('账号已禁用') || 
+                   errorMessage.includes('account disabled') || errorMessage.includes('user disabled')) {
           errorMessage = t('账号已被禁用，请联系管理员');
-        } else if (errorMessage.includes('网络') || errorMessage.includes('连接')) {
+        } else if (errorMessage.includes('网络') || errorMessage.includes('连接') || 
+                   errorMessage.includes('network') || errorMessage.includes('connection') || 
+                   errorMessage.includes('fetch failed')) {
           errorMessage = t('网络连接失败，请检查网络后重试');
         } else if (errorMessage.includes('超时') || errorMessage.includes('timeout')) {
           errorMessage = t('请求超时，请稍后重试');
+        } else if (errorMessage) {
+          // 对于其他未知错误，尝试使用 t() 处理，如果没有翻译键则显示原文
+          errorMessage = t(errorMessage) !== errorMessage ? t(errorMessage) : errorMessage;
+        } else {
+          errorMessage = t('登录失败，请重试');
         }
         
         showError(errorMessage);
@@ -384,7 +394,7 @@ const StarLoginForm = () => {
           <Card className="border-0 !rounded-2xl overflow-hidden shadow-xl">
             <div className="flex justify-center pt-8 pb-4">
               <Title heading={3} className="text-gray-800 dark:text-gray-200 font-semibold">
-                登 录
+                {t('登录')}
               </Title>
             </div>
             <div className="px-4 sm:px-6 pb-8">
@@ -507,6 +517,8 @@ const StarLoginForm = () => {
                     label={t('用户名或邮箱')}
                     placeholder={t('请输入您的用户名或邮箱地址')}
                     rules={[{ required: true, message: t('请输入用户名或邮箱') }]}
+                    size="large"
+                    className="!rounded-lg"
                     prefix={<IconMail />}
                   />
                   <Form.Input
@@ -515,6 +527,8 @@ const StarLoginForm = () => {
                     mode="password"
                     placeholder={t('请输入您的密码')}
                     rules={[{ required: true, message: t('请输入密码') }]}
+                    size="large"
+                    className="!rounded-lg"
                     prefix={<IconLock />}
                     onPressEnter={async () => {
                       if (!formApiRef.current) {
