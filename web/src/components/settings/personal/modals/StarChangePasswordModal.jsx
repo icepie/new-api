@@ -56,11 +56,12 @@ const StarChangePasswordModal = ({
             {t('邮箱')}
           </Typography.Text>
           <Input
-            readonly
-            value={userEmail || inputs.email}
+            disabled
+            value={userEmail || ''}
             size='large'
             className='!rounded-lg'
             prefix={<IconKey />}
+            placeholder={t('自动从账户信息获取')}
           />
         </div>
 
