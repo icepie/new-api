@@ -435,18 +435,18 @@ const StarLoginForm = () => {
                 <div className="flex justify-center mt-2">
                   <div className="relative inline-block">
                     {qrStatus === 'loading' || isLoadingQR ? (
-                      <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 rounded-xl">
                         <Spin size="large" />
                       </div>
                     ) : qrStatus === 'active' ? (
-                      <div className="relative">
+                      <div className="relative bg-white dark:bg-gray-800/50 p-2 rounded-xl">
                         <img
                           src={qrCodeUrl}
                           alt={t('微信登录二维码')}
-                          className="w-40 h-40 sm:w-48 sm:h-48 border border-gray-200 dark:border-gray-700 rounded-lg"
+                          className="w-40 h-40 sm:w-48 sm:h-48 rounded-lg"
                         />
                         {isWechatBinding && (
-                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-xl">
                             <div className="text-center text-white">
                               <Spin size="large" />
                               <Text className="text-white mt-2">{t('登录中...')}</Text>
@@ -455,14 +455,14 @@ const StarLoginForm = () => {
                         )}
                       </div>
                     ) : qrStatus === 'scanned' ? (
-                      <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-600 rounded-lg">
+                      <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-xl shadow-sm">
                         <div className="text-center px-2">
                           <Text className="text-green-600 dark:text-green-400 text-sm sm:text-base">{t('扫码成功')}</Text>
                           <Text className="text-green-500 dark:text-green-500 text-xs">{t('正在登录中...')}</Text>
                         </div>
                       </div>
                     ) : (
-                      <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                      <div className="w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700/50 rounded-xl shadow-sm">
                         <div className="text-center px-2">
                           <Text className="text-gray-500 dark:text-gray-400 mb-2 text-sm sm:text-base">{t('二维码已过期')}</Text>
                           <Button

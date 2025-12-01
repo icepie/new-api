@@ -206,16 +206,23 @@ const StarRegisterForm = () => {
                   }}
                   onBlur={() => validateEmail(email)}
                   validateStatus={emailError ? 'error' : ''}
-                  rules={[{ required: true, message: t('请输入邮箱') }]}
+                  rules={[
+                    { required: true, message: t('请输入邮箱') },
+                    {
+                      validator: (rule, value) => {
+                        if (value && !validateEmail(value)) {
+                          return Promise.reject(emailError || t('请输入有效的邮箱地址'));
+                        }
+                        return Promise.resolve();
+                      }
+                    }
+                  ]}
                   size="large"
                   className="!rounded-lg"
                   prefix={<IconMail />}
                 />
-                {emailError && (
-                  <Text className="text-red-500 text-xs mt-1">{emailError}</Text>
-                )}
 
-                <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+                <div className="flex flex-col mt-[2px] sm:mt-[-2px] sm:flex-row gap-2">
                   <div className="flex-1">
                     <Form.Input
                       field="code"
@@ -229,7 +236,7 @@ const StarRegisterForm = () => {
                       prefix={<IconKey />}
                     />
                   </div>
-                  <div className="flex items-end sm:pb-[12px]">
+                  <div className="flex items-start pt-[6px] sm:pt-[36px]">
                     <Button
                       onClick={handleSendCode}
                       disabled={!!emailError || !email || isSendingCode || countdown > 0}
