@@ -51,6 +51,14 @@ const StarLoginForm = () => {
   const [searchParams] = useSearchParams();
   const [isDark, setIsDark] = useState(false);
   const [isWechatLogoHovered, setIsWechatLogoHovered] = useState(false);
+  
+  // 从 URL 参数获取 aff 码并保存到 localStorage
+  useEffect(() => {
+    const affCode = searchParams.get('aff');
+    if (affCode) {
+      localStorage.setItem('aff', affCode);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     // 检测dark模式

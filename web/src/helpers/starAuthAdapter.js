@@ -58,17 +58,25 @@ export const starLoginAdapter = async (email, password) => {
  * @param {string} email - 邮箱
  * @param {string} email_code - 邮箱验证码
  * @param {string} password - 密码
+ * @param {string} affCode - 可选邀请码
  * @returns {Promise} 返回 new-api 格式的响应 { success, message }
  */
-export const starRegisterAdapter = async (email, email_code, password) => {
+export const starRegisterAdapter = async (email, email_code, password, affCode = '') => {
   try {
     // 调用包装后的接口（返回 new-api 格式）
     const API = (await import('./api')).API;
-    const res = await API.post('/u/register', {
+    const requestData = {
       email,
       email_code,
       password: btoa(password.trim()), // base64 编码
-    });
+    };
+    
+    // 如果有 aff 码，添加到请求中
+    if (affCode) {
+      requestData.aff_code = affCode;
+    }
+    
+    const res = await API.post('/u/register', requestData);
     
     if (res.data.success && res.data.data) {
       const starData = res.data.data;

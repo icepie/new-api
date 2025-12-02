@@ -42,6 +42,14 @@ const StarRegisterForm = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const formApiRef = useRef(null);
+  
+  // 从 URL 参数获取 aff 码并保存到 localStorage
+  useEffect(() => {
+    const affCode = searchParams.get('aff');
+    if (affCode) {
+      localStorage.setItem('aff', affCode);
+    }
+  }, [searchParams]);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [code, setCode] = useState('');
@@ -117,9 +125,12 @@ const StarRegisterForm = () => {
       return;
     }
     
+    // 从 URL 参数获取 aff 码
+    const affCode = searchParams.get('aff') || localStorage.getItem('aff') || '';
+    
     setIsRegistering(true);
     try {
-      const res = await starRegisterAdapter(formEmail, formCode, formPassword);
+      const res = await starRegisterAdapter(formEmail, formCode, formPassword, affCode);
       if (res.success) {
         showSuccess(t('注册成功！'));
         navigate(`/login${searchParams.toString() ? '?' + searchParams.toString() : ''}`);

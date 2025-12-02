@@ -533,8 +533,20 @@ func StarLogin(c *gin.Context) {
 				newUser.StarUserId = starUserId
 			}
 
-			// 插入用户（无需校验密码，因为使用的是自动生成的复杂密码）
-			if err := newUser.Insert(0); err != nil {
+			// 获取 aff 参数（从 URL 参数获取）
+			affCode := c.Query("aff")
+			var inviterId int
+			if affCode != "" {
+				inviterId, _ = model.GetUserIdByAffCode(affCode)
+				if inviterId == 0 {
+					common.SysLog(fmt.Sprintf("邀请码 %s 不存在或无效", affCode))
+				} else {
+					common.SysLog(fmt.Sprintf("使用邀请码 %s，邀请人ID: %d", affCode, inviterId))
+				}
+			}
+
+			// 插入用户（传入 inviterId 以处理邀请关系）
+			if err := newUser.Insert(inviterId); err != nil {
 				common.SysLog(fmt.Sprintf("自动注册用户失败: %v", err))
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,
@@ -694,6 +706,7 @@ func StarRegister(c *gin.Context) {
 		Password  string `json:"password" binding:"required"`
 		EmailCode string `json:"email_code" binding:"required"`
 		Username  string `json:"username,omitempty"` // 可选用户名参数
+		AffCode   string `json:"aff_code,omitempty"` // 可选邀请码参数
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -702,6 +715,12 @@ func StarRegister(c *gin.Context) {
 			"message": "参数错误: " + err.Error(),
 		})
 		return
+	}
+
+	// 如果请求体中没有 aff_code，尝试从 URL 参数获取
+	affCode := request.AffCode
+	if affCode == "" {
+		affCode = c.Query("aff")
 	}
 
 	// 调用 Star 后端注册接口
@@ -723,20 +742,122 @@ func StarRegister(c *gin.Context) {
 	// 将 Star 后端的响应转换为 new-api 格式
 	if code, ok := response["code"].(float64); ok {
 		if code == 20000 {
-			// 注册成功，如果提供了用户名，则调用更新用户名接口
-			if request.Username != "" && strings.TrimSpace(request.Username) != "" {
-				// 从注册响应中获取 xuserid 和 xtoken
-				var xuserid string
-				var xtoken string
-				if data, ok := response["data"].(map[string]interface{}); ok {
-					if xuseridVal, ok := data["xuserid"]; ok {
-						xuserid = fmt.Sprintf("%v", xuseridVal)
-					}
-					if xtokenVal, ok := data["xtoken"].(string); ok {
-						xtoken = xtokenVal
+			// 注册成功，在 new-api 中创建用户并处理邀请关系
+			// 从注册响应中获取 xuserid 和 xtoken
+			var xuserid string
+			var xtoken string
+			if data, ok := response["data"].(map[string]interface{}); ok {
+				if xuseridVal, ok := data["xuserid"]; ok {
+					xuserid = fmt.Sprintf("%v", xuseridVal)
+				}
+				if xtokenVal, ok := data["xtoken"].(string); ok {
+					xtoken = xtokenVal
+				}
+			}
+
+			// 如果提供了 aff 码，在 new-api 中创建用户并设置邀请关系
+			var inviterId int
+			if affCode != "" {
+				inviterId, _ = model.GetUserIdByAffCode(affCode)
+				if inviterId == 0 {
+					common.SysLog(fmt.Sprintf("邀请码 %s 不存在或无效", affCode))
+				}
+			}
+
+			// 检查用户是否已在 new-api 中存在
+			var existingUser model.User
+			err = model.DB.Where("email = ?", request.Email).First(&existingUser).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				// 用户不存在，创建新用户
+				// 获取 Star 用户信息
+				var starUserInfo *StarUserInfo
+				if xuserid != "" && xtoken != "" {
+					success, info, err := callGetUserInfoAPI(xuserid, xtoken)
+					if err != nil {
+						common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
+					} else if success && info != nil {
+						starUserInfo = info
 					}
 				}
 
+				// 创建新用户
+				newUser := model.User{
+					Password:    "", // 使用空密码，因为使用 Star 系统认证
+					Role:        common.RoleCommonUser,
+					Status:      common.UserStatusEnabled,
+					StarUserId:  xuserid,
+				}
+
+				// 使用 Star 用户信息（如果可用）
+				if starUserInfo != nil {
+					if starUserInfo.Username != "" {
+						newUser.Username = starUserInfo.Username
+						newUser.DisplayName = starUserInfo.Username
+					} else {
+						newUser.Username = request.Email
+						newUser.DisplayName = request.Email
+					}
+					if starUserInfo.Email != "" {
+						newUser.Email = starUserInfo.Email
+					} else {
+						newUser.Email = request.Email
+					}
+					if starUserInfo.WechatOpenid != "" {
+						newUser.WeChatId = starUserInfo.WechatOpenid
+					}
+					// 根据 Star 系统的状态设置用户状态
+					if starUserInfo.Status == 0 {
+						newUser.Status = common.UserStatusDisabled
+					}
+				} else {
+					// 没有 Star 用户信息，使用请求中的邮箱
+					newUser.Username = request.Email
+					newUser.DisplayName = request.Email
+					newUser.Email = request.Email
+				}
+
+				// 检查是否是第一个绑定的 star 用户
+				if xuserid != "" {
+					var count int64
+					err = model.DB.Model(&model.User{}).Where("star_user_id != ? AND star_user_id != ?", "", "0").Count(&count).Error
+					if err != nil {
+						common.SysLog(fmt.Sprintf("检查 star 用户数量失败: %v", err))
+					} else {
+						// 如果是第一个绑定的 star 用户，设置为 root 用户
+						if count == 0 {
+							newUser.Role = common.RoleRootUser
+							common.SysLog(fmt.Sprintf("第一个 Star 用户 %s (star_user_id: %s) 被设置为 root 用户", newUser.Username, xuserid))
+						}
+					}
+				}
+
+				// 插入用户（传入 inviterId 以处理邀请关系）
+				if err := newUser.Insert(inviterId); err != nil {
+					common.SysLog(fmt.Sprintf("创建 new-api 用户失败: %v", err))
+					// 不影响 Star 注册成功，只记录日志
+				} else {
+					common.SysLog(fmt.Sprintf("成功创建 new-api 用户 %s (star_user_id: %s, inviter_id: %d)", newUser.Username, xuserid, inviterId))
+				}
+			} else if err == nil {
+				// 用户已存在，更新 star_user_id 和邀请关系（如果需要）
+				if xuserid != "" && existingUser.StarUserId == "" {
+					updates := map[string]interface{}{
+						"star_user_id": xuserid,
+					}
+					// 如果用户还没有邀请人，且提供了 aff 码，设置邀请关系
+					if existingUser.InviterId == 0 && inviterId > 0 {
+						// 注意：这里不能直接更新 InviterId，因为用户已经创建
+						// 邀请关系应该在用户创建时设置，已存在的用户不能修改邀请关系
+						common.SysLog(fmt.Sprintf("用户 %s 已存在，无法更新邀请关系", existingUser.Username))
+					}
+					if err := model.DB.Model(&existingUser).Updates(updates).Error; err != nil {
+						common.SysLog(fmt.Sprintf("更新用户 star_user_id 失败: %v", err))
+					}
+				}
+			}
+
+			// 如果提供了用户名，则调用更新用户名接口
+			if request.Username != "" && strings.TrimSpace(request.Username) != "" {
 				// 如果获取到了认证信息，调用更新用户名接口
 				if xuserid != "" && xtoken != "" {
 					headers := map[string]string{
