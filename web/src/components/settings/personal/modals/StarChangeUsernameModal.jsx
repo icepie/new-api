@@ -17,8 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useRef } from 'react';
-import { Input, Modal, Form, Button } from '@douyinfe/semi-ui';
+import React from 'react';
+import { Input, Modal, Typography } from '@douyinfe/semi-ui';
 import { IconUser } from '@douyinfe/semi-icons';
 
 const StarChangeUsernameModal = ({
@@ -31,85 +31,50 @@ const StarChangeUsernameModal = ({
   loading,
   userState,
 }) => {
-  const formApiRef = useRef(null);
-
-  const handleOk = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!formApiRef.current) {
-      console.error('表单 API 未初始化');
+  const handleOk = async () => {
+    // 基本验证
+    if (!inputs.username || inputs.username.trim() === '') {
       return;
     }
-    try {
-      console.log('开始验证表单...');
-      const values = await formApiRef.current.validate();
-      console.log('表单验证通过，值:', values);
-      console.log('调用 changeUsername 函数...');
-      await changeUsername(values);
-    } catch (errors) {
-      // Validation failed, Semi Design will automatically display error messages
-      console.error('表单验证失败:', errors);
+    if (inputs.username.length > 20) {
+      return;
     }
+    await changeUsername({ username: inputs.username });
   };
 
   return (
     <Modal
       title={
         <div className='flex items-center'>
-          <IconUser className='mr-2 text-blue-500' />
+          <IconUser className='mr-2 text-orange-500' />
           {t('修改用户名')}
         </div>
       }
       visible={showChangeUsernameModal}
       onCancel={() => setShowChangeUsernameModal(false)}
-      footer={null}
+      onOk={handleOk}
       size={'small'}
       centered={true}
-      maskClosable={false}
       className='modern-modal'
+      okButtonProps={{ loading }}
     >
-      <Form
-        getFormApi={(api) => (formApiRef.current = api)}
-        initValues={{ username: inputs.username || userState?.user?.username || '' }}
-        onSubmit={handleOk}
-      >
-        {({ formState }) => (
-          <>
-        <div className='space-y-4 py-4'>
-            <Form.Input
-              field='username'
-              label={t('用户名')}
-              placeholder={t('请输入新用户名')}
-              rules={[
-                { required: true, message: t('请输入用户名') },
-                { max: 20, message: t('用户名不能超过20个字符') },
-              ]}
-              prefix={<IconUser />}
-            />
-          </div>
-          <div className='flex justify-end gap-2 mt-4'>
-            <Button 
-              onClick={() => {
-                console.log('取消按钮被点击');
-                setShowChangeUsernameModal(false);
-              }}
-            >
-              {t('取消')}
-            </Button>
-            <Button
-              type='primary'
-              onClick={(e) => {
-                console.log('确定按钮被点击');
-                handleOk(e);
-              }}
-              loading={loading}
-            >
-              {t('确定')}
-            </Button>
-          </div>
-          </>
-        )}
-      </Form>
+      <div className='space-y-4 py-4'>
+        <div>
+          <Typography.Text strong className='block mb-2'>
+            {t('用户名')}
+          </Typography.Text>
+          <Input
+            name='username'
+            placeholder={t('请输入新用户名')}
+            value={inputs.username || userState?.user?.username || ''}
+            onChange={(value) => handleInputChange('username', value)}
+            size='large'
+            className='!rounded-lg'
+            prefix={<IconUser />}
+            maxLength={20}
+          />
+        </div>
+      </div>
     </Modal>
   );
 };

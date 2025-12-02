@@ -106,7 +106,7 @@ const StarAccountManagement = ({
         >
           <div className='py-4'>
             {/* 用户名 */}
-            <Card className='!rounded-xl mb-4'>
+            <Card className='!rounded-xl mb-6'>
               <div className='flex items-center justify-between gap-3'>
                 <div className='flex items-center flex-1 min-w-0'>
                   <div className='w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mr-3 flex-shrink-0'>
@@ -137,7 +137,7 @@ const StarAccountManagement = ({
               </div>
             </Card>
 
-            <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2'>
               {/* 邮箱绑定 */}
               <Card className='!rounded-xl'>
                 <div className='flex items-center justify-between gap-3'>
