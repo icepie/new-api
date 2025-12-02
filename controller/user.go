@@ -1117,10 +1117,10 @@ func StarQRLoginStatus(c *gin.Context) {
 	// 检查响应
 	if code, ok := response["code"].(float64); ok {
 		if code == 20000 {
-			// Star 接口调用成功，现在可以安全地进行数据库操作
-			// 检查是否是绑定场景（用户已登录）
-			id := c.GetInt("id")
-			isBindMode := false
+		// Star 接口调用成功，现在可以安全地进行数据库操作
+		// 检查是否是绑定场景（用户已登录）
+		id := c.GetInt("id")
+		isBindMode := false
 
 			if id > 0 {
 				// 用户已登录，检查是否是绑定场景
@@ -1131,7 +1131,7 @@ func StarQRLoginStatus(c *gin.Context) {
 						isBindMode = true // 用户已登录且有 star_user_id 和 xtoken，这是绑定场景
 					}
 				}
-			}
+		}
 
 			// 成功，检查返回的数据
 			data, ok := response["data"].(map[string]interface{})
@@ -1331,7 +1331,7 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 			affCode := c.Query("aff")
 			inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
 			common.SysLog(fmt.Sprintf("微信扫码登录自动注册流程: affCode=%s, inviterId=%d, starUserId=%s", affCode, inviterId, starUserId))
-			
+
 			defaultPassword, err := common.GenerateRandomCharsKey(32)
 			if err != nil {
 				common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
@@ -1486,22 +1486,22 @@ func StarWechatBind(c *gin.Context) {
 	// 如果是绑定场景，需要用户已登录
 	var userId int
 	if request.IsBind {
-		userId = c.GetInt("id")
-		if userId == 0 {
-			// 尝试从 session 获取
-			session := sessions.Default(c)
-			if id := session.Get("id"); id != nil {
-				if idInt, ok := id.(int); ok {
-					userId = idInt
-				}
+	userId = c.GetInt("id")
+	if userId == 0 {
+		// 尝试从 session 获取
+		session := sessions.Default(c)
+		if id := session.Get("id"); id != nil {
+			if idInt, ok := id.(int); ok {
+				userId = idInt
 			}
 		}
-		if userId == 0 {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
+	}
+	if userId == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
 				"message": "请先登录",
-			})
-			return
+		})
+		return
 		}
 	}
 
@@ -1534,19 +1534,19 @@ func StarWechatBind(c *gin.Context) {
 			// 成功，检查是否是绑定场景
 			if request.IsBind && userId > 0 {
 				// 绑定场景：更新本地数据库的微信信息
-				if bindData, ok := response["data"].(map[string]interface{}); ok {
+			if bindData, ok := response["data"].(map[string]interface{}); ok {
 					xuseridVal := bindData["xuserid"]
 					xuseridStr := fmt.Sprintf("%v", xuseridVal)
 					xtoken, _ := bindData["xtoken"].(string)
 					xy_uuid_token, _ := bindData["xy_uuid_token"].(string)
 
-					if xuseridStr != "" && xtoken != "" {
-						// 更新当前用户的微信信息
-						handleStarWechatBind(c, userId, xuseridStr, xtoken, xy_uuid_token)
-						return
-					}
+				if xuseridStr != "" && xtoken != "" {
+					// 更新当前用户的微信信息
+					handleStarWechatBind(c, userId, xuseridStr, xtoken, xy_uuid_token)
+					return
 				}
 			}
+		}
 
 			// 登录场景或绑定场景但不需要更新本地数据库：直接返回
 			c.JSON(http.StatusOK, gin.H{
@@ -1753,9 +1753,9 @@ func StarChangeUserInfo(c *gin.Context) {
 
 	// 调用 Star 后端修改用户信息接口
 	headers := map[string]string{
-		"xuserid": xuserid,
-		"xtoken":  xtoken,
-	}
+			"xuserid": xuserid,
+			"xtoken":  xtoken,
+		}
 	response, err := callStarBackendAPI("POST", "u/change_user_info", requestBody, headers)
 
 	if err != nil {

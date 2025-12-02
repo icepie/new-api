@@ -457,11 +457,13 @@ func (user *User) Insert(inviterId int) error {
 			_ = IncreaseUserQuota(user.Id, common.QuotaForInvitee, true)
 			RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("使用邀请码赠送 %s", logger.LogQuota(common.QuotaForInvitee)))
 		}
+		// 无论是否有邀请奖励额度，都要更新邀请人的统计信息（aff_count）
 		if common.QuotaForInviter > 0 {
 			//_ = IncreaseUserQuota(inviterId, common.QuotaForInviter)
 			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户赠送 %s", logger.LogQuota(common.QuotaForInviter)))
-			_ = inviteUser(inviterId)
 		}
+		// 即使没有邀请奖励额度，也要更新邀请人数统计（aff_count）
+		_ = inviteUser(inviterId)
 	}
 
 	// 为新用户创建默认令牌

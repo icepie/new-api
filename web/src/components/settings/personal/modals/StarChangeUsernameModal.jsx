@@ -58,23 +58,23 @@ const StarChangeUsernameModal = ({
       className='modern-modal'
       okButtonProps={{ loading }}
     >
-      <div className='space-y-4 py-4'>
+        <div className='space-y-4 py-4'>
         <div>
           <Typography.Text strong className='block mb-2'>
             {t('用户名')}
           </Typography.Text>
           <Input
             name='username'
-            placeholder={t('请输入新用户名')}
+              placeholder={t('请输入新用户名')}
             value={inputs.username || userState?.user?.username || ''}
             onChange={(value) => handleInputChange('username', value)}
             size='large'
             className='!rounded-lg'
-            prefix={<IconUser />}
+              prefix={<IconUser />}
             maxLength={50}
-          />
-        </div>
-      </div>
+            />
+          </div>
+          </div>
     </Modal>
   );
 };
