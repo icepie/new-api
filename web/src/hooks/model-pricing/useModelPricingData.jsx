@@ -105,11 +105,14 @@ export const useModelPricingData = () => {
 
     // 端点类型筛选
     if (filterEndpointType !== 'all') {
-      result = result.filter(
-        (model) =>
-          model.supported_endpoint_types &&
-          model.supported_endpoint_types.includes(filterEndpointType),
-      );
+      result = result.filter((model) => {
+        // 如果没有 supported_endpoint_types 或为空，默认认为支持 'openai' 端点类型（兼容旧数据）
+        if (!model.supported_endpoint_types || model.supported_endpoint_types.length === 0) {
+          // 默认支持 'openai' 端点类型
+          return filterEndpointType === 'openai';
+        }
+        return model.supported_endpoint_types.includes(filterEndpointType);
+      });
     }
 
     // 供应商筛选

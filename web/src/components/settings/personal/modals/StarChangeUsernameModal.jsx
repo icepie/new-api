@@ -36,7 +36,7 @@ const StarChangeUsernameModal = ({
     if (!inputs.username || inputs.username.trim() === '') {
       return;
     }
-    if (inputs.username.length > 20) {
+    if (inputs.username.length > 50) {
       return;
     }
     await changeUsername({ username: inputs.username });
@@ -71,7 +71,7 @@ const StarChangeUsernameModal = ({
             size='large'
             className='!rounded-lg'
             prefix={<IconUser />}
-            maxLength={20}
+            maxLength={50}
           />
         </div>
       </div>
