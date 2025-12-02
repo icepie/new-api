@@ -479,6 +479,7 @@ func StarLogin(c *gin.Context) {
 			// 参考原版 Register 逻辑：获取 aff 参数并转换为邀请人ID（只有在创建新用户时才处理）
 			affCode := c.Query("aff")
 			inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
+			common.SysLog(fmt.Sprintf("注册流程: affCode=%s, inviterId=%d", affCode, inviterId))
 
 			// 创建新用户，优先使用从 Star 获取的信息（参考原版 Register 逻辑）
 			newUser := model.User{
@@ -487,6 +488,7 @@ func StarLogin(c *gin.Context) {
 				Status:      common.UserStatusEnabled,
 				InviterId:   inviterId, // 参考原版：直接设置 InviterId
 			}
+			common.SysLog(fmt.Sprintf("准备创建新用户: InviterId=%d, 初始Role=%s, 状态=%d", newUser.InviterId, newUser.Role, newUser.Status))
 
 			// 使用 Star 用户信息（如果可用）
 			if starUserInfo != nil {
@@ -755,6 +757,7 @@ func StarRegister(c *gin.Context) {
 				// 用户不存在，创建新用户
 				// 参考原版 Register 逻辑：获取 aff 码并转换为邀请人ID（只有在创建新用户时才处理）
 				inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
+				common.SysLog(fmt.Sprintf("StarRegister 注册流程: affCode=%s, inviterId=%d", affCode, inviterId))
 				// 获取 Star 用户信息
 				var starUserInfo *StarUserInfo
 				if xuserid != "" && xtoken != "" {
@@ -1327,6 +1330,7 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 			// 参考原版 Register 逻辑：获取 aff 参数并转换为邀请人ID（只有在创建新用户时才处理）
 			affCode := c.Query("aff")
 			inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
+			common.SysLog(fmt.Sprintf("微信扫码登录自动注册流程: affCode=%s, inviterId=%d, starUserId=%s", affCode, inviterId, starUserId))
 			
 			defaultPassword, err := common.GenerateRandomCharsKey(32)
 			if err != nil {
@@ -1345,6 +1349,7 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 				StarUserId:  starUserId,
 				InviterId:   inviterId, // 参考原版：直接设置 InviterId
 			}
+			common.SysLog(fmt.Sprintf("微信扫码登录准备创建新用户: InviterId=%d, starUserId=%s", newUser.InviterId, newUser.StarUserId))
 
 			// 使用 Star 用户信息
 			if starUserInfo != nil {
