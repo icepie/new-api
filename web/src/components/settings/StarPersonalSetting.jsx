@@ -74,7 +74,7 @@ const StarPersonalSetting = () => {
   const [systemToken, setSystemToken] = useState('');
   const [wechatQRCode, setWechatQRCode] = useState('');
   const [wechatTicket, setWechatTicket] = useState('');
-  const [wechatQRStatus, setWechatQRStatus] = useState('loading'); // 'loading', 'active', 'scanned', 'expired'
+  const [wechatQRStatus, setWechatQRStatus] = useState('loading'); // 'loading', 'active', 'scanned', 'expired', 'completed'
   const wechatPollingRef = useRef(null);
   const [starUserInfo, setStarUserInfo] = useState(null); // Star 用户信息
   const [notificationSettings, setNotificationSettings] = useState({
@@ -194,21 +194,22 @@ const StarPersonalSetting = () => {
   // 微信绑定二维码轮询
   useEffect(() => {
     // 只有在有 ticket 且状态为 active 或 scanned 且没有正在运行的轮询时才启动
-    if (wechatTicket && (wechatQRStatus === 'active' || wechatQRStatus === 'scanned') && !wechatPollingRef.current) {
+    // 排除 completed 和 expired 状态
+    if (wechatTicket && (wechatQRStatus === 'active' || wechatQRStatus === 'scanned') && wechatQRStatus !== 'completed' && wechatQRStatus !== 'expired' && !wechatPollingRef.current) {
       // 使用递归 setTimeout 实现动态间隔：前30次每2秒，之后每3秒
       let pollingCount = 0;
       
       const scheduleNextPoll = () => {
-        // 检查是否应该继续轮询
-        if (!wechatTicket || wechatQRStatus === 'expired') {
+        // 检查是否应该继续轮询（包括 completed 状态）
+        if (!wechatTicket || wechatQRStatus === 'expired' || wechatQRStatus === 'completed') {
           stopWechatPolling();
           return;
         }
         
         const interval = pollingCount < 30 ? 2000 : 3000;
         wechatPollingRef.current = setTimeout(() => {
-          // 在回调中再次检查状态
-          if (!wechatTicket || wechatQRStatus === 'expired') {
+          // 在回调中再次检查状态（包括 completed 状态）
+          if (!wechatTicket || wechatQRStatus === 'expired' || wechatQRStatus === 'completed') {
             stopWechatPolling();
             return;
           }
@@ -216,16 +217,16 @@ const StarPersonalSetting = () => {
           // 执行检查
           checkWechatBindStatus().then(() => {
             pollingCount++;
-            // 检查是否应该继续轮询（允许 'active' 和 'scanned' 状态继续轮询）
-            if (wechatTicket && wechatQRStatus !== 'expired' && wechatQRStatus !== 'loading') {
+            // 检查是否应该继续轮询（排除 completed 状态）
+            if (wechatTicket && wechatQRStatus !== 'expired' && wechatQRStatus !== 'loading' && wechatQRStatus !== 'completed') {
               scheduleNextPoll(); // 递归调度下一次
             } else {
               stopWechatPolling();
             }
           }).catch(() => {
             pollingCount++;
-            // 错误处理：如果还有 ticket 且未过期，继续轮询
-            if (wechatTicket && wechatQRStatus !== 'expired' && wechatQRStatus !== 'loading') {
+            // 错误处理：如果还有 ticket 且未过期且未完成，继续轮询
+            if (wechatTicket && wechatQRStatus !== 'expired' && wechatQRStatus !== 'loading' && wechatQRStatus !== 'completed') {
               scheduleNextPoll();
             } else {
               stopWechatPolling();
@@ -237,14 +238,14 @@ const StarPersonalSetting = () => {
       // 立即执行一次检查
       checkWechatBindStatus().then(() => {
         pollingCount++;
-        // 开始第一次调度
-        if (wechatTicket && (wechatQRStatus === 'active' || wechatQRStatus === 'scanned') && !wechatPollingRef.current) {
+        // 开始第一次调度（排除已完成和过期状态）
+        if (wechatTicket && (wechatQRStatus === 'active' || wechatQRStatus === 'scanned') && wechatQRStatus !== 'completed' && wechatQRStatus !== 'expired' && !wechatPollingRef.current) {
           scheduleNextPoll();
         }
       }).catch(() => {
         pollingCount++;
-        // 即使第一次检查失败，也继续轮询（可能是网络问题）
-        if (wechatTicket && (wechatQRStatus === 'active' || wechatQRStatus === 'scanned') && !wechatPollingRef.current) {
+        // 即使第一次检查失败，也继续轮询（可能是网络问题），但排除已完成和过期状态
+        if (wechatTicket && (wechatQRStatus === 'active' || wechatQRStatus === 'scanned') && wechatQRStatus !== 'completed' && wechatQRStatus !== 'expired' && !wechatPollingRef.current) {
           scheduleNextPoll();
         }
       });
@@ -310,7 +311,8 @@ const StarPersonalSetting = () => {
 
   // 检查微信绑定状态
   const checkWechatBindStatus = async () => {
-    if (!wechatTicket) {
+    // 如果没有 ticket 或状态为 completed/expired，停止轮询
+    if (!wechatTicket || wechatQRStatus === 'completed' || wechatQRStatus === 'expired') {
       stopWechatPolling();
       return;
     }
@@ -324,6 +326,7 @@ const StarPersonalSetting = () => {
           setWechatQRStatus('scanned');
           // 停止轮询，等待用户确认或自动绑定
           stopWechatPolling();
+          setWechatTicket(''); // 清除 ticket，防止轮询继续
           // 自动调用绑定接口
           await bindWeChatWithToken(res.data.wechat_temp_token);
           return;
@@ -331,9 +334,10 @@ const StarPersonalSetting = () => {
         
         // 如果返回了用户数据（包含 id 字段），说明绑定成功（老用户直接登录的情况）
         if (res.data && res.data.id !== undefined && res.data.id !== null) {
-          // 绑定成功，停止轮询
+          // 绑定成功，停止轮询并清除 ticket，防止重复触发成功提示
           stopWechatPolling();
-          setWechatQRStatus('active');
+          setWechatTicket(''); // 清除 ticket，确保轮询完全停止
+          setWechatQRStatus('completed'); // 设置为完成状态，防止轮询继续
           showSuccess(t('微信账户绑定成功！'));
           setShowWeChatBindModal(false);
           await getUserData();
@@ -351,8 +355,17 @@ const StarPersonalSetting = () => {
       if (error.message && (error.message.includes('过期') || error.message.includes('已过期'))) {
         setWechatQRStatus('expired');
         stopWechatPolling();
+      } else if (error.message && (error.message.includes('502') || error.message.includes('Bad Gateway'))) {
+        // Star 后端服务不可用，停止轮询并提示
+        setWechatQRStatus('expired');
+        stopWechatPolling();
+        showError(t('Star 后端服务暂时不可用，请稍后重试'));
+      } else {
+        // 其他错误，记录日志但不继续轮询（避免重复错误）
+        console.error('检查微信绑定状态失败:', error);
+        // 不继续轮询，避免重复错误
+        stopWechatPolling();
       }
-      // 其他错误继续轮询（可能是网络问题）
     }
   };
 
@@ -383,20 +396,25 @@ const StarPersonalSetting = () => {
 
   // 使用 token 绑定微信
   const bindWeChatWithToken = async (wechatTempToken) => {
+    // 在绑定场景下，后端会自动从 session 中获取 Star 认证信息
+    // 如果前端有 Cookie 中的认证信息，可以传递给后端（可选）
+    // 如果没有，后端会从 session 中获取
     const authCookies = getStarAuthCookies();
-    if (!authCookies.xuserid || !authCookies.xtoken) {
-      showError(t('请先登录'));
-      return;
-    }
-
+    
     setLoading(true);
     try {
-      const res = await starWechatBind({
-        is_bind: true,
+      const bindData = {
         wechat_temp_token: wechatTempToken,
-        xuserid: parseInt(authCookies.xuserid),
-        xtoken: authCookies.xtoken,
-      });
+      };
+      
+      // 如果存在 Cookie 中的认证信息，传递给后端（可选，后端会优先使用）
+      // 如果不存在，后端会自动从 session 中获取
+      if (authCookies.xuserid && authCookies.xtoken) {
+        bindData.xuserid = parseInt(authCookies.xuserid);
+        bindData.xtoken = authCookies.xtoken;
+      }
+      
+      const res = await starWechatBind(bindData);
 
       if (res.success && res.data) {
         // 如果返回了用户数据（包含 id），说明绑定成功并更新了 session
@@ -407,9 +425,13 @@ const StarPersonalSetting = () => {
           setUserData(res.data);
         }
         
+        // 停止轮询并清除 ticket，防止重复触发成功提示
+        stopWechatPolling();
+        setWechatTicket(''); // 清除 ticket，确保轮询完全停止
+        setWechatQRStatus('completed'); // 设置为完成状态，防止轮询继续
+        
         showSuccess(t('微信账户绑定成功！'));
         setShowWeChatBindModal(false);
-        stopWechatPolling();
         
         // 刷新用户数据
         await getUserData();
@@ -421,7 +443,14 @@ const StarPersonalSetting = () => {
         showError(res.message || t('微信绑定失败'));
       }
     } catch (error) {
-      showError(t('微信绑定失败，请重试'));
+      // 检查是否是 Star 后端服务不可用
+      if (error.message && (error.message.includes('502') || error.message.includes('Bad Gateway'))) {
+        showError(t('Star 后端服务暂时不可用，请稍后重试'));
+      } else if (error.message && error.message.includes('缺少必需参数')) {
+        showError(t('绑定微信需要 Star 账户认证，请先登录 Star 账户'));
+      } else {
+        showError(t('微信绑定失败，请重试'));
+      }
     } finally {
       setLoading(false);
     }

@@ -338,6 +338,11 @@ func inviteUser(inviterId int) (err error) {
 	return DB.Save(user).Error
 }
 
+// InviteUser 更新邀请人的统计信息（导出版本）
+func InviteUser(inviterId int) error {
+	return inviteUser(inviterId)
+}
+
 func (user *User) TransferAffQuotaToQuota(quota int) error {
 	// 检查quota是否小于最小额度
 	if float64(quota) < common.QuotaPerUnit {

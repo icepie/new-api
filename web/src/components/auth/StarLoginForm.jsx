@@ -173,7 +173,9 @@ const StarLoginForm = () => {
     }
     
     try {
-      const res = await starCheckWechatLoginStatus(qrTicket);
+      // 从 URL 参数或 localStorage 获取 aff 码（只有在自动注册新用户时才生效）
+      const affCode = searchParams.get('aff') || localStorage.getItem('aff') || null;
+      const res = await starCheckWechatLoginStatus(qrTicket, affCode);
       if (res.success && res.data) {
         // 后端已经统一处理了登录流程
         // 如果返回了用户数据（包含 id 字段），说明登录成功
@@ -327,8 +329,10 @@ const StarLoginForm = () => {
     
     setIsLoggingIn(true);
     try {
-      console.log('Calling starLoginAdapter with:', { usernameOrEmail, password });
-      const res = await starLoginAdapter(usernameOrEmail, password);
+      // 从 URL 参数或 localStorage 获取 aff 码（只有在自动注册新用户时才生效）
+      const affCode = searchParams.get('aff') || localStorage.getItem('aff') || null;
+      console.log('Calling starLoginAdapter with:', { usernameOrEmail, password, affCode });
+      const res = await starLoginAdapter(usernameOrEmail, password, affCode);
       if (res.success && res.data) {
         // 检查是否需要2FA验证
         if (res.data.require_2fa) {

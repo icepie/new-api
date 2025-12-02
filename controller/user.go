@@ -476,11 +476,16 @@ func StarLogin(c *gin.Context) {
 				userPassword = randomPassword
 			}
 
-			// 创建新用户，优先使用从 Star 获取的信息
+			// 参考原版 Register 逻辑：获取 aff 参数并转换为邀请人ID（只有在创建新用户时才处理）
+			affCode := c.Query("aff")
+			inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
+
+			// 创建新用户，优先使用从 Star 获取的信息（参考原版 Register 逻辑）
 			newUser := model.User{
 				Password:    userPassword,
 				Role:        common.RoleCommonUser,
 				Status:      common.UserStatusEnabled,
+				InviterId:   inviterId, // 参考原版：直接设置 InviterId
 			}
 
 			// 使用 Star 用户信息（如果可用）
@@ -533,19 +538,7 @@ func StarLogin(c *gin.Context) {
 				newUser.StarUserId = starUserId
 			}
 
-			// 获取 aff 参数（从 URL 参数获取）
-			affCode := c.Query("aff")
-			var inviterId int
-			if affCode != "" {
-				inviterId, _ = model.GetUserIdByAffCode(affCode)
-				if inviterId == 0 {
-					common.SysLog(fmt.Sprintf("邀请码 %s 不存在或无效", affCode))
-				} else {
-					common.SysLog(fmt.Sprintf("使用邀请码 %s，邀请人ID: %d", affCode, inviterId))
-				}
-			}
-
-			// 插入用户（传入 inviterId 以处理邀请关系）
+			// 插入用户（传入 inviterId 以处理邀请关系，参考原版 Register 逻辑）
 			if err := newUser.Insert(inviterId); err != nil {
 				common.SysLog(fmt.Sprintf("自动注册用户失败: %v", err))
 				c.JSON(http.StatusOK, gin.H{
@@ -755,20 +748,13 @@ func StarRegister(c *gin.Context) {
 				}
 			}
 
-			// 如果提供了 aff 码，在 new-api 中创建用户并设置邀请关系
-			var inviterId int
-			if affCode != "" {
-				inviterId, _ = model.GetUserIdByAffCode(affCode)
-				if inviterId == 0 {
-					common.SysLog(fmt.Sprintf("邀请码 %s 不存在或无效", affCode))
-				}
-			}
-
 			// 检查用户是否已在 new-api 中存在
 			var existingUser model.User
 			err = model.DB.Where("email = ?", request.Email).First(&existingUser).Error
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				// 用户不存在，创建新用户
+				// 参考原版 Register 逻辑：获取 aff 码并转换为邀请人ID（只有在创建新用户时才处理）
+				inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
 				// 获取 Star 用户信息
 				var starUserInfo *StarUserInfo
 				if xuserid != "" && xtoken != "" {
@@ -780,12 +766,13 @@ func StarRegister(c *gin.Context) {
 					}
 				}
 
-				// 创建新用户
+				// 创建新用户（参考原版 Register 逻辑）
 				newUser := model.User{
 					Password:    "", // 使用空密码，因为使用 Star 系统认证
 					Role:        common.RoleCommonUser,
 					Status:      common.UserStatusEnabled,
 					StarUserId:  xuserid,
+					InviterId:   inviterId, // 参考原版：直接设置 InviterId
 				}
 
 				// 使用 Star 用户信息（如果可用）
@@ -839,16 +826,10 @@ func StarRegister(c *gin.Context) {
 					common.SysLog(fmt.Sprintf("成功创建 new-api 用户 %s (star_user_id: %s, inviter_id: %d)", newUser.Username, xuserid, inviterId))
 				}
 			} else if err == nil {
-				// 用户已存在，更新 star_user_id 和邀请关系（如果需要）
+				// 用户已存在，只更新 star_user_id（参考原版 Register：已存在的用户不处理邀请关系）
 				if xuserid != "" && existingUser.StarUserId == "" {
 					updates := map[string]interface{}{
 						"star_user_id": xuserid,
-					}
-					// 如果用户还没有邀请人，且提供了 aff 码，设置邀请关系
-					if existingUser.InviterId == 0 && inviterId > 0 {
-						// 注意：这里不能直接更新 InviterId，因为用户已经创建
-						// 邀请关系应该在用户创建时设置，已存在的用户不能修改邀请关系
-						common.SysLog(fmt.Sprintf("用户 %s 已存在，无法更新邀请关系", existingUser.Username))
 					}
 					if err := model.DB.Model(&existingUser).Updates(updates).Error; err != nil {
 						common.SysLog(fmt.Sprintf("更新用户 star_user_id 失败: %v", err))
@@ -1343,6 +1324,10 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// 用户不存在，创建新用户
+			// 参考原版 Register 逻辑：获取 aff 参数并转换为邀请人ID（只有在创建新用户时才处理）
+			affCode := c.Query("aff")
+			inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
+			
 			defaultPassword, err := common.GenerateRandomCharsKey(32)
 			if err != nil {
 				common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
@@ -1358,6 +1343,7 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 				Role:        common.RoleCommonUser,
 				Status:      common.UserStatusEnabled,
 				StarUserId:  starUserId,
+				InviterId:   inviterId, // 参考原版：直接设置 InviterId
 			}
 
 			// 使用 Star 用户信息
@@ -1383,8 +1369,8 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 				newUser.DisplayName = "微信用户"
 			}
 
-			// 插入用户
-			if err := newUser.Insert(0); err != nil {
+			// 插入用户（传入 inviterId 以处理邀请关系，参考原版 Register 逻辑）
+			if err := newUser.Insert(inviterId); err != nil {
 				common.SysLog(fmt.Sprintf("自动注册用户失败: %v", err))
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,

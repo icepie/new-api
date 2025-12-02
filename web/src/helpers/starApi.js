@@ -96,11 +96,25 @@ export const starRegister = async (email, email_code, password) => {
  * 用户登录
  * @param {string} email - 邮箱/用户名
  * @param {string} password - 密码 (需要 base64 编码)
+ * @param {string} aff - 可选邀请码（只有在自动注册新用户时才生效）
  */
-export const starLogin = async (email, password) => {
+export const starLogin = async (email, password, aff = null) => {
   // 密码需要 base64 编码
   const encodedPassword = btoa(password.trim());
-  const response = await starApi.post('/login', {
+  
+  // 构建请求 URL，如果提供了 aff 参数，添加到 URL 查询字符串中
+  let url = '/login';
+  if (aff) {
+    url += `?aff=${encodeURIComponent(aff)}`;
+  } else {
+    // 如果没有提供 aff 参数，尝试从 localStorage 获取
+    const affFromStorage = localStorage.getItem('aff');
+    if (affFromStorage) {
+      url += `?aff=${encodeURIComponent(affFromStorage)}`;
+    }
+  }
+  
+  const response = await starApi.post(url, {
     email,
     password: encodedPassword,
   });
@@ -136,13 +150,27 @@ export const starGetWechatQRCode = async (mode = 'login') => {
 /**
  * 检查微信二维码登录状态
  * @param {string} ticket - 二维码 ticket
+ * @param {string} aff - 可选邀请码（只有在自动注册新用户时才生效）
  */
-export const starCheckWechatLoginStatus = async (ticket) => {
+export const starCheckWechatLoginStatus = async (ticket, aff = null) => {
   const instance = axios.create({
     baseURL: '/u',
     timeout: 10000,
   });
-  return instance.get('/qr_login_status', { params: { ticket } }).then((response) => {
+  
+  const params = { ticket };
+  // 如果提供了 aff 参数，添加到请求参数中
+  if (aff) {
+    params.aff = aff;
+  } else {
+    // 如果没有提供 aff 参数，尝试从 localStorage 获取
+    const affFromStorage = localStorage.getItem('aff');
+    if (affFromStorage) {
+      params.aff = affFromStorage;
+    }
+  }
+  
+  return instance.get('/qr_login_status', { params }).then((response) => {
     // 后端现在返回 new-api 格式 { success, message, data }
     // 如果登录成功，data 包含用户信息（id, username 等）
     // 如果还在处理中，data 可能包含 wechat_temp_token
