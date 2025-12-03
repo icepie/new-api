@@ -790,46 +790,71 @@ export default function ModelDetailSidebar({
           <div className="pricing-detail-price">
             <div className="pricing-detail-price-container">
               <div className="pricing-detail-price-list">
-                <div className="pricing-detail-price-item">
-                  <span className="pricing-detail-price-label">
-                    {t.input}
-                  </span>
-                  <span className="pricing-detail-price-value">
-                    {priceData && priceData.isPerToken
-                      ? (
+                {model.quota_type === 1 ? (
+                  // 按次计费：显示单次价格
+                  <div className="pricing-detail-price-item">
+                    <span className="pricing-detail-price-label">
+                      {locale === 'zh' ? '价格' : 'Price'}
+                    </span>
+                    <span className="pricing-detail-price-value">
+                      {priceData && !priceData.isPerToken && priceData.price ? (
                         <>
-                          <span className="pricing-detail-price-number">{priceData.inputPrice}</span>
-                          <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} tokens</span>
+                          <span className="pricing-detail-price-number">{priceData.price}</span>
+                          <span className="pricing-detail-price-unit"> / {locale === 'zh' ? '单次' : 'request'}</span>
                         </>
-                      )
-                      : (
+                      ) : (
                         <>
-                          <span className="pricing-detail-price-number">${formatPrice(model.input)}</span>
-                          <span className="pricing-detail-price-unit"> / M tokens</span>
-                        </>
-                      )}
-                  </span>
-                </div>
-                <div className="pricing-detail-price-item">
-                  <span className="pricing-detail-price-label">
-                    {t.output}
-                  </span>
-                  <span className="pricing-detail-price-value">
-                    {priceData && priceData.isPerToken
-                      ? (
-                        <>
-                          <span className="pricing-detail-price-number">{priceData.completionPrice || priceData.outputPrice}</span>
-                          <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} tokens</span>
-                        </>
-                      )
-                      : (
-                        <>
-                          <span className="pricing-detail-price-number">${formatPrice(model.output)}</span>
-                          <span className="pricing-detail-price-unit"> / M tokens</span>
+                          <span className="pricing-detail-price-number">${formatPrice(model.model_price || model.input || model.output || 0)}</span>
+                          <span className="pricing-detail-price-unit"> / {locale === 'zh' ? '单次' : 'request'}</span>
                         </>
                       )}
-                  </span>
-                </div>
+                    </span>
+                  </div>
+                ) : (
+                  // 按量计费：显示输入和输出
+                  <>
+                    <div className="pricing-detail-price-item">
+                      <span className="pricing-detail-price-label">
+                        {t.input}
+                      </span>
+                      <span className="pricing-detail-price-value">
+                        {priceData && priceData.isPerToken
+                          ? (
+                            <>
+                              <span className="pricing-detail-price-number">{priceData.inputPrice}</span>
+                              <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} tokens</span>
+                            </>
+                          )
+                          : (
+                            <>
+                              <span className="pricing-detail-price-number">${formatPrice(model.input)}</span>
+                              <span className="pricing-detail-price-unit"> / M tokens</span>
+                            </>
+                          )}
+                      </span>
+                    </div>
+                    <div className="pricing-detail-price-item">
+                      <span className="pricing-detail-price-label">
+                        {t.output}
+                      </span>
+                      <span className="pricing-detail-price-value">
+                        {priceData && priceData.isPerToken
+                          ? (
+                            <>
+                              <span className="pricing-detail-price-number">{priceData.completionPrice || priceData.outputPrice}</span>
+                              <span className="pricing-detail-price-unit"> / {priceData.unitLabel || 'M'} tokens</span>
+                            </>
+                          )
+                          : (
+                            <>
+                              <span className="pricing-detail-price-number">${formatPrice(model.output)}</span>
+                              <span className="pricing-detail-price-unit"> / M tokens</span>
+                            </>
+                          )}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
