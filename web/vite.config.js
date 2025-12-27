@@ -20,6 +20,9 @@ For commercial licensing, please contact support@quantumnous.com
 import react from '@vitejs/plugin-react';
 import { defineConfig, transformWithEsbuild } from 'vite';
 import path from 'path';
+import { codeInspectorPlugin } from 'code-inspector-plugin';
+import pkg from '@douyinfe/vite-plugin-semi';
+const { vitePluginSemi } = pkg;
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -29,6 +32,9 @@ export default defineConfig({
     },
   },
   plugins: [
+    codeInspectorPlugin({
+      bundler: 'vite',
+    }),
     {
       name: 'treat-js-files-as-jsx',
       async transform(code, id) {

@@ -2286,6 +2286,9 @@
     "该邮箱已被注册，请使用其他邮箱或直接登录": "This email is already registered, please use another email or log in directly",
     "该邮箱未注册，请检查邮箱地址": "This email is not registered, please check the email address",
     "请输入有效的邮箱地址": "Please enter a valid email address",
-    "发送中...": "Sending..."
+    "发送中...": "Sending...",
+    "跨分组重试": "Cross-group retry",
+    "跨分组": "Cross-group",
+    "开启后，当前分组渠道失败时会按顺序尝试下一个分组的渠道": "After enabling, when the current group channel fails, it will try the next group's channel in order"
   }
 }
