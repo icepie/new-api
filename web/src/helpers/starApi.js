@@ -218,6 +218,41 @@ export const starWechatBind = async (data) => {
 };
 
 /**
+ * 检查微信二维码找回用户名状态
+ * @param {string} ticket - 二维码 ticket
+ */
+export const starCheckWechatUsernameStatus = async (ticket) => {
+  const instance = axios.create({
+    baseURL: '/u',
+    timeout: 10000,
+  });
+
+  return instance.get('/qr_get_username_status', { params: { ticket } }).then((response) => {
+    const { success, message, data } = response.data;
+
+    if (success) {
+      // 如果返回了用户名，说明找回成功
+      if (data && data.username) {
+        return { success: true, data };
+      }
+
+      // 如果返回了扫码状态
+      if (data && data.scanned) {
+        return { success: true, data };
+      }
+
+      // 未扫码或等待中
+      return { success: true, data: null, message: '未扫码' };
+    } else {
+      if (typeof message === 'string' && (message.includes('无数据') || message.includes('尚未扫码'))) {
+        return { success: false, data: null, message: '未扫码' };
+      }
+      throw new Error(message || '二维码已过期');
+    }
+  });
+};
+
+/**
  * 设置 Star 认证 cookies
  * @param {object} authData - 认证数据 { xuserid, xtoken, xy_uuid_token }
  */

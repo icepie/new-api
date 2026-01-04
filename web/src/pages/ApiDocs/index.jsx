@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useContext, useMemo } from 'react';
+import React, { useContext, useMemo, useEffect } from 'react';
 import { StatusContext } from '../../context/Status';
 import { useActualTheme } from '../../context/Theme';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +43,13 @@ const ApiDocs = () => {
     }
   }, [apiDocsLink, actualTheme]);
 
+  // 如果设置了接口文档URL但未开启内嵌，自动跳转到外部链接
+  useEffect(() => {
+    if (apiDocsLink && !apiDocsLinkEmbed) {
+      window.location.href = apiDocsLink;
+    }
+  }, [apiDocsLink, apiDocsLinkEmbed]);
+
   // 如果设置了接口文档URL且开启了内嵌，则使用iframe显示
   if (apiDocsLink && apiDocsLinkEmbed) {
     return (
@@ -63,10 +70,19 @@ const ApiDocs = () => {
     );
   }
 
-  // 如果没有设置接口文档URL或没有开启内嵌，显示空状态或重定向
+  // 如果设置了链接但未开启内嵌，显示跳转中提示（实际会被 useEffect 跳转）
+  if (apiDocsLink && !apiDocsLinkEmbed) {
+    return (
+      <div className='flex justify-center items-center h-screen'>
+        <p>{t('正在跳转到接口文档页面...')}</p>
+      </div>
+    );
+  }
+
+  // 如果没有设置接口文档URL，显示未配置提示
   return (
     <div className='flex justify-center items-center h-screen'>
-      <p>{t('接口文档未配置或未启用内嵌模式')}</p>
+      <p>{t('接口文档未配置')}</p>
     </div>
   );
 };

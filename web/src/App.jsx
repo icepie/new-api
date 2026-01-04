@@ -27,6 +27,7 @@ import LoginForm from './components/auth/LoginForm';
 import StarLoginForm from './components/auth/StarLoginForm';
 import StarRegisterForm from './components/auth/StarRegisterForm';
 import StarPasswordResetForm from './components/auth/StarPasswordResetForm';
+import StarWechatUsername from './components/auth/StarWechatUsername';
 import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
 import Setting from './pages/Setting';
@@ -209,6 +210,14 @@ function App() {
           element={
             <Suspense fallback={<Loading></Loading>} key={location.pathname}>
               {starUserSystemEnabled ? <StarPasswordResetForm /> : <PasswordResetForm />}
+            </Suspense>
+          }
+        />
+        <Route
+          path='/starWechatUsername'
+          element={
+            <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+              <StarWechatUsername />
             </Suspense>
           }
         />
