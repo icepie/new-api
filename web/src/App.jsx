@@ -46,6 +46,7 @@ import Pricing from './pages/Pricing';
 const PricingNew = React.lazy(() => import('./pages/Pricing/PricingNew'));
 import Task from './pages/Task';
 import ModelPage from './pages/Model';
+import ModelDeploymentPage from './pages/ModelDeployment';
 import Playground from './pages/Playground';
 import OAuth2Callback from './components/auth/OAuth2Callback';
 import PersonalSetting from './components/settings/PersonalSetting';
@@ -124,6 +125,14 @@ function App() {
           element={
             <AdminRoute>
               <ModelPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path='/console/deployment'
+          element={
+            <AdminRoute>
+              <ModelDeploymentPage />
             </AdminRoute>
           }
         />
