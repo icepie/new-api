@@ -49,6 +49,7 @@ const StarAccountManagement = ({
   setShowChangePasswordModal,
   setShowChangeUsernameModal,
   starUserInfo,
+  starWechatEnabled = true,
 }) => {
   const renderAccountInfo = (accountId, label) => {
     if (!accountId || accountId === '') {
@@ -175,7 +176,8 @@ const StarAccountManagement = ({
                 </div>
               </Card>
 
-              {/* 微信绑定 */}
+              {/* 微信绑定 - 仅在启用微信登录时显示 */}
+              {starWechatEnabled && (
               <Card className='!rounded-xl'>
                 <div className='flex items-center justify-between gap-3'>
                   <div className='flex items-center flex-1 min-w-0'>
@@ -216,6 +218,7 @@ const StarAccountManagement = ({
                   </div>
                 </div>
               </Card>
+              )}
             </div>
           </div>
         </TabPane>

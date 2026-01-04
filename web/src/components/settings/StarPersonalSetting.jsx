@@ -28,6 +28,7 @@ import {
   setUserData,
 } from '../../helpers';
 import { UserContext } from '../../context/User';
+import { StatusContext } from '../../context/Status';
 import { useTranslation } from 'react-i18next';
 
 // 导入子组件
@@ -50,8 +51,12 @@ import {
 
 const StarPersonalSetting = () => {
   const [userState, userDispatch] = useContext(UserContext);
+  const [statusState] = useContext(StatusContext);
   let navigate = useNavigate();
   const { t } = useTranslation();
+
+  // 从状态中获取是否启用微信登录
+  const starWechatEnabled = statusState?.status?.star_wechat_enabled !== false;
 
   const [inputs, setInputs] = useState({
     wechat_verification_code: '',
@@ -695,6 +700,7 @@ const StarPersonalSetting = () => {
               setShowChangePasswordModal={setShowChangePasswordModal}
               setShowChangeUsernameModal={setShowChangeUsernameModal}
               starUserInfo={starUserInfo}
+              starWechatEnabled={starWechatEnabled}
             />
 
             {/* 右侧：其他设置 */}

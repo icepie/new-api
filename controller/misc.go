@@ -124,6 +124,7 @@ func GetStatus(c *gin.Context) {
 		"user_agreement_enabled":      legalSetting.UserAgreement != "",
 		"privacy_policy_enabled":      legalSetting.PrivacyPolicy != "",
 		"star_user_system_enabled":    common.StarUserSystemEnabled && common.StarBackendAddress != "",
+		"star_wechat_enabled":         common.StarWeChatEnabled,
 		"checkin_enabled":             operation_setting.GetCheckinSetting().Enabled,
 	}
 

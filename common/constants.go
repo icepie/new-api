@@ -90,6 +90,7 @@ var WeChatServerAddress = ""
 
 var StarUserSystemEnabled = false
 var StarBackendAddress = ""
+var StarWeChatEnabled = true
 var WeChatServerToken = ""
 var WeChatAccountQRCodeImageURL = ""
 

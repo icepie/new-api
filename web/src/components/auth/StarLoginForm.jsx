@@ -21,6 +21,7 @@ import React, { useContext, useEffect, useState, useRef, useCallback } from 'rea
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../../context/User';
+import { StatusContext } from '../../context/Status';
 import {
   getLogo,
   showError,
@@ -51,6 +52,10 @@ const StarLoginForm = () => {
   const [searchParams] = useSearchParams();
   const [isDark, setIsDark] = useState(false);
   const [isWechatLogoHovered, setIsWechatLogoHovered] = useState(false);
+  const [statusState] = useContext(StatusContext);
+
+  // 从状态中获取是否启用微信登录
+  const starWechatEnabled = statusState?.status?.star_wechat_enabled !== false;
   
   // 从 URL 参数获取 aff 码并保存到 localStorage
   useEffect(() => {
@@ -497,7 +502,8 @@ const StarLoginForm = () => {
             </div>
             <div className="px-4 sm:px-6 pb-8">
 
-              {/* 登录方式选择 */}
+              {/* 登录方式选择 - 仅在启用微信登录时显示 */}
+              {starWechatEnabled && (
               <div style={{ marginBottom: '24px' }}>
                 <div ref={tabContainerRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', paddingBottom: '8px' }}>
                   {/* 连续的下划线背景 - 覆盖整个容器宽度 */}
@@ -538,7 +544,7 @@ const StarLoginForm = () => {
                       border: 'none',
                       cursor: 'pointer',
                       textAlign: 'center',
-                      color: loginMethod === 'wechat' 
+                      color: loginMethod === 'wechat'
                         ? (isDark ? '#f3f4f6' : '#111827')
                         : (isDark ? '#9ca3af' : '#9ca3af'),
                     }}
@@ -571,7 +577,7 @@ const StarLoginForm = () => {
                       border: 'none',
                       cursor: 'pointer',
                       textAlign: 'center',
-                      color: loginMethod === 'email' 
+                      color: loginMethod === 'email'
                         ? (isDark ? '#f3f4f6' : '#111827')
                         : (isDark ? '#9ca3af' : '#9ca3af'),
                     }}
@@ -590,11 +596,12 @@ const StarLoginForm = () => {
                   </button>
                 </div>
               </div>
+              )}
 
               {/* 内容区域 - 设置固定高度避免切换时拉伸 */}
-              <div style={{ position: 'relative', height: '340px' }}>
+              <div style={{ position: 'relative', height: starWechatEnabled ? '340px' : 'auto' }}>
           {/* 微信二维码登录 */}
-          {loginMethod === 'wechat' && (
+          {starWechatEnabled && loginMethod === 'wechat' && (
             <div className="space-y-4">
               <div className="text-center">
                 <Text className="text-gray-600 dark:text-gray-400 mb-8 text-sm sm:text-base max-w-xs mx-auto px-2 leading-relaxed">

@@ -78,6 +78,7 @@ const SystemSetting = () => {
     WeChatAccountQRCodeImageURL: '',
     StarUserSystemEnabled: '',
     StarBackendAddress: '',
+    StarWeChatEnabled: '',
     TurnstileCheckEnabled: '',
     TurnstileSiteKey: '',
     TurnstileSecretKey: '',
@@ -1605,6 +1606,17 @@ const SystemSetting = () => {
                         }
                       >
                         {t('启用 Star 用户系统')}
+                      </Form.Checkbox>
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Checkbox
+                        field='StarWeChatEnabled'
+                        noLabel
+                        onChange={(e) =>
+                          handleCheckboxChange('StarWeChatEnabled', e)
+                        }
+                      >
+                        {t('启用 Star 微信登录')}
                       </Form.Checkbox>
                     </Col>
                   </Row>
