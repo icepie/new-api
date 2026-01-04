@@ -22,6 +22,8 @@ func SetStarRouter(router *gin.Engine) {
 		// qr_login_status 接口需要频繁轮询，使用更宽松的限流策略
 		// 允许每分钟 60 次请求（每 1 秒一次），足够支持 2 秒轮询
 		starRoute.GET("/qr_login_status", middleware.QRStatusRateLimit(), controller.StarQRLoginStatus)
+		// qr_get_username_status 找回用户名专用接口，也需要轮询
+		starRoute.GET("/qr_get_username_status", middleware.QRStatusRateLimit(), controller.StarQRGetUsernameStatus)
 		// wechat_bind 接口在绑定场景下需要用户已登录，但登录场景不需要，所以不使用 UserAuth 中间件
 		// 而是在函数内部检查 is_bind 参数来决定是否需要认证
 		starRoute.POST("/wechat_bind", controller.StarWechatBind)

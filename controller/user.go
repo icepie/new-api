@@ -1458,6 +1458,123 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 	setupLogin(&user, c)
 }
 
+// StarQRGetUsernameStatus 微信扫码找回用户名接口
+func StarQRGetUsernameStatus(c *gin.Context) {
+	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户系统未启用",
+		})
+		return
+	}
+
+	ticket := c.Query("ticket")
+	if ticket == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误: ticket 不能为空",
+		})
+		return
+	}
+
+	// 调用 Star 后端检查微信二维码状态
+	endpoint := "u/qr_login_status?ticket=" + url.QueryEscape(ticket)
+	response, err := callStarBackendAPI("GET", endpoint, nil, nil)
+
+	if err != nil {
+		common.SysLog(fmt.Sprintf("调用 Star 检查微信二维码状态接口失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "检查状态失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 检查响应
+	if code, ok := response["code"].(float64); ok {
+		if code == 20000 {
+			// 成功，检查返回的数据
+			data, ok := response["data"].(map[string]interface{})
+			if !ok {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "响应数据格式错误",
+				})
+				return
+			}
+
+			// 如果返回了 xuserid 和 xtoken，说明已扫码成功，调用获取用户信息接口
+			if xuseridVal, ok := data["xuserid"]; ok {
+				xuseridStr := fmt.Sprintf("%v", xuseridVal)
+				xtoken, _ := data["xtoken"].(string)
+
+				if xuseridStr != "" && xtoken != "" {
+					// 调用 Star 获取用户信息接口
+					success, starUserInfo, err := callGetUserInfoAPI(xuseridStr, xtoken)
+					if err != nil {
+						common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
+						c.JSON(http.StatusOK, gin.H{
+							"success": false,
+							"message": "获取用户信息失败",
+						})
+						return
+					}
+
+					if success && starUserInfo != nil {
+						// 返回用户名和邮箱
+						result := gin.H{
+							"username": starUserInfo.Username,
+						}
+						if starUserInfo.Email != "" {
+							result["email"] = starUserInfo.Email
+						}
+						c.JSON(http.StatusOK, gin.H{
+							"success": true,
+							"message": "",
+							"data":    result,
+						})
+						return
+					}
+
+					c.JSON(http.StatusOK, gin.H{
+						"success": false,
+						"message": "获取用户信息失败",
+					})
+					return
+				}
+			}
+
+			// 如果有 wechat_temp_token，说明扫码成功但是新用户（未绑定）
+			if _, ok := data["wechat_temp_token"].(string); ok {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "该微信未绑定任何账户",
+				})
+				return
+			}
+
+			// 未扫码或等待中
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "",
+				"data":    gin.H{},
+			})
+		} else {
+			// 失败
+			msg := ""
+			if msgVal, ok := response["msg"].(string); ok {
+				msg = msgVal
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": msg,
+			})
+		}
+	} else {
+		c.JSON(http.StatusOK, response)
+	}
+}
+
 // StarWechatBind 微信绑定/登录接口 - 返回 new-api 格式
 func StarWechatBind(c *gin.Context) {
 	if !common.StarUserSystemEnabled || common.StarBackendAddress == "" {

@@ -47,8 +47,9 @@ const StarWechatUsername = () => {
   const [qrStatus, setQrStatus] = useState('loading'); // 'loading', 'active', 'scanned', 'expired', 'success'
   const [isLoadingQR, setIsLoadingQR] = useState(false);
 
-  // 找回的用户名
+  // 找回的用户名和邮箱
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [copied, setCopied] = useState(false);
 
   // 使用 useRef 存储定时器
@@ -91,6 +92,7 @@ const StarWechatUsername = () => {
     setIsLoadingQR(true);
     setQrStatus('loading');
     setUsername('');
+    setEmail('');
     stopPolling();
 
     try {
@@ -136,18 +138,21 @@ const StarWechatUsername = () => {
         // 如果返回了用户名，说明找回成功
         if (res.data.username) {
           setUsername(res.data.username);
+          if (res.data.email) {
+            setEmail(res.data.email);
+          }
           setQrStatus('success');
           stopPolling();
           return;
         }
 
-        // 如果状态是已扫码
-        if (res.data.scanned) {
-          setQrStatus('scanned');
-        }
-
         pollingCountRef.current++;
       } else if (res.message && (res.message.includes('过期') || res.message.includes('已过期'))) {
+        setQrStatus('expired');
+        stopPolling();
+      } else if (res.message && res.message.includes('未绑定')) {
+        // 微信未绑定任何账户
+        showError(t('该微信未绑定任何账户'));
         setQrStatus('expired');
         stopPolling();
       } else {
@@ -155,6 +160,10 @@ const StarWechatUsername = () => {
       }
     } catch (error) {
       if (error.message && (error.message.includes('过期') || error.message.includes('已过期'))) {
+        setQrStatus('expired');
+        stopPolling();
+      } else if (error.message && error.message.includes('未绑定')) {
+        showError(t('该微信未绑定任何账户'));
         setQrStatus('expired');
         stopPolling();
       } else {
@@ -165,7 +174,7 @@ const StarWechatUsername = () => {
         }
       }
     }
-  }, [qrTicket, stopPolling]);
+  }, [qrTicket, stopPolling, t]);
 
   // 当获取到 ticket 后，自动开始轮询
   useEffect(() => {
@@ -268,23 +277,39 @@ const StarWechatUsername = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <Text className="text-gray-600 dark:text-gray-400 text-sm mb-6 block">
-                      {t('您的用户名是')}
+                    <Text className="text-gray-600 dark:text-gray-400 text-sm mb-4 block">
+                      {t('您的账户信息')}
                     </Text>
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-4">
-                      <div className="flex items-center justify-center gap-3">
-                        <Text className="text-2xl font-mono font-bold text-gray-800 dark:text-gray-200">
-                          {username}
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Text className="text-gray-500 dark:text-gray-400 text-sm">
+                          {t('用户名')}
                         </Text>
-                        <Button
-                          icon={<IconCopy />}
-                          theme="borderless"
-                          onClick={copyUsername}
-                          className="!text-gray-500 hover:!text-gray-700 dark:!text-gray-400 dark:hover:!text-gray-200"
-                        />
+                        <div className="flex items-center gap-2">
+                          <Text className="text-lg font-mono font-bold text-gray-800 dark:text-gray-200">
+                            {username}
+                          </Text>
+                          <Button
+                            icon={<IconCopy />}
+                            size="small"
+                            theme="borderless"
+                            onClick={copyUsername}
+                            className="!text-gray-500 hover:!text-gray-700 dark:!text-gray-400 dark:hover:!text-gray-200"
+                          />
+                        </div>
                       </div>
+                      {email && (
+                        <div className="flex items-center justify-between">
+                          <Text className="text-gray-500 dark:text-gray-400 text-sm">
+                            {t('邮箱')}
+                          </Text>
+                          <Text className="text-sm text-gray-800 dark:text-gray-200">
+                            {email}
+                          </Text>
+                        </div>
+                      )}
                       {copied && (
-                        <Text className="text-green-600 dark:text-green-400 text-sm mt-2 block">
+                        <Text className="text-green-600 dark:text-green-400 text-sm block text-center">
                           {t('已复制到剪贴板')}
                         </Text>
                       )}
