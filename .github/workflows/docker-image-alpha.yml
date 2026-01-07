@@ -104,12 +104,10 @@ jobs:
         run: |
           docker buildx imagetools create \
             -t ${DOCKERHUB_USERNAME}/new-api:alpha \
-            ${DOCKERHUB_USERNAME}/new-api:alpha-amd64 \
-            ${DOCKERHUB_USERNAME}/new-api:alpha-arm64
+            ${DOCKERHUB_USERNAME}/new-api:alpha-amd64
 
       - name: Create & push manifest (Docker Hub - versioned alpha)
         run: |
           docker buildx imagetools create \
             -t ${DOCKERHUB_USERNAME}/new-api:${VERSION} \
-            ${DOCKERHUB_USERNAME}/new-api:${VERSION}-amd64 \
-            ${DOCKERHUB_USERNAME}/new-api:${VERSION}-arm64
+            ${DOCKERHUB_USERNAME}/new-api:${VERSION}-amd64
