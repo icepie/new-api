@@ -51,6 +51,7 @@ export default defineConfig({
       },
     },
     react(),
+    vitePluginSemi(),
   ],
   optimizeDeps: {
     force: true,

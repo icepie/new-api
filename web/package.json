@@ -6,7 +6,7 @@
   "dependencies": {
     "@douyinfe/semi-icons": "^2.88.3",
     "@douyinfe/semi-illustrations": "^2.90.1",
-    "@douyinfe/semi-ui": "^2.88.3",
+    "@douyinfe/semi-ui": "^2.90.12",
     "@lobehub/icons": "^2.43.1",
     "@visactor/react-vchart": "~1.8.11",
     "@visactor/vchart": "~1.8.11",
