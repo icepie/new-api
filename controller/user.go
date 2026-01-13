@@ -491,13 +491,12 @@ func StarLogin(c *gin.Context) {
 			common.SysLog(fmt.Sprintf("准备创建新用户: InviterId=%d, 初始Role=%s, 状态=%d", newUser.InviterId, newUser.Role, newUser.Status))
 
 			// 使用 Star 用户信息（如果可用）
+			var baseUsername string
 			if starUserInfo != nil {
 				if starUserInfo.Username != "" {
-					newUser.Username = starUserInfo.Username
-					newUser.DisplayName = starUserInfo.Username
+					baseUsername = starUserInfo.Username
 				} else {
-					newUser.Username = username
-					newUser.DisplayName = username
+					baseUsername = username
 				}
 				if starUserInfo.Email != "" {
 					newUser.Email = starUserInfo.Email
@@ -515,14 +514,25 @@ func StarLogin(c *gin.Context) {
 				}
 			} else {
 				// 没有 Star 用户信息，使用原有逻辑
-				newUser.Username = username
-				newUser.DisplayName = username
+				baseUsername = username
 				if strings.Contains(username, "@") {
 					newUser.Email = username
 				} else if email != "" {
 					newUser.Email = email
 				}
 			}
+
+			// 检查用户名是否已存在，如果存在则添加随机后缀
+			finalUsername := baseUsername
+			exists, _ := model.CheckUserExistOrDeleted(baseUsername, "")
+			if exists {
+				// 用户名已存在，添加随机后缀
+				suffix := common.GetRandomString(4)
+				finalUsername = baseUsername + "_" + suffix
+				common.SysLog(fmt.Sprintf("用户名 %s 已存在，使用新用户名: %s", baseUsername, finalUsername))
+			}
+			newUser.Username = finalUsername
+			newUser.DisplayName = baseUsername // DisplayName 保持原始名称
 
 			// 检查是否是第一个绑定的 star 用户
 			if starUserId != "" {
@@ -1370,13 +1380,15 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 			common.SysLog(fmt.Sprintf("微信扫码登录准备创建新用户: InviterId=%d, starUserId=%s", newUser.InviterId, newUser.StarUserId))
 
 			// 使用 Star 用户信息
+			var baseUsername string
+			var displayName string
 			if starUserInfo != nil {
 				if starUserInfo.Username != "" {
-					newUser.Username = starUserInfo.Username
-					newUser.DisplayName = starUserInfo.Username
+					baseUsername = starUserInfo.Username
+					displayName = starUserInfo.Username
 				} else {
-					newUser.Username = "wechat_user_" + starUserId
-					newUser.DisplayName = "微信用户"
+					baseUsername = "wechat_user_" + starUserId
+					displayName = "微信用户"
 				}
 				if starUserInfo.Email != "" {
 					newUser.Email = starUserInfo.Email
@@ -1388,9 +1400,21 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 					newUser.Status = common.UserStatusDisabled
 				}
 			} else {
-				newUser.Username = "wechat_user_" + starUserId
-				newUser.DisplayName = "微信用户"
+				baseUsername = "wechat_user_" + starUserId
+				displayName = "微信用户"
 			}
+
+			// 检查用户名是否已存在，如果存在则添加随机后缀
+			finalUsername := baseUsername
+			exists, _ := model.CheckUserExistOrDeleted(baseUsername, "")
+			if exists {
+				// 用户名已存在，添加随机后缀
+				suffix := common.GetRandomString(4)
+				finalUsername = baseUsername + "_" + suffix
+				common.SysLog(fmt.Sprintf("用户名 %s 已存在，使用新用户名: %s", baseUsername, finalUsername))
+			}
+			newUser.Username = finalUsername
+			newUser.DisplayName = displayName
 
 			// 插入用户（传入 inviterId 以处理邀请关系，参考原版 Register 逻辑）
 			if err := newUser.Insert(inviterId); err != nil {
