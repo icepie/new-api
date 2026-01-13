@@ -417,53 +417,59 @@ func StarLogin(c *gin.Context) {
 		return
 	}
 
-	// 外部登录成功，检查本地是否存在用户
-	// 使用email查找用户，如果username是email格式则使用username，否则使用从外部API获取的email
-	userEmail := username
-	if !strings.Contains(username, "@") && email != "" {
-		userEmail = email
+	// 外部登录成功，使用 star_user_id 查找本地用户
+	if starUserId == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Star 用户ID为空，无法登录",
+		})
+		return
 	}
 
 	var user model.User
-	err = model.DB.Where("email = ? OR username = ?", userEmail, username).First(&user).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 用户不存在，先尝试获取 Star 用户信息
-			var starUserInfo *StarUserInfo
-			if starUserId != "" && xtoken != "" {
-				success, info, err := callGetUserInfoAPI(starUserId, xtoken)
-				if err != nil {
-					common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
-				} else if success && info != nil {
-					starUserInfo = info
-				}
-			}
+	var needCreateUser bool = false
 
-			// 使用 Star 系统的密码（base64 解码后使用）
-			// 注意：password 参数是 base64 编码的，需要先解码
-			var userPassword string
-			if password != "" {
-				// 解码 base64 密码
-				decodedPassword, err := base64.StdEncoding.DecodeString(password)
-				if err == nil {
-					userPassword = string(decodedPassword)
-					common.SysLog(fmt.Sprintf("使用 Star 系统密码创建新用户"))
-				} else {
-					// 如果解码失败，生成随机密码作为后备
-					common.SysLog(fmt.Sprintf("密码 base64 解码失败，使用随机密码: %v", err))
-					randomPassword, err := common.GenerateRandomCharsKey(32)
-					if err != nil {
-						common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
-						c.JSON(http.StatusOK, gin.H{
-							"success": false,
-							"message": "系统错误，请稍后重试",
-						})
-						return
-					}
-					userPassword = randomPassword
-				}
+	err = model.DB.Where("star_user_id = ?", starUserId).First(&user).Error
+	if err == nil {
+		// 找到用户
+		common.SysLog(fmt.Sprintf("通过 star_user_id=%s 找到本地用户: %s", starUserId, user.Username))
+	} else if errors.Is(err, gorm.ErrRecordNotFound) {
+		// 未找到，需要创建新用户
+		needCreateUser = true
+	} else {
+		// 数据库错误
+		common.SysLog(fmt.Sprintf("查询用户失败: %v", err))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "数据库错误，请稍后重试",
+		})
+		return
+	}
+
+	if needCreateUser {
+		// 用户不存在，先尝试获取 Star 用户信息
+		var starUserInfo *StarUserInfo
+		if starUserId != "" && xtoken != "" {
+			success, info, err := callGetUserInfoAPI(starUserId, xtoken)
+			if err != nil {
+				common.SysLog(fmt.Sprintf("获取 Star 用户信息失败: %v", err))
+			} else if success && info != nil {
+				starUserInfo = info
+			}
+		}
+
+		// 使用 Star 系统的密码（base64 解码后使用）
+		// 注意：password 参数是 base64 编码的，需要先解码
+		var userPassword string
+		if password != "" {
+			// 解码 base64 密码
+			decodedPassword, err := base64.StdEncoding.DecodeString(password)
+			if err == nil {
+				userPassword = string(decodedPassword)
+				common.SysLog(fmt.Sprintf("使用 Star 系统密码创建新用户"))
 			} else {
-				// 如果没有密码，生成随机密码
+				// 如果解码失败，生成随机密码作为后备
+				common.SysLog(fmt.Sprintf("密码 base64 解码失败，使用随机密码: %v", err))
 				randomPassword, err := common.GenerateRandomCharsKey(32)
 				if err != nil {
 					common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
@@ -475,125 +481,129 @@ func StarLogin(c *gin.Context) {
 				}
 				userPassword = randomPassword
 			}
-
-			// 参考原版 Register 逻辑：获取 aff 参数并转换为邀请人ID（只有在创建新用户时才处理）
-			affCode := c.Query("aff")
-			inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
-			common.SysLog(fmt.Sprintf("注册流程: affCode=%s, inviterId=%d", affCode, inviterId))
-
-			// 创建新用户，优先使用从 Star 获取的信息（参考原版 Register 逻辑）
-			newUser := model.User{
-				Password:  userPassword,
-				Role:      common.RoleCommonUser,
-				Status:    common.UserStatusEnabled,
-				InviterId: inviterId, // 参考原版：直接设置 InviterId
-			}
-			common.SysLog(fmt.Sprintf("准备创建新用户: InviterId=%d, 初始Role=%s, 状态=%d", newUser.InviterId, newUser.Role, newUser.Status))
-
-			// 使用 Star 用户信息（如果可用）
-			var baseUsername string
-			if starUserInfo != nil {
-				if starUserInfo.Username != "" {
-					baseUsername = starUserInfo.Username
-				} else {
-					baseUsername = username
-				}
-				if starUserInfo.Email != "" {
-					newUser.Email = starUserInfo.Email
-				} else if strings.Contains(username, "@") {
-					newUser.Email = username
-				} else if email != "" {
-					newUser.Email = email
-				}
-				if starUserInfo.WechatOpenid != "" {
-					newUser.WeChatId = starUserInfo.WechatOpenid
-				}
-				// 根据 Star 系统的状态设置用户状态
-				if starUserInfo.Status == 0 {
-					newUser.Status = common.UserStatusDisabled
-				}
-			} else {
-				// 没有 Star 用户信息，使用原有逻辑
-				baseUsername = username
-				if strings.Contains(username, "@") {
-					newUser.Email = username
-				} else if email != "" {
-					newUser.Email = email
-				}
-			}
-
-			// 检查用户名是否已存在，如果存在则添加随机后缀
-			finalUsername := baseUsername
-			exists, _ := model.CheckUserExistOrDeleted(baseUsername, "")
-			if exists {
-				// 用户名已存在，添加随机后缀
-				suffix := common.GetRandomString(4)
-				finalUsername = baseUsername + "_" + suffix
-				common.SysLog(fmt.Sprintf("用户名 %s 已存在，使用新用户名: %s", baseUsername, finalUsername))
-			}
-			newUser.Username = finalUsername
-			newUser.DisplayName = baseUsername // DisplayName 保持原始名称
-
-			// 检查是否是第一个绑定的 star 用户
-			if starUserId != "" {
-				var count int64
-				err = model.DB.Model(&model.User{}).Where("star_user_id != ? AND star_user_id != ?", "", "0").Count(&count).Error
-				if err != nil {
-					common.SysLog(fmt.Sprintf("检查 star 用户数量失败: %v", err))
-				} else {
-					// 如果是第一个绑定的 star 用户，设置为 root 用户
-					if count == 0 {
-						newUser.Role = common.RoleRootUser
-						common.SysLog(fmt.Sprintf("第一个 Star 用户 %s (star_user_id: %s) 被设置为 root 用户", newUser.Username, starUserId))
-					}
-				}
-				newUser.StarUserId = starUserId
-			}
-
-			// 插入用户（传入 inviterId 以处理邀请关系，参考原版 Register 逻辑）
-			if err := newUser.Insert(inviterId); err != nil {
-				common.SysLog(fmt.Sprintf("自动注册用户失败: %v", err))
-				// 返回详细的错误信息
-				errMsg := "自动注册失败"
-				errStr := err.Error()
-				if strings.Contains(errStr, "Duplicate entry") || strings.Contains(errStr, "UNIQUE constraint") || strings.Contains(errStr, "duplicate key") {
-					if strings.Contains(errStr, "username") {
-						errMsg = "自动注册失败：用户名已存在"
-					} else if strings.Contains(errStr, "email") {
-						errMsg = "自动注册失败：邮箱已被注册"
-					} else if strings.Contains(errStr, "aff_code") {
-						errMsg = "自动注册失败：邀请码生成冲突，请重试"
-					} else {
-						errMsg = fmt.Sprintf("自动注册失败：数据冲突 (%s)", errStr)
-					}
-				} else if strings.Contains(errStr, "password") {
-					errMsg = "自动注册失败：密码处理错误"
-				} else {
-					errMsg = fmt.Sprintf("自动注册失败：%s", errStr)
-				}
-				c.JSON(http.StatusOK, gin.H{
-					"success": false,
-					"message": errMsg,
-				})
-				return
-			}
-
-			// 重新获取创建的用户
-			err = model.DB.Where("email = ? OR username = ?", newUser.Email, newUser.Username).First(&user).Error
+		} else {
+			// 如果没有密码，生成随机密码
+			randomPassword, err := common.GenerateRandomCharsKey(32)
 			if err != nil {
-				common.SysLog(fmt.Sprintf("获取新创建用户失败: %v", err))
+				common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,
-					"message": "用户创建成功但登录失败，请稍后重试",
+					"message": "系统错误，请稍后重试",
 				})
 				return
+			}
+			userPassword = randomPassword
+		}
+
+		// 参考原版 Register 逻辑：获取 aff 参数并转换为邀请人ID（只有在创建新用户时才处理）
+		affCode := c.Query("aff")
+		inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
+		common.SysLog(fmt.Sprintf("注册流程: affCode=%s, inviterId=%d", affCode, inviterId))
+
+		// 创建新用户，优先使用从 Star 获取的信息（参考原版 Register 逻辑）
+		newUser := model.User{
+			Password:  userPassword,
+			Role:      common.RoleCommonUser,
+			Status:    common.UserStatusEnabled,
+			InviterId: inviterId, // 参考原版：直接设置 InviterId
+		}
+		common.SysLog(fmt.Sprintf("准备创建新用户: InviterId=%d, 初始Role=%d, 状态=%d", newUser.InviterId, newUser.Role, newUser.Status))
+
+		// 使用 Star 用户信息（如果可用）
+		var baseUsername string
+		if starUserInfo != nil {
+			if starUserInfo.Username != "" {
+				baseUsername = starUserInfo.Username
+			} else {
+				baseUsername = username
+			}
+			if starUserInfo.Email != "" {
+				newUser.Email = starUserInfo.Email
+			} else if strings.Contains(username, "@") {
+				newUser.Email = username
+			} else if email != "" {
+				newUser.Email = email
+			}
+			if starUserInfo.WechatOpenid != "" {
+				newUser.WeChatId = starUserInfo.WechatOpenid
+			}
+			// 根据 Star 系统的状态设置用户状态
+			if starUserInfo.Status == 0 {
+				newUser.Status = common.UserStatusDisabled
 			}
 		} else {
-			// 其他数据库错误
-			common.SysLog(fmt.Sprintf("查询用户失败: %v", err))
+			// 没有 Star 用户信息，使用原有逻辑
+			baseUsername = username
+			if strings.Contains(username, "@") {
+				newUser.Email = username
+			} else if email != "" {
+				newUser.Email = email
+			}
+		}
+
+		// 检查用户名是否已存在，如果存在则添加随机后缀
+		finalUsername := baseUsername
+		exists, _ := model.CheckUserExistOrDeleted(baseUsername, "")
+		if exists {
+			// 用户名已存在，添加随机后缀
+			suffix := common.GetRandomString(4)
+			finalUsername = baseUsername + "_" + suffix
+			common.SysLog(fmt.Sprintf("用户名 %s 已存在，使用新用户名: %s", baseUsername, finalUsername))
+		}
+		newUser.Username = finalUsername
+		newUser.DisplayName = baseUsername // DisplayName 保持原始名称
+
+		// 检查是否是第一个绑定的 star 用户
+		if starUserId != "" {
+			var count int64
+			err = model.DB.Model(&model.User{}).Where("star_user_id != ? AND star_user_id != ?", "", "0").Count(&count).Error
+			if err != nil {
+				common.SysLog(fmt.Sprintf("检查 star 用户数量失败: %v", err))
+			} else {
+				// 如果是第一个绑定的 star 用户，设置为 root 用户
+				if count == 0 {
+					newUser.Role = common.RoleRootUser
+					common.SysLog(fmt.Sprintf("第一个 Star 用户 %s (star_user_id: %s) 被设置为 root 用户", newUser.Username, starUserId))
+				}
+			}
+			newUser.StarUserId = starUserId
+		}
+
+		// 插入用户（传入 inviterId 以处理邀请关系，参考原版 Register 逻辑）
+		if err := newUser.Insert(inviterId); err != nil {
+			common.SysLog(fmt.Sprintf("自动注册用户失败: %v", err))
+			// 返回详细的错误信息
+			errMsg := "自动注册失败"
+			errStr := err.Error()
+			if strings.Contains(errStr, "Duplicate entry") || strings.Contains(errStr, "UNIQUE constraint") || strings.Contains(errStr, "duplicate key") {
+				if strings.Contains(errStr, "username") {
+					errMsg = "自动注册失败：用户名已存在"
+				} else if strings.Contains(errStr, "email") {
+					errMsg = "自动注册失败：邮箱已被注册"
+				} else if strings.Contains(errStr, "aff_code") {
+					errMsg = "自动注册失败：邀请码生成冲突，请重试"
+				} else {
+					errMsg = fmt.Sprintf("自动注册失败：数据冲突 (%s)", errStr)
+				}
+			} else if strings.Contains(errStr, "password") {
+				errMsg = "自动注册失败：密码处理错误"
+			} else {
+				errMsg = fmt.Sprintf("自动注册失败：%s", errStr)
+			}
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "数据库错误，请稍后重试",
+				"message": errMsg,
+			})
+			return
+		}
+
+		// 重新获取创建的用户
+		err = model.DB.Where("star_user_id = ?", starUserId).First(&user).Error
+		if err != nil {
+			common.SysLog(fmt.Sprintf("获取新创建用户失败: %v", err))
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "用户创建成功但登录失败，请稍后重试",
 			})
 			return
 		}
@@ -606,36 +616,6 @@ func StarLogin(c *gin.Context) {
 			"message": "用户已被封禁",
 		})
 		return
-	}
-
-	// 绑定 star_user_id（如果用户已存在但还没有绑定）
-	if starUserId != "" && user.StarUserId == "" {
-		// 检查是否是第一个绑定的 star 用户
-		var count int64
-		err = model.DB.Model(&model.User{}).Where("star_user_id != ? AND star_user_id != ?", "", "0").Count(&count).Error
-		if err != nil {
-			common.SysLog(fmt.Sprintf("检查 star 用户数量失败: %v", err))
-		} else {
-			// 如果是第一个绑定的 star 用户，设置为 root 用户
-			if count == 0 {
-				user.Role = common.RoleRootUser
-				common.SysLog(fmt.Sprintf("第一个 Star 用户 %s (star_user_id: %s) 被设置为 root 用户", user.Username, starUserId))
-			}
-		}
-
-		// 更新 star_user_id
-		updates := map[string]interface{}{
-			"star_user_id": starUserId,
-		}
-		if user.Role == common.RoleRootUser {
-			updates["role"] = common.RoleRootUser
-		}
-		if err := model.DB.Model(&user).Updates(updates).Error; err != nil {
-			common.SysLog(fmt.Sprintf("更新 star_user_id 失败: %v", err))
-		} else {
-			// 重新获取用户以获取最新信息
-			model.DB.Where("id = ?", user.Id).First(&user)
-		}
 	}
 
 	// 更新用户信息（包括密码同步）
