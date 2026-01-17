@@ -15,8 +15,8 @@ importers:
         specifier: ^2.90.1
         version: 2.90.1(react@18.3.1)
       '@douyinfe/semi-ui':
-        specifier: ^2.88.3
-        version: 2.88.3(@floating-ui/dom@1.7.4)(@tiptap/suggestion@3.11.0(@tiptap/core@3.11.0(@tiptap/pm@3.11.0))(@tiptap/pm@3.11.0))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^2.90.12
+        version: 2.90.13(@floating-ui/dom@1.7.4)(@tiptap/suggestion@3.11.0(@tiptap/core@3.11.0(@tiptap/pm@3.11.0))(@tiptap/pm@3.11.0))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@lobehub/icons':
         specifier: ^2.43.1
         version: 2.43.1(@babel/core@7.28.5)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(antd@5.29.1(date-fns@2.30.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(framer-motion@12.23.24(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(micromark-util-types@2.0.2)(micromark@4.0.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -41,9 +41,9 @@ importers:
       dayjs:
         specifier: ^1.11.19
         version: 1.11.19
-      github.css:
-        specifier: link:highlight.js/styles/github.css
-        version: link:highlight.js/styles/github.css
+      gravatar-url:
+        specifier: ^4.0.1
+        version: 4.0.1
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
@@ -392,25 +392,25 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
 
-  '@douyinfe/semi-animation-react@2.88.3':
-    resolution: {integrity: sha512-Jhk/QXZ1Wz++D7PZpdRSc3Pj9sDHIDeOXal/zfzUVpEjuQWlD/ebup0MM50ChBkMPI9HkOQLCbZ2Z5qV7bX5SQ==}
+  '@douyinfe/semi-animation-react@2.90.13':
+    resolution: {integrity: sha512-OWAvznz6fGdO17fYoDIzgSGKj6awqOPeC0N13OzfPtZ7ofZNozdhWqFHRVMiZgRe2MiJ3W63cHw9OLEdLNYsQA==}
 
-  '@douyinfe/semi-animation-styled@2.88.3':
-    resolution: {integrity: sha512-VNuMBD4mffSB4yCzhxHf7/AIRddIxUzz6U+jHQbd0ZAt75CXmj6h/YNyURpaYspHKr3bMqgRW98956CTa8qbjQ==}
+  '@douyinfe/semi-animation-styled@2.90.13':
+    resolution: {integrity: sha512-h0m97jF341yo7bV+pS/vDck4GAtE0VUbvrcZT1Ku7yjntHqicqLc4BGJGVs/RdSEcZo/zZJ3N2UDj0Qc+Pk58A==}
 
-  '@douyinfe/semi-animation@2.88.3':
-    resolution: {integrity: sha512-x7Ef2IJjW8M0cgg41P7hgePlxz3XvWRVcov4fvzAE3LYBPgYRz9FL+k/gQ/OhT8PpnlHh5XpPUL3N2ATBLeiEQ==}
+  '@douyinfe/semi-animation@2.90.13':
+    resolution: {integrity: sha512-qHMn8whglNbziNsNBIyrL5/jDDf4pvlJwPelGDH1orG9rryuNpLGalX9mBY7z4OKaXjrp2tfQc0mADRKVht0fA==}
 
-  '@douyinfe/semi-foundation@2.88.3':
-    resolution: {integrity: sha512-/jlSfki5Bg4lAqbl0oAUtHqzWqFijvqcHvH/dmU1wgLw/kZYj/bQkA3G9/VrTyWggfXmq2JC6bx9EoQAvXEsSQ==}
+  '@douyinfe/semi-foundation@2.90.13':
+    resolution: {integrity: sha512-sTQVfk2UdF79VffSFy3DwPtT4qGHp9LkaFPeeW7mGUu8c3el6fKd6WSYJXNyE8Iba5bnqzxWAyfjtCxUYA+sfQ==}
 
   '@douyinfe/semi-icons@2.88.3':
     resolution: {integrity: sha512-g3YFaM8Jr0GRY9rV5OuxvmZiqZUN9grj+TdRC930StxBjxdp901WGhuaPGpkaVahO0mkX3hSAJVlQYPEF/MOzQ==}
     peerDependencies:
       react: '>=16.0.0'
 
-  '@douyinfe/semi-illustrations@2.88.3':
-    resolution: {integrity: sha512-L8nqLz7YaRTDM+ZSXmWLrt+zjaGl7SFOBT4QQG7O6q1gmaK2XOiHWLiiQYztp863cMr11LSBIckMy56M9ScCbQ==}
+  '@douyinfe/semi-icons@2.90.13':
+    resolution: {integrity: sha512-9OiKvleOMB+t0h+Vbq/6Tz90JJPANJDvW5g3XtVWmIwIgScgy/N52fMhWXDf6Avr6wi9MDPcQZ6SYPO2S7m4sQ==}
     peerDependencies:
       react: '>=16.0.0'
 
@@ -419,14 +419,19 @@ packages:
     peerDependencies:
       react: '>=16.0.0'
 
-  '@douyinfe/semi-json-viewer-core@2.88.3':
-    resolution: {integrity: sha512-2tqTXbUrDYxZVu/Stl14Rv/WeiqbYlfyKmra9AIG81ZaqG1fP28g/dkiBlHVzUZbYCMM9s3EGAuZugn1jWkWKQ==}
+  '@douyinfe/semi-illustrations@2.90.13':
+    resolution: {integrity: sha512-8gdonacMEw9Q9y3Y34gg1pHa7N5aURVv2qoE3hkPGpmW0RjIET1uaKaKZmGNQiXbgv6jPZ80LV4gxEw3ez4YWg==}
+    peerDependencies:
+      react: '>=16.0.0'
 
-  '@douyinfe/semi-theme-default@2.88.3':
-    resolution: {integrity: sha512-mCuxedgCT1bJChMEQ+AAJ8g0oJQZaXsL+vVKxjqISjFUutbUvs++K+A2pWobgZafOXu1JS+cpppPsEcR4G4JvQ==}
+  '@douyinfe/semi-json-viewer-core@2.90.13':
+    resolution: {integrity: sha512-QwRe4MtB7SH/IjdcgqsuY2NgkXcxFTSRwYpslGNNVkEPHpxyXEqR3WIr1tMaU8Hjel8Pldc6E3F22+XZl8Gd1g==}
 
-  '@douyinfe/semi-ui@2.88.3':
-    resolution: {integrity: sha512-lVW4euk+j+ev2c4c2LNwx1gwnEU6pGguaB5Z9E11DoyrvMtIg5irow5o1M4pG1r3xbU+4+oQqkRLPXAx01WPzg==}
+  '@douyinfe/semi-theme-default@2.90.13':
+    resolution: {integrity: sha512-8f4j7NVw7w1IFFTEpTe/RkK3TW4DZWrUngV6CK3XXSCQKSVVyG/cXI5xgK9jkFiuES5S+d+ZlvL2sTA4+x8HWw==}
+
+  '@douyinfe/semi-ui@2.90.13':
+    resolution: {integrity: sha512-6mD2Q8aQOXah7nNSxpdvjbFI3PgI/TYez9/yBEq7+0CbEn3BGJsjl1dcRoE0JJ30IUIdCCJRTB0q3JQWH2Bvsw==}
     peerDependencies:
       react: '>=16.0.0'
       react-dom: '>=16.0.0'
@@ -2138,6 +2143,9 @@ packages:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
+  blueimp-md5@2.19.0:
+    resolution: {integrity: sha512-DRQrD6gJyy8FbiE4s+bDoXS9hiW3Vbx5uCdwvcCf3zLHL+Iv7LtGHLpr+GZV8rHG8tK766FGYBwRbu8pELTt+w==}
+
   brace-expansion@1.1.12:
     resolution: {integrity: sha512-9T9UjW3r0UW5c1Q7GTwllptXwhvYmEzFhzMfZ9H7FQWt+uZePjZPjBP/W1ZEyZ1twGWom5/56TF4lPcqjnDHcg==}
 
@@ -2949,6 +2957,10 @@ packages:
   graphemer@1.4.0:
     resolution: {integrity: sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==}
 
+  gravatar-url@4.0.1:
+    resolution: {integrity: sha512-AiU83cghGg2D8vAUwrMXCByejkkm4RtLwMNGmPU7VhqBYhsxcBCV0SAzRpYNbUCpTci5v46J/KFKPmDYaG2oyA==}
+    engines: {node: '>=12'}
+
   hachure-fill@0.5.2:
     resolution: {integrity: sha512-3GKBOn+m2LX9iq+JC1064cSFprJY4jL1jCXTcpnfER5HYE2l/4EfWSGzkPa/ZDBmYI0ZOEj5VHV/eKnPGkHuOg==}
 
@@ -3382,6 +3394,10 @@ packages:
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
+
+  md5-hex@4.0.0:
+    resolution: {integrity: sha512-di38zHPn4Tz8LCb5Lz8SpLb/20Hv23aPXpF4Bq1mR5r9JuCZQ/JpcDUxFfZF9Ur5GiUvqS5NQOkR+fm5cYZ0IQ==}
+    engines: {node: '>=12'}
 
   mdast-util-find-and-replace@3.0.2:
     resolution: {integrity: sha512-Tmd1Vg/m3Xz43afeNxDIhWRtFZgM2VLyaf4vSTYwudTyeuTneoL3qtWMA5jeLyz/O1vDJmmV4QuScFCA2tBPwg==}
@@ -4839,6 +4855,10 @@ packages:
     resolution: {integrity: sha512-Ne+eE4r0/iWnpAxD852z3A+N0Bt5RN//NjJwRd2VFHEmrywxf5vsZlh4R6lixl6B+wz/8d+maTSAkN1FIkI3LQ==}
     engines: {node: '>=10'}
 
+  type-fest@1.4.0:
+    resolution: {integrity: sha512-yGSza74xk0UG8k+pLh5oeoYirvIiWo5t0/o3zHHAO2tRDiZcxWP7fywNlXhqb6/r6sWvwi+RsyQMWhVLe4BVuA==}
+    engines: {node: '>=10'}
+
   typedarray@0.0.6:
     resolution: {integrity: sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==}
 
@@ -5365,22 +5385,22 @@ snapshots:
       react: 18.3.1
       tslib: 2.8.1
 
-  '@douyinfe/semi-animation-react@2.88.3':
+  '@douyinfe/semi-animation-react@2.90.13':
     dependencies:
-      '@douyinfe/semi-animation': 2.88.3
-      '@douyinfe/semi-animation-styled': 2.88.3
+      '@douyinfe/semi-animation': 2.90.13
+      '@douyinfe/semi-animation-styled': 2.90.13
       classnames: 2.5.1
 
-  '@douyinfe/semi-animation-styled@2.88.3': {}
+  '@douyinfe/semi-animation-styled@2.90.13': {}
 
-  '@douyinfe/semi-animation@2.88.3':
+  '@douyinfe/semi-animation@2.90.13':
     dependencies:
       bezier-easing: 2.1.0
 
-  '@douyinfe/semi-foundation@2.88.3':
+  '@douyinfe/semi-foundation@2.90.13':
     dependencies:
-      '@douyinfe/semi-animation': 2.88.3
-      '@douyinfe/semi-json-viewer-core': 2.88.3
+      '@douyinfe/semi-animation': 2.90.13
+      '@douyinfe/semi-json-viewer-core': 2.90.13
       '@mdx-js/mdx': 3.1.1
       async-validator: 3.5.2
       classnames: 2.5.1
@@ -5401,31 +5421,36 @@ snapshots:
       classnames: 2.5.1
       react: 18.3.1
 
-  '@douyinfe/semi-illustrations@2.88.3(react@18.3.1)':
+  '@douyinfe/semi-icons@2.90.13(react@18.3.1)':
     dependencies:
+      classnames: 2.5.1
       react: 18.3.1
 
   '@douyinfe/semi-illustrations@2.90.1(react@18.3.1)':
     dependencies:
       react: 18.3.1
 
-  '@douyinfe/semi-json-viewer-core@2.88.3':
+  '@douyinfe/semi-illustrations@2.90.13(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
+
+  '@douyinfe/semi-json-viewer-core@2.90.13':
     dependencies:
       jsonc-parser: 3.3.1
 
-  '@douyinfe/semi-theme-default@2.88.3': {}
+  '@douyinfe/semi-theme-default@2.90.13': {}
 
-  '@douyinfe/semi-ui@2.88.3(@floating-ui/dom@1.7.4)(@tiptap/suggestion@3.11.0(@tiptap/core@3.11.0(@tiptap/pm@3.11.0))(@tiptap/pm@3.11.0))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@douyinfe/semi-ui@2.90.13(@floating-ui/dom@1.7.4)(@tiptap/suggestion@3.11.0(@tiptap/core@3.11.0(@tiptap/pm@3.11.0))(@tiptap/pm@3.11.0))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@dnd-kit/core': 6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@dnd-kit/sortable': 7.0.2(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@dnd-kit/utilities': 3.2.2(react@18.3.1)
-      '@douyinfe/semi-animation': 2.88.3
-      '@douyinfe/semi-animation-react': 2.88.3
-      '@douyinfe/semi-foundation': 2.88.3
-      '@douyinfe/semi-icons': 2.88.3(react@18.3.1)
-      '@douyinfe/semi-illustrations': 2.88.3(react@18.3.1)
-      '@douyinfe/semi-theme-default': 2.88.3
+      '@douyinfe/semi-animation': 2.90.13
+      '@douyinfe/semi-animation-react': 2.90.13
+      '@douyinfe/semi-foundation': 2.90.13
+      '@douyinfe/semi-icons': 2.90.13(react@18.3.1)
+      '@douyinfe/semi-illustrations': 2.90.13(react@18.3.1)
+      '@douyinfe/semi-theme-default': 2.90.13
       '@tiptap/core': 3.11.0(@tiptap/pm@3.11.0)
       '@tiptap/extension-document': 3.11.0(@tiptap/core@3.11.0(@tiptap/pm@3.11.0))
       '@tiptap/extension-hard-break': 3.11.0(@tiptap/core@3.11.0(@tiptap/pm@3.11.0))
@@ -7289,6 +7314,8 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
+  blueimp-md5@2.19.0: {}
+
   brace-expansion@1.1.12:
     dependencies:
       balanced-match: 1.0.2
@@ -8173,6 +8200,11 @@ snapshots:
 
   graphemer@1.4.0: {}
 
+  gravatar-url@4.0.1:
+    dependencies:
+      md5-hex: 4.0.0
+      type-fest: 1.4.0
+
   hachure-fill@0.5.2: {}
 
   has-flag@4.0.0: {}
@@ -8674,6 +8706,10 @@ snapshots:
   marked@4.3.0: {}
 
   math-intrinsics@1.1.0: {}
+
+  md5-hex@4.0.0:
+    dependencies:
+      blueimp-md5: 2.19.0
 
   mdast-util-find-and-replace@3.0.2:
     dependencies:
@@ -10691,6 +10727,8 @@ snapshots:
       prelude-ls: 1.2.1
 
   type-fest@0.20.2: {}
+
+  type-fest@1.4.0: {}
 
   typedarray@0.0.6: {}
 

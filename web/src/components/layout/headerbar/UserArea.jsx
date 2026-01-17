@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Avatar, Button, Dropdown, Typography } from '@douyinfe/semi-ui';
+import { Button, Dropdown, Typography } from '@douyinfe/semi-ui';
 import { ChevronDown } from 'lucide-react';
 import {
   IconExit,
@@ -29,6 +29,7 @@ import {
 } from '@douyinfe/semi-icons';
 import { stringToColor } from '../../../helpers';
 import SkeletonWrapper from '../components/SkeletonWrapper';
+import GravatarAvatar from '../../common/avatar/GravatarAvatar';
 
 const UserArea = ({
   userState,
@@ -121,13 +122,13 @@ const UserArea = ({
             type='tertiary'
             className='flex items-center gap-1.5 !p-1 !rounded-full hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-700 !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
           >
-            <Avatar
+            <GravatarAvatar
+              email={userState.user.email}
+              fallbackText={userState.user.username[0].toUpperCase()}
               size='extra-small'
               color={stringToColor(userState.user.username)}
               className='mr-1'
-            >
-              {userState.user.username[0].toUpperCase()}
-            </Avatar>
+            />
             <span className='hidden md:inline'>
               <Typography.Text className='!text-xs !font-medium !text-semi-color-text-1 dark:!text-gray-300 mr-1'>
                 {userState.user.username}
