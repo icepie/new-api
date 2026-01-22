@@ -82,8 +82,8 @@ const filterModel = (model, filters) => {
   const provider = model.vendor_name || 'Unknown';
   const types = getModelType(name);
 
-  // 必须有描述字段
-  if (!model.description || model.description.trim() === '') {
+  // 上架状态筛选 - 只显示已上架的模型
+  if (model.is_listed === false) {
     return false;
   }
 
@@ -253,9 +253,9 @@ export default function PricingNew() {
       }
     });
 
-    // 过滤：只显示有 description 的模型
+    // 过滤：只显示已上架的模型
     return formattedModels.filter((model) => {
-      return model.description && model.description.trim() !== '';
+      return model.is_listed !== false;
     });
   };
 

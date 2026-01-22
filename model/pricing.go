@@ -27,6 +27,7 @@ type Pricing struct {
 	CompletionRatio        float64                 `json:"completion_ratio"`
 	EnableGroup            []string                `json:"enable_groups"`
 	SupportedEndpointTypes []constant.EndpointType `json:"supported_endpoint_types"`
+	IsListed               bool                    `json:"is_listed"`
 }
 
 type PricingVendor struct {
@@ -66,6 +67,15 @@ func GetPricing() []Pricing {
 		}
 	}
 	return pricingMap
+}
+
+// RefreshPricingCache 强制刷新 pricing 缓存
+func RefreshPricingCache() {
+	updatePricingLock.Lock()
+	defer updatePricingLock.Unlock()
+	modelSupportEndpointsLock.Lock()
+	defer modelSupportEndpointsLock.Unlock()
+	updatePricing()
 }
 
 // GetVendors 返回当前定价接口使用到的供应商信息
@@ -262,6 +272,13 @@ func updatePricing() {
 		}
 	}
 
+	// 获取所有模型的上架状态
+	modelListingStatusMap, err := GetAllModelListingStatus()
+	if err != nil {
+		common.SysLog(fmt.Sprintf("GetAllModelListingStatus error: %v", err))
+		modelListingStatusMap = make(map[string]bool)
+	}
+
 	pricingMap = make([]Pricing, 0)
 	for model, groups := range modelGroupsMap {
 		pricing := Pricing{
@@ -291,6 +308,14 @@ func updatePricing() {
 			pricing.CompletionRatio = ratio_setting.GetCompletionRatio(model)
 			pricing.QuotaType = 0
 		}
+
+		// 设置上架状态，默认为 true
+		if isListed, ok := modelListingStatusMap[model]; ok {
+			pricing.IsListed = isListed
+		} else {
+			pricing.IsListed = true
+		}
+
 		pricingMap = append(pricingMap, pricing)
 	}
 
