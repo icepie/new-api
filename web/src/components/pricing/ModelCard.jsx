@@ -299,6 +299,7 @@ export default function ModelCard({
   tokenUnit = 'M',
   modelsDevData = null, // models.dev 的数据
   savings = null, // 节省金额
+  officialPrice = null, // 官方价格（用于测试）
 }) {
   // 从 models.dev 数据中获取 tags（不使用之前的 API tags）
   const parsedTags = getFeatureTagsFromDevData(name, modelsDevData);
@@ -403,8 +404,114 @@ export default function ModelCard({
       onClick={handleCardClick}
       style={{ position: 'relative' }}
     >
-      {/* Savings - 显示在右上角 */}
-      {savings !== null && savings > 0 && (
+      {/* Official Price - 显示在右上角（测试用） */}
+      {officialPrice && (() => {
+        // 计算节约金额
+        let savingsAmount = null;
+        let savingsPercent = null;
+        
+        if (priceData && priceData.isPerToken) {
+          // 按 token 计费：计算 input 和 output 的节约
+          let currentInput = input || 0;
+          if (typeof priceData.inputPrice === 'string') {
+            const parsed = parseFloat(priceData.inputPrice.replace('$', '').replace(freeLabel, '0'));
+            if (!isNaN(parsed)) {
+              currentInput = parsed;
+            }
+          }
+
+          let currentOutput = output || 0;
+          if (typeof priceData.completionPrice === 'string' || typeof priceData.outputPrice === 'string') {
+            const parsed = parseFloat((priceData.completionPrice || priceData.outputPrice || '').replace('$', '').replace(freeLabel, '0'));
+            if (!isNaN(parsed)) {
+              currentOutput = parsed;
+            }
+          }
+          
+          const inputSavings = officialPrice.input - currentInput;
+          const outputSavings = officialPrice.output - currentOutput;
+          const totalSavings = inputSavings + outputSavings;
+          const totalOfficial = officialPrice.input + officialPrice.output;
+
+          // 四舍五入到小数点后2位，避免浮点数精度问题
+          const roundedSavings = Math.round(totalSavings * 100) / 100;
+
+          if (totalOfficial > 0) {
+            // 即使节约为0或负数，也显示
+            savingsAmount = roundedSavings;
+            savingsPercent = (roundedSavings / totalOfficial) * 100;
+          }
+        } else {
+          // 按请求计费
+          let currentPrice = output || input || 0;
+          if (typeof priceData?.price === 'string') {
+            const parsed = parseFloat(priceData.price.replace('$', '').replace(freeLabel, '0'));
+            if (!isNaN(parsed)) {
+              currentPrice = parsed;
+            }
+          }
+
+          // 对于按请求计费，使用 input 作为官方价格（如果没有单独的请求价格）
+          const officialRequestPrice = officialPrice.input || 0;
+          savingsAmount = officialRequestPrice - currentPrice;
+          if (officialRequestPrice > 0) {
+            savingsPercent = (savingsAmount / officialRequestPrice) * 100;
+          }
+        }
+        
+        return (
+          <div style={{ 
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            zIndex: 10,
+            pointerEvents: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            alignItems: 'flex-end'
+          }}>
+            <div style={{ 
+              backgroundColor: '#3b82f6', 
+              color: 'white', 
+              padding: '4px 8px', 
+              borderRadius: '4px', 
+              fontSize: '11px',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+              whiteSpace: 'nowrap',
+              lineHeight: '1.4'
+            }}>
+              {locale === 'zh' ? (
+                <>官方: ${officialPrice.input.toFixed(2)}/${officialPrice.output.toFixed(2)}</>
+              ) : (
+                <>Official: ${officialPrice.input.toFixed(2)}/${officialPrice.output.toFixed(2)}</>
+              )}
+            </div>
+            {savingsAmount !== null && savingsPercent !== null && (
+              <div style={{
+                backgroundColor: savingsAmount >= 0 ? '#10b981' : '#ef4444',
+                color: 'white',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                whiteSpace: 'nowrap',
+                lineHeight: '1.4'
+              }}>
+                {locale === 'zh' ? (
+                  <>节约: ${savingsAmount.toFixed(2)} ({savingsPercent.toFixed(1)}%)</>
+                ) : (
+                  <>Save: ${savingsAmount.toFixed(2)} ({savingsPercent.toFixed(1)}%)</>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+      {/* Savings - 显示在右上角（暂时隐藏） */}
+      {savings !== null && savings > 0 && false && (
         <div style={{ 
           position: 'absolute',
           top: '12px',

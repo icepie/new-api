@@ -368,8 +368,8 @@ export default function PricingNew() {
     return null;
   };
 
-  // 计算节省金额的函数
-  const calculateSavings = (model, modelsDevData) => {
+  // 获取官方价格（从 models.dev 数据）
+  const getOfficialPrice = (model, modelsDevData) => {
     if (!modelsDevData || !model) {
       return null;
     }
@@ -389,60 +389,10 @@ export default function PricingNew() {
       return null;
     }
 
-    // 计算当前价格（USD per M tokens，不考虑 groupRatio）
-    let currentInputPrice = 0;
-    let currentOutputPrice = 0;
-    
-    if (model.quota_type === 0) {
-      // 按量计费：使用 model_ratio * 2（1倍率=0.002刀，所以 *2）
-      currentInputPrice = model.model_ratio ? model.model_ratio * 2 : 0;
-      currentOutputPrice = model.model_ratio && model.completion_ratio
-        ? model.model_ratio * model.completion_ratio * 2
-        : model.model_ratio ? model.model_ratio * 2 : 0;
-    } else {
-      // 按次计费：使用 model_price（按次计费通常不适用于 token 价格对比）
-      // 跳过按次计费的模型
-      return null;
-    }
-
-    // 如果当前价格为0，无法计算节省
-    if (currentInputPrice === 0 && currentOutputPrice === 0) {
-      return null;
-    }
-
-    // 计算平均节省百分比（基于输入和输出价格）
-    let totalSavings = 0;
-    let count = 0;
-
-    if (devCost.input > 0 && currentInputPrice > 0) {
-      const inputSavings = ((devCost.input - currentInputPrice) / devCost.input) * 100;
-      totalSavings += inputSavings;
-      count++;
-    }
-
-    if (devCost.output > 0 && currentOutputPrice > 0) {
-      const outputSavings = ((devCost.output - currentOutputPrice) / devCost.output) * 100;
-      totalSavings += outputSavings;
-      count++;
-    }
-
-    if (count > 0) {
-      const avgSavings = totalSavings / count;
-      // 只返回正数（节省）的情况，且至少节省 0.5%（降低阈值以便更多显示）
-      if (avgSavings >= 0.5) {
-        // 调试：打印第一个匹配成功的模型
-        if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
-          console.log('calculateSavings success:', modelName, {
-            devCost: { input: devCost.input, output: devCost.output },
-            currentPrice: { input: currentInputPrice, output: currentOutputPrice },
-            avgSavings: avgSavings.toFixed(2) + '%'
-          });
-        }
-        return avgSavings;
-      }
-    }
-
-    return null;
+    return {
+      input: devCost.input,
+      output: devCost.output,
+    };
   };
 
   // 处理筛选器变化
@@ -652,8 +602,8 @@ export default function PricingNew() {
                       output = model.model_price || 0;
                     }
 
-                    // 计算节省金额（只在 modelsDevData 加载完成后计算）
-                    const savings = modelsDevData ? calculateSavings(model, modelsDevData) : null;
+                    // 获取官方价格（用于测试）
+                    const officialPrice = modelsDevData ? getOfficialPrice(model, modelsDevData) : null;
 
                     return (
                       <div key={model.key || model.model_name || index} className="pricing-page-model-card-item">
@@ -676,7 +626,8 @@ export default function PricingNew() {
                           currency={currency}
                           tokenUnit={tokenUnit}
                           modelsDevData={modelsDevData}
-                          savings={savings}
+                          savings={null}
+                          officialPrice={officialPrice}
                         />
                       </div>
                     );
