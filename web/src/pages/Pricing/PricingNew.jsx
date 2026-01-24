@@ -32,6 +32,7 @@ import ModelCardSkeleton from '../../components/pricing/ModelCardSkeleton';
 import ModelFilter from '../../components/pricing/ModelFilter';
 import ModelFilterSkeleton from '../../components/pricing/ModelFilterSkeleton';
 import ModelDetailSidebar from '../../components/pricing/ModelDetailSidebar';
+import { getFeatureTagsFromDevData, getTagKeyFromTranslation } from '../../components/pricing/modelTags';
 import '../../styles/pricing.css';
 
 // 模型类型推断函数（参考 NiceRouter 的 getModelType）
@@ -77,7 +78,7 @@ const getModelType = (name) => {
 };
 
 // 筛选模型函数
-const filterModel = (model, filters) => {
+const filterModel = (model, filters, modelsDevData = null) => {
   const name = model.model_name || model.name;
   const provider = model.vendor_name || 'Unknown';
   const types = getModelType(name);
@@ -106,17 +107,19 @@ const filterModel = (model, filters) => {
     if (!hasMatchingType) return false;
   }
 
-  // 标签筛选
+  // 标签筛选（支持特性 tags）
   if (filters.tags && filters.tags.length > 0) {
-    if (!model.tags) return false;
-    const tagsArr = model.tags
-      .toLowerCase()
-      .split(/[,;|]+/)
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
-    const hasMatchingTag = filters.tags.some((tag) =>
-      tagsArr.includes(tag.toLowerCase())
+    // 从 models.dev 数据中获取特性 tags
+    const featureTags = getFeatureTagsFromDevData(name, modelsDevData);
+    
+    // 将筛选器中的标签转换为原始 tag key（支持中英文）
+    const filterTagKeys = filters.tags.map(tag => getTagKeyFromTranslation(tag));
+    
+    // 检查是否有匹配的 tag
+    const hasMatchingTag = filterTagKeys.some((filterTag) =>
+      featureTags.includes(filterTag)
     );
+    
     if (!hasMatchingTag) return false;
   }
 
@@ -310,6 +313,9 @@ export default function PricingNew() {
       const res = await API.get(url);
       if (res.data.success && res.data.data) {
         setModelsDevData(res.data.data);
+        console.log('Models.dev data loaded:', Object.keys(res.data.data).length, 'vendors');
+      } else {
+        console.warn('Models.dev data load failed:', res.data);
       }
     } catch (error) {
       console.error('Failed to load models.dev data:', error);
@@ -322,68 +328,117 @@ export default function PricingNew() {
     loadModelsDevData();
   }, []);
 
+  // 辅助函数：在 models.dev 数据中查找匹配的模型
+  const findModelInDevData = (modelName, devData) => {
+    if (!devData || !modelName) return null;
+    
+    // 尝试多种匹配方式
+    const matchVariants = [
+      modelName, // 原始名称
+      modelName.toLowerCase(), // 小写
+      modelName.replace(/^Pro\//, ''), // 去除 Pro/ 前缀
+      modelName.replace(/^Pro\//, '').toLowerCase(), // 去除前缀并小写
+    ];
+    
+    // 遍历所有供应商查找匹配的模型
+    for (const vendorId in devData) {
+      const vendor = devData[vendorId];
+      if (!vendor.models) continue;
+      
+      // 尝试各种匹配方式
+      for (const variant of matchVariants) {
+        if (vendor.models[variant]) {
+          return vendor.models[variant];
+        }
+      }
+      
+      // 如果直接匹配失败，尝试模糊匹配（忽略大小写）
+      const modelKeys = Object.keys(vendor.models);
+      for (const key of modelKeys) {
+        const normalizedKey = key.toLowerCase();
+        const normalizedName = modelName.toLowerCase();
+        const normalizedNameNoPrefix = modelName.replace(/^Pro\//, '').toLowerCase();
+        
+        if (normalizedKey === normalizedName || normalizedKey === normalizedNameNoPrefix) {
+          return vendor.models[key];
+        }
+      }
+    }
+    
+    return null;
+  };
+
   // 计算节省金额的函数
   const calculateSavings = (model, modelsDevData) => {
-    if (!modelsDevData || !model) return null;
+    if (!modelsDevData || !model) {
+      return null;
+    }
     
     const modelName = model.model_name || model.name;
     if (!modelName) return null;
 
-    // 遍历所有供应商查找匹配的模型
-    for (const vendorId in modelsDevData) {
-      const vendor = modelsDevData[vendorId];
-      if (vendor.models && vendor.models[modelName]) {
-        const modelData = vendor.models[modelName];
-        const devCost = modelData.cost;
-        
-        if (!devCost || (devCost.input === 0 && devCost.output === 0)) {
-          return null;
+    // 使用辅助函数查找匹配的模型
+    const modelData = findModelInDevData(modelName, modelsDevData);
+    if (!modelData) {
+      return null;
+    }
+    
+    const devCost = modelData.cost;
+    
+    if (!devCost || (devCost.input === 0 && devCost.output === 0)) {
+      return null;
+    }
+
+    // 计算当前价格（USD per M tokens，不考虑 groupRatio）
+    let currentInputPrice = 0;
+    let currentOutputPrice = 0;
+    
+    if (model.quota_type === 0) {
+      // 按量计费：使用 model_ratio * 2（1倍率=0.002刀，所以 *2）
+      currentInputPrice = model.model_ratio ? model.model_ratio * 2 : 0;
+      currentOutputPrice = model.model_ratio && model.completion_ratio
+        ? model.model_ratio * model.completion_ratio * 2
+        : model.model_ratio ? model.model_ratio * 2 : 0;
+    } else {
+      // 按次计费：使用 model_price（按次计费通常不适用于 token 价格对比）
+      // 跳过按次计费的模型
+      return null;
+    }
+
+    // 如果当前价格为0，无法计算节省
+    if (currentInputPrice === 0 && currentOutputPrice === 0) {
+      return null;
+    }
+
+    // 计算平均节省百分比（基于输入和输出价格）
+    let totalSavings = 0;
+    let count = 0;
+
+    if (devCost.input > 0 && currentInputPrice > 0) {
+      const inputSavings = ((devCost.input - currentInputPrice) / devCost.input) * 100;
+      totalSavings += inputSavings;
+      count++;
+    }
+
+    if (devCost.output > 0 && currentOutputPrice > 0) {
+      const outputSavings = ((devCost.output - currentOutputPrice) / devCost.output) * 100;
+      totalSavings += outputSavings;
+      count++;
+    }
+
+    if (count > 0) {
+      const avgSavings = totalSavings / count;
+      // 只返回正数（节省）的情况，且至少节省 0.5%（降低阈值以便更多显示）
+      if (avgSavings >= 0.5) {
+        // 调试：打印第一个匹配成功的模型
+        if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
+          console.log('calculateSavings success:', modelName, {
+            devCost: { input: devCost.input, output: devCost.output },
+            currentPrice: { input: currentInputPrice, output: currentOutputPrice },
+            avgSavings: avgSavings.toFixed(2) + '%'
+          });
         }
-
-        // 计算当前价格（USD per M tokens，不考虑 groupRatio）
-        let currentInputPrice = 0;
-        let currentOutputPrice = 0;
-        
-        if (model.quota_type === 0) {
-          // 按量计费：使用 model_ratio * 2（1倍率=0.002刀，所以 *2）
-          currentInputPrice = model.model_ratio ? model.model_ratio * 2 : 0;
-          currentOutputPrice = model.model_ratio && model.completion_ratio
-            ? model.model_ratio * model.completion_ratio * 2
-            : model.model_ratio ? model.model_ratio * 2 : 0;
-        } else {
-          // 按次计费：使用 model_price（按次计费通常不适用于 token 价格对比）
-          // 跳过按次计费的模型
-          return null;
-        }
-
-        // 如果当前价格为0，无法计算节省
-        if (currentInputPrice === 0 && currentOutputPrice === 0) {
-          return null;
-        }
-
-        // 计算平均节省百分比（基于输入和输出价格）
-        let totalSavings = 0;
-        let count = 0;
-
-        if (devCost.input > 0 && currentInputPrice > 0) {
-          const inputSavings = ((devCost.input - currentInputPrice) / devCost.input) * 100;
-          totalSavings += inputSavings;
-          count++;
-        }
-
-        if (devCost.output > 0 && currentOutputPrice > 0) {
-          const outputSavings = ((devCost.output - currentOutputPrice) / devCost.output) * 100;
-          totalSavings += outputSavings;
-          count++;
-        }
-
-        if (count > 0) {
-          const avgSavings = totalSavings / count;
-          // 只返回正数（节省）的情况，且至少节省 1%
-          return avgSavings >= 1 ? avgSavings : null;
-        }
-
-        return null;
+        return avgSavings;
       }
     }
 
@@ -470,8 +525,11 @@ export default function PricingNew() {
       ...filters,
       searchQuery: searchValue,
     };
-    return models.filter((model) => filterModel(model, currentFilters));
-  }, [models, filters, searchValue]);
+    return models.filter((model) => filterModel(model, currentFilters, modelsDevData));
+  }, [models, filters, searchValue, modelsDevData]);
+
+  // 当 modelsDevData 加载完成后，重新计算所有模型的 savings
+  // 这确保在数据加载后能正确显示节省金额
 
   // 分页后的模型列表
   const paginatedModels = useMemo(() => {
@@ -511,7 +569,7 @@ export default function PricingNew() {
             {loading ? (
               <ModelFilterSkeleton />
             ) : (
-              <ModelFilter locale={locale} allModels={models} onFilterChange={setFilters} />
+              <ModelFilter locale={locale} allModels={models} onFilterChange={setFilters} modelsDevData={modelsDevData} />
             )}
             <div className="pricing-page-main">
               {/* Search Box and Show Filters Button */}
@@ -594,8 +652,8 @@ export default function PricingNew() {
                       output = model.model_price || 0;
                     }
 
-                    // 计算节省金额
-                    const savings = calculateSavings(model, modelsDevData);
+                    // 计算节省金额（只在 modelsDevData 加载完成后计算）
+                    const savings = modelsDevData ? calculateSavings(model, modelsDevData) : null;
 
                     return (
                       <div key={model.key || model.model_name || index} className="pricing-page-model-card-item">
@@ -677,6 +735,7 @@ export default function PricingNew() {
         endpointMap={endpointMap}
         usableGroup={usableGroup}
         autoGroups={autoGroups}
+        modelsDevData={modelsDevData}
       />
 
       {/* Footer Section */}

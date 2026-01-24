@@ -17,14 +17,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Filter, X } from 'lucide-react';
 import ProviderIcon from './ProviderIcon';
+import { getFeatureTagsFromDevData, getTagTranslation } from './modelTags';
 
 export default function ModelFilter({
   locale = 'zh',
   onFilterChange,
   allModels = [],
+  modelsDevData = null,
 }) {
   const [isOpen, setIsOpen] = useState(() => {
     // 移动端默认隐藏，PC端默认显示
@@ -79,69 +81,57 @@ export default function ModelFilter({
   };
 
   // 从所有模型中提取唯一的提供商列表
-  const getAllProviders = () => {
-    const providers = new Set();
-    const providerIcons = new Map();
-    let hasUnknownProvider = false;
+  // 使用 useMemo 缓存结果，避免在渲染时重复计算
+  const { providers, providerIcons, hasUnknownProvider } = useMemo(() => {
+    const providersSet = new Set();
+    const providerIconsMap = new Map();
+    let hasUnknownProviderFlag = false;
 
     allModels.forEach((model) => {
       // 优先使用 API 返回的 vendor_name
       if (model.vendor_name) {
-        providers.add(model.vendor_name);
+        providersSet.add(model.vendor_name);
         // 保存供应商图标
-        if (model.vendor_icon && !providerIcons.has(model.vendor_name)) {
-          providerIcons.set(model.vendor_name, model.vendor_icon);
+        if (model.vendor_icon && !providerIconsMap.has(model.vendor_name)) {
+          providerIconsMap.set(model.vendor_name, model.vendor_icon);
         }
       } else {
         // 如果没有 vendor_name，检查是否有未知供应商
-        hasUnknownProvider = true;
+        hasUnknownProviderFlag = true;
       }
     });
 
     // 转换为数组并排序
-    const sortedProviders = Array.from(providers).sort();
+    const sortedProviders = Array.from(providersSet).sort();
 
     return {
       providers: sortedProviders,
-      providerIcons,
-      hasUnknownProvider,
+      providerIcons: providerIconsMap,
+      hasUnknownProvider: hasUnknownProviderFlag,
     };
-  };
+  }, [allModels]);
 
-  const { providers, providerIcons, hasUnknownProvider } = getAllProviders();
-
-  // 从所有模型中收集唯一的tags
-  const getAllTags = () => {
+  // 从所有模型中收集唯一的特性 tags（从 models.dev 数据中）
+  // 使用 useMemo 缓存结果，避免在渲染时重复计算
+  const allTags = useMemo(() => {
     const tagSet = new Set();
-
     allModels.forEach((model) => {
-      if (model.tags) {
-        // 解析逗号、分号或竖线分隔的tags
-        const tags = model.tags
-          .split(/[,;|]+/)
-          .map(tag => tag.trim())
-          .filter(tag => tag.length > 0)
-          // 过滤掉以 K 或 M 结尾的标签（例如："121.8K" "1M"）
-          .filter(tag => !/^[\d.]+[KM]$/i.test(tag));
-        tags.forEach(tag => tagSet.add(tag));
+      const name = model.model_name || model.name;
+      if (name) {
+        // 从 models.dev 数据中获取特性 tags
+        const featureTags = getFeatureTagsFromDevData(name, modelsDevData);
+        featureTags.forEach(tag => tagSet.add(tag));
       }
     });
-
-    // 转换为数组并排序
-    return Array.from(tagSet).sort();
-  };
-
-  const allTags = getAllTags();
-
-  // Tag显示名称映射
-  const getTagLabel = (tag) => {
-    // 如果tag是数字（年份），直接返回
-    if (/^\d{4}$/.test(tag)) {
-      return tag;
-    }
-    // 其他tag保持原样
-    return tag;
-  };
+    // 转换为翻译后的标签并排序
+    const translatedTags = Array.from(tagSet)
+      .map(tag => ({
+        key: tag,
+        label: getTagTranslation(tag, locale)
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return translatedTags;
+  }, [allModels, modelsDevData, locale]);
 
   const translations = {
     zh: {
@@ -475,8 +465,8 @@ export default function ModelFilter({
                 sectionKey="tags"
                 twoColumns={true}
                 options={allTags.map(tag => ({
-                  value: tag,
-                  label: getTagLabel(tag),
+                  value: tag.label, // 使用翻译后的 label 作为 value
+                  label: tag.label,
                 }))}
               />
             )}

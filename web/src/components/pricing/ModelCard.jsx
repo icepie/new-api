@@ -20,6 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React from 'react';
 import ProviderIcon from './ProviderIcon';
 import { calculateModelPrice } from '../../helpers';
+import { getFeatureTagsFromDevData, getTagTranslation } from './modelTags';
 
 // 为不同的 tag 生成不同的渐变颜色 - 使用更协调的配色方案
 const getTagColor = (tag) => {
@@ -299,59 +300,11 @@ export default function ModelCard({
   modelsDevData = null, // models.dev 的数据
   savings = null, // 节省金额
 }) {
-  // 从 models.dev 数据中获取 tags，如果没有则使用 API 返回的 tags
-  let parsedTags = [];
-  if (modelsDevData && name) {
-    // 遍历所有供应商查找匹配的模型
-    for (const vendorId in modelsDevData) {
-      const vendor = modelsDevData[vendorId];
-      if (vendor.models && vendor.models[name]) {
-        const modelData = vendor.models[name];
-        // 从模型数据中提取 tags（如果有的话）
-        if (modelData.tags && Array.isArray(modelData.tags)) {
-          parsedTags = modelData.tags;
-        } else if (modelData.tags && typeof modelData.tags === 'string') {
-          parsedTags = modelData.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
-        } else {
-          // 从其他字段生成 tags
-          const generatedTags = [];
-          if (modelData.family) {
-            generatedTags.push(modelData.family);
-          }
-          if (modelData.reasoning) {
-            generatedTags.push('reasoning');
-          }
-          if (modelData.tool_call) {
-            generatedTags.push('tool-call');
-          }
-          if (modelData.structured_output) {
-            generatedTags.push('structured-output');
-          }
-          if (modelData.attachment) {
-            generatedTags.push('attachment');
-          }
-          if (modelData.open_weights) {
-            generatedTags.push('open-weights');
-          }
-          if (modelData.modalities) {
-            if (modelData.modalities.input) {
-              generatedTags.push(...modelData.modalities.input.map(m => `input-${m}`));
-            }
-            if (modelData.modalities.output) {
-              generatedTags.push(...modelData.modalities.output.map(m => `output-${m}`));
-            }
-          }
-          parsedTags = generatedTags;
-        }
-        break;
-      }
-    }
-  }
-  
-  // 如果没有从 models.dev 获取到 tags，使用 API 返回的 tags
-  if (parsedTags.length === 0 && apiTags) {
-    parsedTags = apiTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
-  }
+  // 从 models.dev 数据中获取 tags（不使用之前的 API tags）
+  const parsedTags = getFeatureTagsFromDevData(name, modelsDevData);
+
+  // 翻译 tags
+  const translatedTags = parsedTags.map(tag => getTagTranslation(tag, locale));
 
   // 检查是否为 Pro 模型
   const isPro = name.startsWith('Pro/');
@@ -448,27 +401,17 @@ export default function ModelCard({
       data-model-input={input}
       data-model-output={output}
       onClick={handleCardClick}
+      style={{ position: 'relative' }}
     >
-      {/* Status Badge and Savings */}
-      <div className="pricing-model-card-badges" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          {isPro && (
-            <span className="pricing-model-badge pricing-model-badge-pro">
-              Pro
-            </span>
-          )}
-          {newModel && (
-            <span className="pricing-model-badge pricing-model-badge-new">
-              New
-            </span>
-          )}
-          {!newModel && !isPro && versionLabel && (
-            <span className="pricing-model-badge pricing-model-badge-version">
-              {versionLabel}
-            </span>
-          )}
-        </div>
-        {savings !== null && savings > 0 && (
+      {/* Savings - 显示在右上角 */}
+      {savings !== null && savings > 0 && (
+        <div style={{ 
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          zIndex: 10,
+          pointerEvents: 'none'
+        }}>
           <div style={{ 
             backgroundColor: '#10b981', 
             color: 'white', 
@@ -476,24 +419,41 @@ export default function ModelCard({
             borderRadius: '4px', 
             fontSize: '12px',
             fontWeight: 'bold',
-            marginLeft: '8px'
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+            whiteSpace: 'nowrap'
           }}>
             {locale === 'zh' ? `省${savings.toFixed(1)}%` : `Save ${savings.toFixed(1)}%`}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Model Name - 现在显示在顶部 */}
-      <h3 className="pricing-model-card-name" style={{ marginTop: '8px', marginBottom: '8px' }}>
+      {/* Model Name - 现在显示在顶部，使用主文字样式（之前厂商的样式） */}
+      <h3 
+        className="pricing-model-card-provider-name" 
+        style={{ 
+          marginTop: '12px', 
+          marginBottom: '4px',
+          fontSize: '1.125rem',
+          whiteSpace: 'normal',
+          wordBreak: 'break-word',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          lineHeight: '1.4',
+          minHeight: '2.8rem'
+        }}
+      >
         {name}
       </h3>
 
-      {/* Provider Logo and Name - 现在显示在模型名称下方 */}
-      <div className="pricing-model-card-provider">
+      {/* Provider Logo and Name - 现在显示在模型名称下方，使用次要文字样式（之前模型名称的样式） */}
+      <div className="pricing-model-card-provider" style={{ marginBottom: '8px' }}>
         <div className="pricing-model-card-provider-icon">
           <ProviderIcon provider={providerIconName} iconName={icon || vendorIcon} size={28} />
         </div>
-        <div className="pricing-model-card-provider-name">
+        <div className="pricing-model-card-name">
           {displayProviderName}
         </div>
       </div>
@@ -537,19 +497,21 @@ export default function ModelCard({
       </p>
 
       {/* Tags */}
-      {parsedTags.length > 0 && (
+      {translatedTags.length > 0 && (
         <div className="pricing-model-card-tags">
-          {parsedTags.slice(0, 5).map((tag, index) => {
-            const tagColor = getTagColor(tag);
+          {translatedTags.slice(0, 5).map((tag, index) => {
+            // 使用原始 tag 来获取颜色（保持颜色一致性）
+            const originalTag = parsedTags[index];
+            const tagColor = getTagColor(originalTag);
             return (
               <span key={index} className={`pricing-model-tag ${tagColor.bg} ${tagColor.text}`}>
                 {tag}
               </span>
             );
           })}
-          {parsedTags.length > 5 && (
+          {translatedTags.length > 5 && (
             <span className="pricing-model-tag pricing-model-tag-more">
-              +{parsedTags.length - 5}
+              +{translatedTags.length - 5}
             </span>
           )}
         </div>

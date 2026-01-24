@@ -22,6 +22,7 @@ import { X, BookOpen, Copy, Check } from 'lucide-react';
 import ProviderIcon from './ProviderIcon';
 import { calculateModelPrice } from '../../helpers/utils';
 import { StatusContext } from '../../context/Status';
+import { getFeatureTagsFromDevData, getTagTranslation } from './modelTags';
 
 // 为不同的 tag 生成不同的渐变颜色
 const getTagColor = (tag) => {
@@ -319,6 +320,7 @@ export default function ModelDetailSidebar({
   endpointMap = {},
   usableGroup = {},
   autoGroups = [],
+  modelsDevData = null,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [model, setModel] = useState(null);
@@ -401,7 +403,13 @@ export default function ModelDetailSidebar({
 
   const providerDisplayName = getProviderDisplayName(currentModelName, model.vendor_name);
   const providerIconName = getProviderIconName(currentModelName);
-  const { apiTags, inferredTags, billingTag } = getTags(modelName, model.tags, model.quota_type, locale);
+  
+  // 从 models.dev 数据中获取特性 tags
+  const featureTags = getFeatureTagsFromDevData(modelName, modelsDevData);
+  const translatedFeatureTags = featureTags.map(tag => getTagTranslation(tag, locale));
+  
+  // 保留原有的 billingTag 逻辑
+  const { billingTag } = getTags(modelName, model.tags, model.quota_type, locale);
 
   // 获取显示名称：如果提供商是 Unknown，显示模型名称
   const displayProviderName = providerDisplayName === 'Unknown'
@@ -417,9 +425,10 @@ export default function ModelDetailSidebar({
     return price.toFixed(2);
   };
 
-  const allTags = [...apiTags, ...inferredTags];
-  const hasTools = allTags.includes('Tools') || allTags.includes('工具调用');
-  const hasPrefix = allTags.includes('Prefix') || allTags.includes('前缀续写');
+  // 使用特性 tags（从 models.dev 获取）
+  const allTags = translatedFeatureTags.length > 0 ? translatedFeatureTags : [];
+  const hasTools = featureTags.includes('tool-call') || allTags.includes('工具调用') || allTags.includes('Tool Call');
+  const hasPrefix = false; // 不再使用 Prefix 标签
 
   const translations = {
     zh: {
