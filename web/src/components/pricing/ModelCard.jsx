@@ -460,53 +460,37 @@ export default function ModelCard({
         }
         
         return (
-          <div style={{ 
+          <div style={{
             position: 'absolute',
             top: '12px',
             right: '12px',
             zIndex: 10,
-            pointerEvents: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            alignItems: 'flex-end'
+            pointerEvents: 'none'
           }}>
-            <div style={{ 
-              backgroundColor: '#3b82f6', 
-              color: 'white', 
-              padding: '4px 8px', 
-              borderRadius: '4px', 
-              fontSize: '11px',
-              fontWeight: 'bold',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-              whiteSpace: 'nowrap',
-              lineHeight: '1.4'
-            }}>
-              {locale === 'zh' ? (
-                <>官方: ${officialPrice.input.toFixed(2)}/${officialPrice.output.toFixed(2)}</>
-              ) : (
-                <>Official: ${officialPrice.input.toFixed(2)}/${officialPrice.output.toFixed(2)}</>
-              )}
-            </div>
-            {savingsAmount !== null && savingsPercent !== null && (
-              <div style={{
-                backgroundColor: savingsAmount >= 0 ? '#10b981' : '#ef4444',
-                color: 'white',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                whiteSpace: 'nowrap',
-                lineHeight: '1.4'
-              }}>
-                {locale === 'zh' ? (
-                  <>节约: ${savingsAmount.toFixed(2)} ({savingsPercent.toFixed(1)}%)</>
-                ) : (
-                  <>Save: ${savingsAmount.toFixed(2)} ({savingsPercent.toFixed(1)}%)</>
-                )}
-              </div>
-            )}
+            {savingsAmount !== null && savingsPercent !== null && (() => {
+              // 计算折扣：折扣 = (1 - 节约百分比/100) * 10
+              const discount = ((1 - savingsPercent / 100) * 10).toFixed(1);
+
+              return (
+                <div style={{
+                  backgroundColor: savingsAmount >= 0 ? '#10b981' : '#ef4444',
+                  color: 'white',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                  whiteSpace: 'nowrap',
+                  lineHeight: '1.4'
+                }}>
+                  {locale === 'zh' ? (
+                    <>≈官方 {discount} 折</>
+                  ) : (
+                    <>≈{discount}0% of official</>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
