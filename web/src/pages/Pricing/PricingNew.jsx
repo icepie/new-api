@@ -156,6 +156,7 @@ export default function PricingNew() {
   const [searchValue, setSearchValue] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [modelsDevData, setModelsDevData] = useState(null);
   const [filters, setFilters] = useState({
     types: [],
     tags: [],
@@ -302,9 +303,92 @@ export default function PricingNew() {
     }
   };
 
+  // 加载 models.dev 数据
+  const loadModelsDevData = async () => {
+    try {
+      const url = '/api/models/dev';
+      const res = await API.get(url);
+      if (res.data.success && res.data.data) {
+        setModelsDevData(res.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to load models.dev data:', error);
+      // 不显示错误，因为这是可选功能
+    }
+  };
+
   useEffect(() => {
     loadPricing();
+    loadModelsDevData();
   }, []);
+
+  // 计算节省金额的函数
+  const calculateSavings = (model, modelsDevData) => {
+    if (!modelsDevData || !model) return null;
+    
+    const modelName = model.model_name || model.name;
+    if (!modelName) return null;
+
+    // 遍历所有供应商查找匹配的模型
+    for (const vendorId in modelsDevData) {
+      const vendor = modelsDevData[vendorId];
+      if (vendor.models && vendor.models[modelName]) {
+        const modelData = vendor.models[modelName];
+        const devCost = modelData.cost;
+        
+        if (!devCost || (devCost.input === 0 && devCost.output === 0)) {
+          return null;
+        }
+
+        // 计算当前价格（USD per M tokens，不考虑 groupRatio）
+        let currentInputPrice = 0;
+        let currentOutputPrice = 0;
+        
+        if (model.quota_type === 0) {
+          // 按量计费：使用 model_ratio * 2（1倍率=0.002刀，所以 *2）
+          currentInputPrice = model.model_ratio ? model.model_ratio * 2 : 0;
+          currentOutputPrice = model.model_ratio && model.completion_ratio
+            ? model.model_ratio * model.completion_ratio * 2
+            : model.model_ratio ? model.model_ratio * 2 : 0;
+        } else {
+          // 按次计费：使用 model_price（按次计费通常不适用于 token 价格对比）
+          // 跳过按次计费的模型
+          return null;
+        }
+
+        // 如果当前价格为0，无法计算节省
+        if (currentInputPrice === 0 && currentOutputPrice === 0) {
+          return null;
+        }
+
+        // 计算平均节省百分比（基于输入和输出价格）
+        let totalSavings = 0;
+        let count = 0;
+
+        if (devCost.input > 0 && currentInputPrice > 0) {
+          const inputSavings = ((devCost.input - currentInputPrice) / devCost.input) * 100;
+          totalSavings += inputSavings;
+          count++;
+        }
+
+        if (devCost.output > 0 && currentOutputPrice > 0) {
+          const outputSavings = ((devCost.output - currentOutputPrice) / devCost.output) * 100;
+          totalSavings += outputSavings;
+          count++;
+        }
+
+        if (count > 0) {
+          const avgSavings = totalSavings / count;
+          // 只返回正数（节省）的情况，且至少节省 1%
+          return avgSavings >= 1 ? avgSavings : null;
+        }
+
+        return null;
+      }
+    }
+
+    return null;
+  };
 
   // 处理筛选器变化
   useEffect(() => {
@@ -510,6 +594,9 @@ export default function PricingNew() {
                       output = model.model_price || 0;
                     }
 
+                    // 计算节省金额
+                    const savings = calculateSavings(model, modelsDevData);
+
                     return (
                       <div key={model.key || model.model_name || index} className="pricing-page-model-card-item">
                         <ModelCard
@@ -530,6 +617,8 @@ export default function PricingNew() {
                           displayPrice={displayPrice}
                           currency={currency}
                           tokenUnit={tokenUnit}
+                          modelsDevData={modelsDevData}
+                          savings={savings}
                         />
                       </div>
                     );

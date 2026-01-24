@@ -296,9 +296,62 @@ export default function ModelCard({
   displayPrice,
   currency = 'USD',
   tokenUnit = 'M',
+  modelsDevData = null, // models.dev 的数据
+  savings = null, // 节省金额
 }) {
-  // 解析 API 返回的 tags
-  const parsedTags = apiTags ? apiTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : [];
+  // 从 models.dev 数据中获取 tags，如果没有则使用 API 返回的 tags
+  let parsedTags = [];
+  if (modelsDevData && name) {
+    // 遍历所有供应商查找匹配的模型
+    for (const vendorId in modelsDevData) {
+      const vendor = modelsDevData[vendorId];
+      if (vendor.models && vendor.models[name]) {
+        const modelData = vendor.models[name];
+        // 从模型数据中提取 tags（如果有的话）
+        if (modelData.tags && Array.isArray(modelData.tags)) {
+          parsedTags = modelData.tags;
+        } else if (modelData.tags && typeof modelData.tags === 'string') {
+          parsedTags = modelData.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+        } else {
+          // 从其他字段生成 tags
+          const generatedTags = [];
+          if (modelData.family) {
+            generatedTags.push(modelData.family);
+          }
+          if (modelData.reasoning) {
+            generatedTags.push('reasoning');
+          }
+          if (modelData.tool_call) {
+            generatedTags.push('tool-call');
+          }
+          if (modelData.structured_output) {
+            generatedTags.push('structured-output');
+          }
+          if (modelData.attachment) {
+            generatedTags.push('attachment');
+          }
+          if (modelData.open_weights) {
+            generatedTags.push('open-weights');
+          }
+          if (modelData.modalities) {
+            if (modelData.modalities.input) {
+              generatedTags.push(...modelData.modalities.input.map(m => `input-${m}`));
+            }
+            if (modelData.modalities.output) {
+              generatedTags.push(...modelData.modalities.output.map(m => `output-${m}`));
+            }
+          }
+          parsedTags = generatedTags;
+        }
+        break;
+      }
+    }
+  }
+  
+  // 如果没有从 models.dev 获取到 tags，使用 API 返回的 tags
+  if (parsedTags.length === 0 && apiTags) {
+    parsedTags = apiTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+  }
 
   // 检查是否为 Pro 模型
   const isPro = name.startsWith('Pro/');
@@ -396,26 +449,46 @@ export default function ModelCard({
       data-model-output={output}
       onClick={handleCardClick}
     >
-      {/* Status Badge */}
-      <div className="pricing-model-card-badges">
-        {isPro && (
-          <span className="pricing-model-badge pricing-model-badge-pro">
-            Pro
-          </span>
-        )}
-        {newModel && (
-          <span className="pricing-model-badge pricing-model-badge-new">
-            New
-          </span>
-        )}
-        {!newModel && !isPro && versionLabel && (
-          <span className="pricing-model-badge pricing-model-badge-version">
-            {versionLabel}
-          </span>
+      {/* Status Badge and Savings */}
+      <div className="pricing-model-card-badges" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          {isPro && (
+            <span className="pricing-model-badge pricing-model-badge-pro">
+              Pro
+            </span>
+          )}
+          {newModel && (
+            <span className="pricing-model-badge pricing-model-badge-new">
+              New
+            </span>
+          )}
+          {!newModel && !isPro && versionLabel && (
+            <span className="pricing-model-badge pricing-model-badge-version">
+              {versionLabel}
+            </span>
+          )}
+        </div>
+        {savings !== null && savings > 0 && (
+          <div style={{ 
+            backgroundColor: '#10b981', 
+            color: 'white', 
+            padding: '4px 8px', 
+            borderRadius: '4px', 
+            fontSize: '12px',
+            fontWeight: 'bold',
+            marginLeft: '8px'
+          }}>
+            {locale === 'zh' ? `省${savings.toFixed(1)}%` : `Save ${savings.toFixed(1)}%`}
+          </div>
         )}
       </div>
 
-      {/* Provider Logo and Name */}
+      {/* Model Name - 现在显示在顶部 */}
+      <h3 className="pricing-model-card-name" style={{ marginTop: '8px', marginBottom: '8px' }}>
+        {name}
+      </h3>
+
+      {/* Provider Logo and Name - 现在显示在模型名称下方 */}
       <div className="pricing-model-card-provider">
         <div className="pricing-model-card-provider-icon">
           <ProviderIcon provider={providerIconName} iconName={icon || vendorIcon} size={28} />
@@ -424,11 +497,6 @@ export default function ModelCard({
           {displayProviderName}
         </div>
       </div>
-
-      {/* Model Name */}
-      <h3 className="pricing-model-card-name">
-        {name}
-      </h3>
 
       {/* Price */}
       <div className="pricing-model-card-price">
