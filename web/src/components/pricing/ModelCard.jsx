@@ -428,18 +428,16 @@ export default function ModelCard({
             }
           }
           
+          // 只按照 input 价格计算折扣
           const inputSavings = officialPrice.input - currentInput;
-          const outputSavings = officialPrice.output - currentOutput;
-          const totalSavings = inputSavings + outputSavings;
-          const totalOfficial = officialPrice.input + officialPrice.output;
 
           // 四舍五入到小数点后2位，避免浮点数精度问题
-          const roundedSavings = Math.round(totalSavings * 100) / 100;
+          const roundedSavings = Math.round(inputSavings * 100) / 100;
 
-          if (totalOfficial > 0) {
+          if (officialPrice.input > 0) {
             // 即使节约为0或负数，也显示
             savingsAmount = roundedSavings;
-            savingsPercent = (roundedSavings / totalOfficial) * 100;
+            savingsPercent = (roundedSavings / officialPrice.input) * 100;
           }
         } else {
           // 按请求计费
