@@ -393,12 +393,14 @@ export default function PricingNew() {
     // 生成查询名称的变体
     const queryVariants = normalizeModelName(modelName);
     
-    // 遍历所有供应商查找匹配的模型
-    for (const vendorId in devData) {
+    // 优先匹配的供应商（OpenAI 优先）
+    const priorityVendors = ['openai', 'anthropic', 'google', 'deepseek', 'mistral'];
+    
+    // 第一轮：在优先供应商中精确匹配
+    for (const vendorId of priorityVendors) {
       const vendor = devData[vendorId];
-      if (!vendor.models) continue;
+      if (!vendor || !vendor.models) continue;
       
-      // 尝试所有变体的精确匹配
       for (const variant of queryVariants) {
         if (vendor.models[variant]) {
           return vendor.models[variant];
@@ -406,10 +408,25 @@ export default function PricingNew() {
       }
     }
     
-    // 模糊匹配：查找包含该名称的模型（仅用于核心部分）
+    // 第二轮：在所有供应商中精确匹配
+    for (const vendorId in devData) {
+      // 跳过已经检查过的优先供应商
+      if (priorityVendors.includes(vendorId)) continue;
+      
+      const vendor = devData[vendorId];
+      if (!vendor.models) continue;
+      
+      for (const variant of queryVariants) {
+        if (vendor.models[variant]) {
+          return vendor.models[variant];
+        }
+      }
+    }
+    
+    // 第三轮：模糊匹配（更严格的匹配规则）
     const lowerName = modelName.toLowerCase();
     // 提取核心模型名（去掉版本号等）
-    const coreName = lowerName
+    let coreName = lowerName
       .replace(/^pro\//, '')
       .replace(/-\d{4}-\d{2}-\d{2}$/, '')
       .replace(/-preview$/, '')
@@ -417,26 +434,88 @@ export default function PricingNew() {
       .replace(/@\d+$/, '')
       .split('/').pop() || lowerName;
     
+    // 对于 gpt-4-0613 这样的模型，保留完整的版本号（如 0613）
+    // 不要去掉 -0613 这样的版本号，因为这是模型标识的一部分
+    // 但可以尝试去掉日期格式的版本号
+    
     // 如果核心名称太短，不进行模糊匹配
     if (coreName.length < 4) {
       return null;
     }
     
-    for (const vendorId in devData) {
+    // 收集所有可能的匹配项，按匹配度排序
+    const matches = [];
+    
+    for (const vendorId of priorityVendors) {
       const vendor = devData[vendorId];
-      if (!vendor.models) continue;
+      if (!vendor || !vendor.models) continue;
       
       const modelKeys = Object.keys(vendor.models);
       for (const key of modelKeys) {
         const normalizedKey = key.toLowerCase();
-        // 双向包含匹配
-        if (normalizedKey.includes(coreName) || coreName.includes(normalizedKey)) {
-          // 确保不是误匹配（例如 "gpt-4" 不应该匹配 "gpt-4o"）
-          if (normalizedKey.length >= 4 && coreName.length >= 4) {
-            return vendor.models[key];
+        
+        // 完全匹配原始名称（最高优先级）
+        if (normalizedKey === lowerName) {
+          matches.push({ key, model: vendor.models[key], score: 100, vendor: vendorId });
+          continue;
+        }
+        
+        // 完全匹配核心名称
+        if (normalizedKey === coreName) {
+          matches.push({ key, model: vendor.models[key], score: 95, vendor: vendorId });
+          continue;
+        }
+        
+        // 防止误匹配：如果查询的是 gpt-4-0613，不应该匹配 gpt-4o
+        // 检查是否包含版本号差异
+        const hasVersionInQuery = /-\d{4}$/.test(lowerName) || /-\d{3,}$/.test(lowerName);
+        const hasVersionInKey = /-\d{4}$/.test(normalizedKey) || /-\d{3,}$/.test(normalizedKey);
+        
+        if (hasVersionInQuery && !hasVersionInKey) {
+          // 查询有版本号但 key 没有，可能是不同的模型，跳过
+          continue;
+        }
+        
+        // 更严格的匹配：要求核心名称完全匹配或作为完整单词出现
+        if (normalizedKey.startsWith(coreName + '-')) {
+          // 以核心名称开头，优先级较高
+          matches.push({ key, model: vendor.models[key], score: 80, vendor: vendorId });
+        } else if (normalizedKey.includes('-' + coreName + '-') || normalizedKey.endsWith('-' + coreName)) {
+          // 包含核心名称作为完整单词，优先级中等
+          matches.push({ key, model: vendor.models[key], score: 60, vendor: vendorId });
+        } else if (normalizedKey.includes(coreName) && coreName.length >= 6) {
+          // 包含核心名称（但核心名称要足够长，避免误匹配）
+          matches.push({ key, model: vendor.models[key], score: 40, vendor: vendorId });
+        }
+      }
+    }
+    
+    // 如果优先供应商中没有找到，再检查其他供应商
+    if (matches.length === 0) {
+      for (const vendorId in devData) {
+        if (priorityVendors.includes(vendorId)) continue;
+        
+        const vendor = devData[vendorId];
+        if (!vendor.models) continue;
+        
+        const modelKeys = Object.keys(vendor.models);
+        for (const key of modelKeys) {
+          const normalizedKey = key.toLowerCase();
+          if (normalizedKey === coreName) {
+            matches.push({ key, model: vendor.models[key], score: 50, vendor: vendorId });
+          } else if (normalizedKey.startsWith(coreName + '-') || normalizedKey === coreName) {
+            matches.push({ key, model: vendor.models[key], score: 30, vendor: vendorId });
+          } else if (normalizedKey.includes('-' + coreName + '-') || normalizedKey.endsWith('-' + coreName)) {
+            matches.push({ key, model: vendor.models[key], score: 20, vendor: vendorId });
           }
         }
       }
+    }
+    
+    // 按匹配度排序，返回最佳匹配
+    if (matches.length > 0) {
+      matches.sort((a, b) => b.score - a.score);
+      return matches[0].model;
     }
     
     return null;
@@ -463,9 +542,24 @@ export default function PricingNew() {
       return null;
     }
 
+    // models.dev 的 cost.input 和 cost.output 已经是每百万 token 的美元价格
+    // 不需要任何单位转换
+    const inputPrice = typeof devCost.input === 'number' ? devCost.input : parseFloat(devCost.input) || 0;
+    const outputPrice = typeof devCost.output === 'number' ? devCost.output : parseFloat(devCost.output) || 0;
+
+    // 调试日志（仅在开发环境）
+    if (process.env.NODE_ENV === 'development' && modelName.includes('gpt-4-0613')) {
+      console.log(`[Official Price] Model: ${modelName}`, {
+        matchedModelId: modelData.id || modelData.name,
+        inputPrice,
+        outputPrice,
+        rawCost: devCost
+      });
+    }
+
     return {
-      input: devCost.input,
-      output: devCost.output,
+      input: inputPrice,
+      output: outputPrice,
     };
   };
 
