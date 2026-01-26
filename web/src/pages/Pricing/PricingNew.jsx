@@ -385,137 +385,64 @@ export default function PricingNew() {
     return [...new Set(variants)]; // 去重
   };
 
+  // 构建模型价格映射表（仅使用 model_id 精确匹配）
+  // 匹配方式：与 pricing-manager 项目保持一致
+  // - 仅使用 model.id 的原始值（小写）作为 key
+  // - 不使用变体和模糊匹配
+  // 这个映射表会在 modelsDevData 加载后构建一次
+  const buildModelPriceMap = useMemo(() => {
+    if (!modelsDevData) return new Map();
+    
+    const map = new Map();
+    
+    // 遍历所有供应商
+    for (const vendorId in modelsDevData) {
+      const vendor = modelsDevData[vendorId];
+      if (!vendor || !vendor.models) continue;
+      
+      // 遍历供应商的所有模型
+      for (const [modelKey, model] of Object.entries(vendor.models)) {
+        if (!model.cost || (model.cost.input === 0 && model.cost.output === 0)) {
+          continue; // 跳过没有价格的模型
+        }
+        
+        // 仅使用 model.id 的原始值（小写）进行精确匹配
+        // 与 pricing-manager 的 getOfficialPriceMap 逻辑一致
+        const modelId = model.id || modelKey;
+        const modelIdLower = modelId.toLowerCase();
+        
+        // 只在没有该 key 时添加（保留第一个匹配的）
+        if (!map.has(modelIdLower)) {
+          map.set(modelIdLower, model);
+        }
+      }
+    }
+    
+    return map;
+  }, [modelsDevData]);
+
   // 辅助函数：在 models.dev 数据中查找匹配的模型
-  // 参考 pricing-manager 的 findOfficialPrice 逻辑
+  // 匹配方式：与 pricing-manager 项目的 findOfficialPrice 逻辑完全一致
+  // - 仅使用 model_id 的原始值（小写）进行精确匹配
+  // - 不使用变体和模糊匹配
   const findModelInDevData = (modelName, devData) => {
     if (!devData || !modelName) return null;
     
-    // 生成查询名称的变体
-    const queryVariants = normalizeModelName(modelName);
-    
-    // 优先匹配的供应商（OpenAI 优先）
-    const priorityVendors = ['openai', 'anthropic', 'google', 'deepseek', 'mistral'];
-    
-    // 第一轮：在优先供应商中精确匹配
-    for (const vendorId of priorityVendors) {
-      const vendor = devData[vendorId];
-      if (!vendor || !vendor.models) continue;
-      
-      for (const variant of queryVariants) {
-        if (vendor.models[variant]) {
-          return vendor.models[variant];
-        }
+    // 仅使用 model_id 的原始值进行精确匹配
+    // 与 pricing-manager 的 findOfficialPrice 逻辑一致
+    const modelIdLower = modelName.toLowerCase();
+    if (buildModelPriceMap.has(modelIdLower)) {
+      const matched = buildModelPriceMap.get(modelIdLower);
+      // 调试日志
+      if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview')) {
+        console.log(`[Match] Exact model_id match for "${modelName}": model_id="${matched.id || 'N/A'}", model_name="${matched.name || 'N/A'}"`);
       }
+      return matched;
     }
     
-    // 第二轮：在所有供应商中精确匹配
-    for (const vendorId in devData) {
-      // 跳过已经检查过的优先供应商
-      if (priorityVendors.includes(vendorId)) continue;
-      
-      const vendor = devData[vendorId];
-      if (!vendor.models) continue;
-      
-      for (const variant of queryVariants) {
-        if (vendor.models[variant]) {
-          return vendor.models[variant];
-        }
-      }
-    }
-    
-    // 第三轮：模糊匹配（更严格的匹配规则）
-    const lowerName = modelName.toLowerCase();
-    // 提取核心模型名（去掉版本号等）
-    let coreName = lowerName
-      .replace(/^pro\//, '')
-      .replace(/-\d{4}-\d{2}-\d{2}$/, '')
-      .replace(/-preview$/, '')
-      .replace(/-latest$/, '')
-      .replace(/@\d+$/, '')
-      .split('/').pop() || lowerName;
-    
-    // 对于 gpt-4-0613 这样的模型，保留完整的版本号（如 0613）
-    // 不要去掉 -0613 这样的版本号，因为这是模型标识的一部分
-    // 但可以尝试去掉日期格式的版本号
-    
-    // 如果核心名称太短，不进行模糊匹配
-    if (coreName.length < 4) {
-      return null;
-    }
-    
-    // 收集所有可能的匹配项，按匹配度排序
-    const matches = [];
-    
-    for (const vendorId of priorityVendors) {
-      const vendor = devData[vendorId];
-      if (!vendor || !vendor.models) continue;
-      
-      const modelKeys = Object.keys(vendor.models);
-      for (const key of modelKeys) {
-        const normalizedKey = key.toLowerCase();
-        
-        // 完全匹配原始名称（最高优先级）
-        if (normalizedKey === lowerName) {
-          matches.push({ key, model: vendor.models[key], score: 100, vendor: vendorId });
-          continue;
-        }
-        
-        // 完全匹配核心名称
-        if (normalizedKey === coreName) {
-          matches.push({ key, model: vendor.models[key], score: 95, vendor: vendorId });
-          continue;
-        }
-        
-        // 防止误匹配：如果查询的是 gpt-4-0613，不应该匹配 gpt-4o
-        // 检查是否包含版本号差异
-        const hasVersionInQuery = /-\d{4}$/.test(lowerName) || /-\d{3,}$/.test(lowerName);
-        const hasVersionInKey = /-\d{4}$/.test(normalizedKey) || /-\d{3,}$/.test(normalizedKey);
-        
-        if (hasVersionInQuery && !hasVersionInKey) {
-          // 查询有版本号但 key 没有，可能是不同的模型，跳过
-          continue;
-        }
-        
-        // 更严格的匹配：要求核心名称完全匹配或作为完整单词出现
-        if (normalizedKey.startsWith(coreName + '-')) {
-          // 以核心名称开头，优先级较高
-          matches.push({ key, model: vendor.models[key], score: 80, vendor: vendorId });
-        } else if (normalizedKey.includes('-' + coreName + '-') || normalizedKey.endsWith('-' + coreName)) {
-          // 包含核心名称作为完整单词，优先级中等
-          matches.push({ key, model: vendor.models[key], score: 60, vendor: vendorId });
-        } else if (normalizedKey.includes(coreName) && coreName.length >= 6) {
-          // 包含核心名称（但核心名称要足够长，避免误匹配）
-          matches.push({ key, model: vendor.models[key], score: 40, vendor: vendorId });
-        }
-      }
-    }
-    
-    // 如果优先供应商中没有找到，再检查其他供应商
-    if (matches.length === 0) {
-      for (const vendorId in devData) {
-        if (priorityVendors.includes(vendorId)) continue;
-        
-        const vendor = devData[vendorId];
-        if (!vendor.models) continue;
-        
-        const modelKeys = Object.keys(vendor.models);
-        for (const key of modelKeys) {
-          const normalizedKey = key.toLowerCase();
-          if (normalizedKey === coreName) {
-            matches.push({ key, model: vendor.models[key], score: 50, vendor: vendorId });
-          } else if (normalizedKey.startsWith(coreName + '-') || normalizedKey === coreName) {
-            matches.push({ key, model: vendor.models[key], score: 30, vendor: vendorId });
-          } else if (normalizedKey.includes('-' + coreName + '-') || normalizedKey.endsWith('-' + coreName)) {
-            matches.push({ key, model: vendor.models[key], score: 20, vendor: vendorId });
-          }
-        }
-      }
-    }
-    
-    // 按匹配度排序，返回最佳匹配
-    if (matches.length > 0) {
-      matches.sort((a, b) => b.score - a.score);
-      return matches[0].model;
+    // 如果没有匹配到，返回 null
+    if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview')) {
+      console.log(`[Match] No match found for "${modelName}"`);
     }
     
     return null;
@@ -547,13 +474,20 @@ export default function PricingNew() {
     const inputPrice = typeof devCost.input === 'number' ? devCost.input : parseFloat(devCost.input) || 0;
     const outputPrice = typeof devCost.output === 'number' ? devCost.output : parseFloat(devCost.output) || 0;
 
-    // 调试日志（仅在开发环境）
-    if (process.env.NODE_ENV === 'development' && modelName.includes('gpt-4-0613')) {
+    // 调试日志（开发环境或特定模型）
+    if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview') || modelName.includes('gpt-4-0613')) {
       console.log(`[Official Price] Model: ${modelName}`, {
-        matchedModelId: modelData.id || modelData.name,
+        matchedModelId: modelData.id || 'N/A',
+        matchedModelName: modelData.name || 'N/A',
+        matchedModelKey: Object.keys(modelsDevData).find(vendorId => {
+          const vendor = modelsDevData[vendorId];
+          if (!vendor || !vendor.models) return false;
+          return Object.entries(vendor.models).some(([key, model]) => model === modelData);
+        }) || 'N/A',
         inputPrice,
         outputPrice,
-        rawCost: devCost
+        rawCost: devCost,
+        queryVariants: normalizeModelName(modelName)
       });
     }
 
