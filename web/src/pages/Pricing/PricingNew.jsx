@@ -328,39 +328,113 @@ export default function PricingNew() {
     loadModelsDevData();
   }, []);
 
+  /**
+   * 标准化模型名称（生成多种可能的匹配 key）
+   * 参考 pricing-manager 的 normalizeModelName 逻辑
+   */
+  const normalizeModelName = (name) => {
+    if (!name) return [];
+    
+    const lower = name.toLowerCase();
+    const variants = [lower];
+    
+    // 去掉日期后缀：gpt-4o-2024-05-13 -> gpt-4o
+    const noDate = lower.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+    if (noDate !== lower) variants.push(noDate);
+    
+    // 去掉 -preview, -latest 等后缀
+    const noSuffix = lower
+      .replace(/-preview$/, '')
+      .replace(/-latest$/, '')
+      .replace(/@\d+$/, '')
+      .replace(/-instruct$/, '')
+      .replace(/-chat$/, '');
+    if (noSuffix !== lower) variants.push(noSuffix);
+    
+    // 去掉路径前缀：Qwen/Qwen2.5-72B-Instruct -> qwen2.5-72b-instruct
+    if (lower.includes('/')) {
+      const afterSlash = lower.split('/').pop();
+      variants.push(afterSlash);
+      // 也去掉 -instruct 等
+      const afterSlashClean = afterSlash.replace(/-instruct$/, '').replace(/-chat$/, '');
+      if (afterSlashClean !== afterSlash) variants.push(afterSlashClean);
+    }
+    
+    // 替换分隔符：claude-3.5-sonnet <-> claude-3-5-sonnet
+    const dotToHyphen = lower.replace(/\./g, '-');
+    if (dotToHyphen !== lower) variants.push(dotToHyphen);
+    const hyphenToDot = lower.replace(/-(\d+)-/g, '.$1.');
+    if (hyphenToDot !== lower) variants.push(hyphenToDot);
+    
+    // 去掉 Pro/ 前缀
+    const noProPrefix = lower.replace(/^pro\//, '');
+    if (noProPrefix !== lower) {
+      variants.push(noProPrefix);
+      // 对去掉前缀的也应用其他规则
+      const noProNoDate = noProPrefix.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+      if (noProNoDate !== noProPrefix) variants.push(noProNoDate);
+      const noProNoSuffix = noProPrefix
+        .replace(/-preview$/, '')
+        .replace(/-latest$/, '')
+        .replace(/@\d+$/, '')
+        .replace(/-instruct$/, '')
+        .replace(/-chat$/, '');
+      if (noProNoSuffix !== noProPrefix) variants.push(noProNoSuffix);
+    }
+    
+    return [...new Set(variants)]; // 去重
+  };
+
   // 辅助函数：在 models.dev 数据中查找匹配的模型
+  // 参考 pricing-manager 的 findOfficialPrice 逻辑
   const findModelInDevData = (modelName, devData) => {
     if (!devData || !modelName) return null;
     
-    // 尝试多种匹配方式
-    const matchVariants = [
-      modelName, // 原始名称
-      modelName.toLowerCase(), // 小写
-      modelName.replace(/^Pro\//, ''), // 去除 Pro/ 前缀
-      modelName.replace(/^Pro\//, '').toLowerCase(), // 去除前缀并小写
-    ];
+    // 生成查询名称的变体
+    const queryVariants = normalizeModelName(modelName);
     
     // 遍历所有供应商查找匹配的模型
     for (const vendorId in devData) {
       const vendor = devData[vendorId];
       if (!vendor.models) continue;
       
-      // 尝试各种匹配方式
-      for (const variant of matchVariants) {
+      // 尝试所有变体的精确匹配
+      for (const variant of queryVariants) {
         if (vendor.models[variant]) {
           return vendor.models[variant];
         }
       }
+    }
+    
+    // 模糊匹配：查找包含该名称的模型（仅用于核心部分）
+    const lowerName = modelName.toLowerCase();
+    // 提取核心模型名（去掉版本号等）
+    const coreName = lowerName
+      .replace(/^pro\//, '')
+      .replace(/-\d{4}-\d{2}-\d{2}$/, '')
+      .replace(/-preview$/, '')
+      .replace(/-latest$/, '')
+      .replace(/@\d+$/, '')
+      .split('/').pop() || lowerName;
+    
+    // 如果核心名称太短，不进行模糊匹配
+    if (coreName.length < 4) {
+      return null;
+    }
+    
+    for (const vendorId in devData) {
+      const vendor = devData[vendorId];
+      if (!vendor.models) continue;
       
-      // 如果直接匹配失败，尝试模糊匹配（忽略大小写）
       const modelKeys = Object.keys(vendor.models);
       for (const key of modelKeys) {
         const normalizedKey = key.toLowerCase();
-        const normalizedName = modelName.toLowerCase();
-        const normalizedNameNoPrefix = modelName.replace(/^Pro\//, '').toLowerCase();
-        
-        if (normalizedKey === normalizedName || normalizedKey === normalizedNameNoPrefix) {
-          return vendor.models[key];
+        // 双向包含匹配
+        if (normalizedKey.includes(coreName) || coreName.includes(normalizedKey)) {
+          // 确保不是误匹配（例如 "gpt-4" 不应该匹配 "gpt-4o"）
+          if (normalizedKey.length >= 4 && coreName.length >= 4) {
+            return vendor.models[key];
+          }
         }
       }
     }
