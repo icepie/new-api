@@ -20,6 +20,7 @@ import {
   PlusOutlined,
   DeleteOutlined,
   EyeOutlined,
+  EyeInvisibleOutlined,
   CopyOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -43,6 +44,7 @@ const Keys = () => {
   const [usageData, setUsageData] = useState([]);
   const [usageStats, setUsageStats] = useState(null);
   const [usageLoading, setUsageLoading] = useState(false);
+  const [visibleKeys, setVisibleKeys] = useState<Set<number>>(new Set());
   const [form] = Form.useForm();
   const [usageFilters, setUsageFilters] = useState({
     startTime: dayjs().subtract(7, 'day'),
@@ -62,10 +64,10 @@ const Keys = () => {
       if (res.success && res.data) {
         setTokens(res.data.items || []);
       } else {
-        message.error('获取Key列表失败');
+        message.error('获取密钥列表失败');
       }
     } catch (error) {
-      message.error('获取Key列表失败');
+      message.error('获取密钥列表失败');
     } finally {
       setLoading(false);
     }
@@ -150,8 +152,37 @@ const Keys = () => {
   };
 
   const handleCopyKey = (key) => {
-    navigator.clipboard.writeText(key);
-    message.success('已复制到剪贴板');
+    // 使用更可靠的复制方法
+    const textArea = document.createElement('textarea');
+    textArea.value = key;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      message.success('已复制到剪贴板');
+    } catch (err) {
+      // 如果execCommand失败，尝试使用clipboard API
+      navigator.clipboard.writeText(key).then(
+        () => message.success('已复制到剪贴板'),
+        () => message.error('复制失败，请手动复制')
+      );
+    } finally {
+      document.body.removeChild(textArea);
+    }
+  };
+
+  const toggleKeyVisibility = (id: number) => {
+    setVisibleKeys((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   const columns = [
@@ -162,23 +193,37 @@ const Keys = () => {
       width: 200,
     },
     {
-      title: 'Key',
+      title: '密钥',
       dataIndex: 'key',
       key: 'key',
       width: 300,
-      render: (text) => (
-        <Space>
-          <span style={{ fontFamily: 'monospace' }}>
-            {text.substring(0, 20)}...
-          </span>
-          <Button
-            type="text"
-            size="small"
-            icon={<CopyOutlined />}
-            onClick={() => handleCopyKey(text)}
-          />
-        </Space>
-      ),
+      render: (text, record) => {
+        const isVisible = visibleKeys.has(record.id);
+        const fullKey = `sk-${text}`;
+        const displayKey = isVisible ? fullKey : `sk-${text.substring(0, 20)}...`;
+
+        return (
+          <Space>
+            <span style={{ fontFamily: 'monospace' }}>
+              {displayKey}
+            </span>
+            <Button
+              type="text"
+              size="small"
+              icon={isVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+              onClick={() => toggleKeyVisibility(record.id)}
+              title={isVisible ? '隐藏密钥' : '显示完整密钥'}
+            />
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => handleCopyKey(fullKey)}
+              title="复制密钥"
+            />
+          </Space>
+        );
+      },
     },
     {
       title: '状态',
@@ -213,7 +258,7 @@ const Keys = () => {
             查看明细
           </Button>
           <Popconfirm
-            title="确定要删除这个Key吗?"
+            title="确定要删除这个密钥吗?"
             onConfirm={() => handleDeleteToken(record.id)}
             okText="确定"
             cancelText="取消"
@@ -277,14 +322,14 @@ const Keys = () => {
   return (
     <div>
       <Card
-        title="Key 管理"
+        title="密钥管理"
         extra={
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setCreateModalVisible(true)}
           >
-            创建 Key
+            创建密钥
           </Button>
         }
       >
@@ -295,14 +340,14 @@ const Keys = () => {
           rowKey="id"
           pagination={{
             pageSize: 10,
-            showTotal: (total) => `共 ${total} 个Key`,
+            showTotal: (total) => `共 ${total} 个密钥`,
           }}
         />
       </Card>
 
-      {/* 创建Key模态框 */}
+      {/* 创建密钥模态框 */}
       <Modal
-        title="创建新 Key"
+        title="创建新密钥"
         open={createModalVisible}
         onOk={() => form.submit()}
         onCancel={() => {
@@ -315,10 +360,10 @@ const Keys = () => {
         <Form form={form} onFinish={handleCreateToken} layout="vertical">
           <Form.Item
             name="name"
-            label="Key名称"
-            rules={[{ required: true, message: '请输入Key名称' }]}
+            label="密钥名称"
+            rules={[{ required: true, message: '请输入密钥名称' }]}
           >
-            <Input placeholder="请输入Key名称" />
+            <Input placeholder="请输入密钥名称" />
           </Form.Item>
         </Form>
       </Modal>

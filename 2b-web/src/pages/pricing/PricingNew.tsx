@@ -74,7 +74,7 @@ const getModelType = (name) => {
 };
 
 // 筛选模型函数
-const filterModel = (model, filters, modelsDevData = null) => {
+const filterModel = (model, filters, modelsDevLookup = null, isDevDataLoading = false) => {
   const name = model.model_name || model.name;
   const provider = model.vendor_name || 'Unknown';
   const types = getModelType(name);
@@ -84,29 +84,12 @@ const filterModel = (model, filters, modelsDevData = null) => {
     return false;
   }
 
-  // models.dev 匹配筛选 - 只显示在 models.dev 中有匹配的模型
-  if (modelsDevData) {
+  // models.dev 匹配筛选 - 只在数据加载完成后应用
+  // 如果数据还在加载中，跳过此筛选，显示所有模型
+  if (modelsDevLookup && !isDevDataLoading) {
     const modelIdLower = name.toLowerCase();
-    let hasMatch = false;
-
-    // 遍历所有供应商查找匹配
-    for (const vendorId in modelsDevData) {
-      const vendor = modelsDevData[vendorId];
-      if (!vendor || !vendor.models) continue;
-
-      for (const [modelKey, devModel] of Object.entries(vendor.models)) {
-        const devModelId = (devModel.id || modelKey).toLowerCase();
-        if (devModelId === modelIdLower) {
-          hasMatch = true;
-          break;
-        }
-      }
-
-      if (hasMatch) break;
-    }
-
     // 如果没有匹配，不显示该模型
-    if (!hasMatch) {
+    if (!modelsDevLookup.has(modelIdLower)) {
       return false;
     }
   }
@@ -132,8 +115,8 @@ const filterModel = (model, filters, modelsDevData = null) => {
 
   // 标签筛选（支持特性 tags）
   if (filters.tags && filters.tags.length > 0) {
-    // 从 models.dev 数据中获取特性 tags
-    const featureTags = getFeatureTagsFromDevData(name, modelsDevData);
+    // 从预缓存的模型数据中获取特性 tags（如果模型有缓存的 tags）
+    const featureTags = model._cachedTags || [];
 
     // 将筛选器中的标签转换为原始 tag key（支持中英文）
     const filterTagKeys = filters.tags.map(tag => getTagKeyFromTranslation(tag));
@@ -172,6 +155,7 @@ export default function PricingNew() {
   const [models, setModels] = useState([]);
   const [vendorsMap, setVendorsMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [modelsDevLoading, setModelsDevLoading] = useState(true);
   const [groupRatio, setGroupRatio] = useState({});
   const [usableGroup, setUsableGroup] = useState({});
   const [endpointMap, setEndpointMap] = useState({});
@@ -181,6 +165,7 @@ export default function PricingNew() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [modelsDevData, setModelsDevData] = useState(null);
+  const [modelsDevLookup, setModelsDevLookup] = useState(null); // 预构建的查找表
   const [filters, setFilters] = useState({
     types: [],
     tags: [],
@@ -229,7 +214,7 @@ export default function PricingNew() {
   };
 
   // 处理模型数据格式（参考 useModelPricingData 的 setModelsFormat）
-  const setModelsFormat = (modelsData, groupRatioData, vendorMap) => {
+  const setModelsFormat = (modelsData, groupRatioData, vendorMap, devData = null) => {
     const formattedModels = modelsData.map((m) => {
       const model = { ...m };
       model.key = model.model_name;
@@ -240,6 +225,13 @@ export default function PricingNew() {
         model.vendor_name = vendor.name;
         model.vendor_icon = vendor.icon;
         model.vendor_description = vendor.description;
+      }
+
+      // 预计算并缓存 tags（如果有 devData）
+      if (devData) {
+        model._cachedTags = getFeatureTagsFromDevData(model.model_name, devData);
+      } else {
+        model._cachedTags = [];
       }
 
       return model;
@@ -271,7 +263,6 @@ export default function PricingNew() {
 
   // 加载价格数据
   const loadPricing = async () => {
-    setLoading(true);
     try {
       const url = '/api/pricing';
       const res = await request.get(url);
@@ -299,7 +290,8 @@ export default function PricingNew() {
         setVendorsMap(vendorMap);
         setEndpointMap(supported_endpoint || {});
         setAutoGroups(auto_groups || []);
-        const formattedModels = setModelsFormat(data, group_ratio, vendorMap);
+        // 注意：此时 modelsDevData 可能还未加载，所以先不传入
+        const formattedModels = setModelsFormat(data, group_ratio, vendorMap, null);
         setModels(formattedModels);
       } else {
         message.error(msg || '加载失败');
@@ -307,38 +299,72 @@ export default function PricingNew() {
     } catch (error) {
       message.error('加载失败');
       console.error('Failed to load pricing:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   // 加载 models.dev 数据
   const loadModelsDevData = async () => {
+    setModelsDevLoading(true);
     try {
       const url = '/api/models/dev';
       const res = await request.get(url);
       // API 返回格式: { data: { vendor1: {...}, vendor2: {...} } }
       // request 拦截器已经解包，所以 res 就是原始响应
+      let devData = null;
       if (res && res.data) {
-        setModelsDevData(res.data);
-        console.log('Models.dev data loaded:', Object.keys(res.data).length, 'vendors');
+        devData = res.data;
       } else if (res) {
         // 如果没有 data 字段，可能整个 res 就是 vendors 对象
-        setModelsDevData(res);
-        console.log('Models.dev data loaded:', Object.keys(res).length, 'vendors');
-      } else {
-        console.warn('Models.dev data load failed:', res);
+        devData = res;
+      }
+
+      if (devData) {
+        setModelsDevData(devData);
+
+        // 构建查找表：modelId -> true (用于快速检查模型是否存在)
+        const lookup = new Set();
+        for (const vendorId in devData) {
+          const vendor = devData[vendorId];
+          if (!vendor || !vendor.models) continue;
+
+          for (const [modelKey, devModel] of Object.entries(vendor.models)) {
+            const devModelId = (devModel.id || modelKey).toLowerCase();
+            lookup.add(devModelId);
+          }
+        }
+        setModelsDevLookup(lookup);
       }
     } catch (error) {
       console.error('Failed to load models.dev data:', error);
       // 不显示错误，因为这是可选功能
+    } finally {
+      setModelsDevLoading(false);
     }
   };
 
   useEffect(() => {
-    loadPricing();
-    loadModelsDevData();
+    // 并行加载两个数据源，等待都完成后再显示内容
+    const loadAllData = async () => {
+      setLoading(true);
+      await Promise.all([
+        loadPricing(),
+        loadModelsDevData()
+      ]);
+      setLoading(false);
+    };
+    loadAllData();
   }, []);
+
+  // 当 modelsDevData 加载完成后，更新所有模型的缓存 tags
+  useEffect(() => {
+    if (modelsDevData && models.length > 0) {
+      const updatedModels = models.map(model => ({
+        ...model,
+        _cachedTags: getFeatureTagsFromDevData(model.model_name, modelsDevData)
+      }));
+      setModels(updatedModels);
+    }
+  }, [modelsDevData]);
 
   /**
    * 标准化模型名称（生成多种可能的匹配 key）
@@ -444,19 +470,9 @@ export default function PricingNew() {
     // 与 pricing-manager 的 findOfficialPrice 逻辑一致
     const modelIdLower = modelName.toLowerCase();
     if (buildModelPriceMap.has(modelIdLower)) {
-      const matched = buildModelPriceMap.get(modelIdLower);
-      // 调试日志
-      if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview')) {
-        console.log(`[Match] Exact model_id match for "${modelName}": model_id="${matched.id || 'N/A'}", model_name="${matched.name || 'N/A'}"`);
-      }
-      return matched;
+      return buildModelPriceMap.get(modelIdLower);
     }
-    
-    // 如果没有匹配到，返回 null
-    if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview')) {
-      console.log(`[Match] No match found for "${modelName}"`);
-    }
-    
+
     return null;
   };
 
@@ -485,23 +501,6 @@ export default function PricingNew() {
     // 不需要任何单位转换
     const inputPrice = typeof devCost.input === 'number' ? devCost.input : parseFloat(devCost.input) || 0;
     const outputPrice = typeof devCost.output === 'number' ? devCost.output : parseFloat(devCost.output) || 0;
-
-    // 调试日志（开发环境或特定模型）
-    if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview') || modelName.includes('gpt-4-0613')) {
-      console.log(`[Official Price] Model: ${modelName}`, {
-        matchedModelId: modelData.id || 'N/A',
-        matchedModelName: modelData.name || 'N/A',
-        matchedModelKey: Object.keys(modelsDevData).find(vendorId => {
-          const vendor = modelsDevData[vendorId];
-          if (!vendor || !vendor.models) return false;
-          return Object.entries(vendor.models).some(([key, model]) => model === modelData);
-        }) || 'N/A',
-        inputPrice,
-        outputPrice,
-        rawCost: devCost,
-        queryVariants: normalizeModelName(modelName)
-      });
-    }
 
     return {
       input: inputPrice,
@@ -589,8 +588,8 @@ export default function PricingNew() {
       ...filters,
       searchQuery: searchValue,
     };
-    return models.filter((model) => filterModel(model, currentFilters, modelsDevData));
-  }, [models, filters, searchValue, modelsDevData]);
+    return models.filter((model) => filterModel(model, currentFilters, modelsDevLookup, modelsDevLoading));
+  }, [models, filters, searchValue, modelsDevLookup, modelsDevLoading]);
 
   // 当 modelsDevData 加载完成后，重新计算所有模型的 savings
   // 这确保在数据加载后能正确显示节省金额

@@ -120,7 +120,7 @@ const Profile = () => {
   };
 
   const renderQuota = (quota: number) => {
-    return `¥${(quota / 500000).toFixed(2)}`;
+    return `$${(quota / 500000).toFixed(2)}`;
   };
 
   if (!user) {

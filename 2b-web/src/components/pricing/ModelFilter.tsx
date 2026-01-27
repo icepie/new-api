@@ -118,17 +118,14 @@ export default function ModelFilter({
     };
   }, [allModels]);
 
-  // 从所有模型中收集唯一的特性 tags（从 models.dev 数据中）
+  // 从所有模型中收集唯一的特性 tags（使用预缓存的 tags）
   // 使用 useMemo 缓存结果，避免在渲染时重复计算
   const allTags = useMemo(() => {
     const tagSet = new Set();
     allModels.forEach((model) => {
-      const name = model.model_name || model.name;
-      if (name) {
-        // 从 models.dev 数据中获取特性 tags
-        const featureTags = getFeatureTagsFromDevData(name, modelsDevData);
-        featureTags.forEach(tag => tagSet.add(tag));
-      }
+      // 使用预缓存的 tags（如果存在）
+      const featureTags = model._cachedTags || [];
+      featureTags.forEach(tag => tagSet.add(tag));
     });
     // 转换为翻译后的标签并排序
     const translatedTags = Array.from(tagSet)
@@ -138,7 +135,7 @@ export default function ModelFilter({
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
     return translatedTags;
-  }, [allModels, modelsDevData, locale]);
+  }, [allModels, locale]);
 
   const translations = {
     zh: {

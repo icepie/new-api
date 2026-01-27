@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
+import { memo } from 'react';
 import ProviderIcon from './ProviderIcon';
 import { calculateModelPrice } from '../../helpers/utils';
 import { getFeatureTagsFromDevData, getTagTranslation } from './modelTags';
@@ -278,7 +279,7 @@ const getVersionLabel = (name) => {
   return null;
 };
 
-export default function ModelCard({
+function ModelCard({
   model, // 完整的模型对象（可选）
   name,
   input,
@@ -318,9 +319,27 @@ export default function ModelCard({
     ? (name.startsWith('Pro/') ? name.substring(4) : name)
     : providerDisplayName;
 
-  // 使用 calculateModelPrice 计算价格（如果有完整模型对象和 displayPrice）
+  // 优先使用官方价格，如果没有则使用计算价格
   let priceData = null;
-  if (model && displayPrice) {
+
+  // 如果有官方价格，使用官方价格
+  if (officialPrice && (officialPrice.input > 0 || officialPrice.output > 0)) {
+    const formatOfficialPrice = (price) => {
+      if (!price || price === 0) return freeLabel;
+      if (displayPrice) {
+        return displayPrice(price);
+      }
+      return `$${price.toFixed(3)}`;
+    };
+
+    priceData = {
+      isPerToken: true,
+      inputPrice: formatOfficialPrice(officialPrice.input),
+      completionPrice: formatOfficialPrice(officialPrice.output),
+      unitLabel: tokenUnit === 'K' ? 'K' : 'M',
+    };
+  } else if (model && displayPrice) {
+    // 如果没有官方价格，使用 calculateModelPrice 计算价格
     try {
       priceData = calculateModelPrice({
         record: model,
@@ -336,7 +355,7 @@ export default function ModelCard({
     }
   }
 
-  // 如果没有 priceData，使用传入的 input/output 构建简单的价格显示
+  // 如果还是没有 priceData，使用传入的 input/output 构建简单的价格显示
   if (!priceData) {
     if (quotaType === 0) {
       priceData = {
@@ -403,158 +422,6 @@ export default function ModelCard({
       onClick={handleCardClick}
       style={{ position: 'relative' }}
     >
-      {/* Official Price - 显示在右上角（测试用） */}
-      {officialPrice && (() => {
-        // 计算节约金额
-        let savingsAmount = null;
-        let savingsPercent = null;
-        
-        if (priceData && priceData.isPerToken) {
-          // 按 token 计费：计算 input 和 output 的节约
-          let currentInput = input || 0;
-          if (typeof priceData.inputPrice === 'string') {
-            const parsed = parseFloat(priceData.inputPrice.replace('$', '').replace(freeLabel, '0'));
-            if (!isNaN(parsed)) {
-              currentInput = parsed;
-            }
-          }
-
-          let currentOutput = output || 0;
-          if (typeof priceData.completionPrice === 'string' || typeof priceData.outputPrice === 'string') {
-            const parsed = parseFloat((priceData.completionPrice || priceData.outputPrice || '').replace('$', '').replace(freeLabel, '0'));
-            if (!isNaN(parsed)) {
-              currentOutput = parsed;
-            }
-          }
-          
-          // 只按照 input 价格计算折扣
-          const inputSavings = officialPrice.input - currentInput;
-
-          // 四舍五入到小数点后2位，避免浮点数精度问题
-          const roundedSavings = Math.round(inputSavings * 100) / 100;
-
-          if (officialPrice.input > 0) {
-            // 即使节约为0或负数，也显示
-            savingsAmount = roundedSavings;
-            savingsPercent = (roundedSavings / officialPrice.input) * 100;
-          }
-        } else {
-          // 按请求计费
-          let currentPrice = output || input || 0;
-          if (typeof priceData?.price === 'string') {
-            const parsed = parseFloat(priceData.price.replace('$', '').replace(freeLabel, '0'));
-            if (!isNaN(parsed)) {
-              currentPrice = parsed;
-            }
-          }
-
-          // 对于按请求计费，使用 input 作为官方价格（如果没有单独的请求价格）
-          const officialRequestPrice = officialPrice.input || 0;
-          savingsAmount = officialRequestPrice - currentPrice;
-          if (officialRequestPrice > 0) {
-            savingsPercent = (savingsAmount / officialRequestPrice) * 100;
-          }
-        }
-        
-        // 格式化官方价格
-        const formatOfficialPrice = (price) => {
-          if (!price || price === 0) return '';
-          if (displayPrice) {
-            return displayPrice(price);
-          }
-          return `$${price.toFixed(3)}`;
-        };
-
-        const officialInputPrice = formatOfficialPrice(officialPrice.input);
-        const officialOutputPrice = priceData && priceData.isPerToken 
-          ? formatOfficialPrice(officialPrice.output) 
-          : null;
-
-        return (
-          <div style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            zIndex: 10,
-            pointerEvents: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            gap: '4px'
-          }}>
-            {savingsAmount !== null && savingsPercent !== null && (() => {
-              // 计算折扣：折扣 = (1 - 节约百分比/100) * 10
-              const discount = ((1 - savingsPercent / 100) * 10).toFixed(1);
-
-              return (
-                <>
-                  <div style={{
-                    backgroundColor: savingsAmount >= 0 ? '#10b981' : '#ef4444',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    whiteSpace: 'nowrap',
-                    lineHeight: '1.4'
-                  }}>
-                    {locale === 'zh' ? (
-                      <>≈官方 {discount} 折</>
-                    ) : (
-                      <>≈{discount}0% of official</>
-                    )}
-                  </div>
-                  {officialInputPrice && (
-                    <div style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
-                      padding: '3px 6px',
-                      borderRadius: '4px',
-                      fontSize: '10px',
-                      fontWeight: 'normal',
-                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                      whiteSpace: 'nowrap',
-                      lineHeight: '1.3',
-                      backdropFilter: 'blur(4px)'
-                    }}>
-                      {locale === 'zh' ? (
-                        <>官方: {officialInputPrice}{priceData && priceData.isPerToken ? ` /${tokenUnit}` : ''}</>
-                      ) : (
-                        <>Official: {officialInputPrice}{priceData && priceData.isPerToken ? ` /${tokenUnit}` : ''}</>
-                      )}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        );
-      })()}
-      {/* Savings - 显示在右上角（暂时隐藏） */}
-      {savings !== null && savings > 0 && false && (
-        <div style={{ 
-          position: 'absolute',
-          top: '12px',
-          right: '12px',
-          zIndex: 10,
-          pointerEvents: 'none'
-        }}>
-          <div style={{ 
-            backgroundColor: '#10b981', 
-            color: 'white', 
-            padding: '4px 8px', 
-            borderRadius: '4px', 
-            fontSize: '12px',
-            fontWeight: 'bold',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-            whiteSpace: 'nowrap'
-          }}>
-            {locale === 'zh' ? `省${savings.toFixed(1)}%` : `Save ${savings.toFixed(1)}%`}
-          </div>
-        </div>
-      )}
-
       {/* Model Name - 现在显示在顶部，使用主文字样式（之前厂商的样式） */}
       <h3 
         className="pricing-model-card-provider-name" 
@@ -647,4 +514,21 @@ export default function ModelCard({
     </div>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(ModelCard, (prevProps, nextProps) => {
+  // Custom comparison function - only re-render if these props change
+  return (
+    prevProps.name === nextProps.name &&
+    prevProps.input === nextProps.input &&
+    prevProps.output === nextProps.output &&
+    prevProps.selectedGroup === nextProps.selectedGroup &&
+    prevProps.currency === nextProps.currency &&
+    prevProps.tokenUnit === nextProps.tokenUnit &&
+    prevProps.locale === nextProps.locale &&
+    prevProps.model?.model_ratio === nextProps.model?.model_ratio &&
+    prevProps.model?.completion_ratio === nextProps.model?.completion_ratio &&
+    prevProps.model?.model_price === nextProps.model?.model_price
+  );
+});
 
