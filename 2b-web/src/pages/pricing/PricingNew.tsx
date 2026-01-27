@@ -1,0 +1,794 @@
+/*
+Copyright (C) 2025 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { message } from 'antd';
+import request from '../../utils/request';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import ModelCard from '../../components/pricing/ModelCard';
+import ModelCardSkeleton from '../../components/pricing/ModelCardSkeleton';
+import ModelFilter from '../../components/pricing/ModelFilter';
+import ModelFilterSkeleton from '../../components/pricing/ModelFilterSkeleton';
+import ModelDetailSidebar from '../../components/pricing/ModelDetailSidebar';
+import Empty from '../../components/pricing/Empty';
+import Pagination from '../../components/pricing/Pagination';
+import { getFeatureTagsFromDevData, getTagKeyFromTranslation } from '../../components/pricing/modelTags';
+import './pricing.css';
+
+// 模型类型推断函数（参考 NiceRouter 的 getModelType）
+const getModelType = (name) => {
+  const types = [];
+  if (
+    name.includes('Instruct') ||
+    name.includes('Chat') ||
+    name.includes('chat') ||
+    name.includes('对话') ||
+    name.includes('R1') ||
+    name.includes('Thinking')
+  ) {
+    types.push('dialogue');
+  }
+  if (
+    name.includes('image') ||
+    name.includes('Image') ||
+    name.includes('生图') ||
+    name.includes('VL') ||
+    name.includes('vision')
+  ) {
+    types.push('imageGen');
+  }
+  if (name.includes('video') || name.includes('Video') || name.includes('视频')) {
+    types.push('video');
+  }
+  if (
+    name.includes('TTS') ||
+    name.includes('Whisper') ||
+    name.includes('speech') ||
+    name.includes('语音')
+  ) {
+    types.push('voice');
+  }
+  if (name.includes('Embedding') || name.includes('embedding') || name.includes('嵌入')) {
+    types.push('embedding');
+  }
+  if (name.includes('rerank') || name.includes('Rerank') || name.includes('重排序')) {
+    types.push('reranking');
+  }
+  return types.length > 0 ? types : ['dialogue'];
+};
+
+// 筛选模型函数
+const filterModel = (model, filters, modelsDevData = null) => {
+  const name = model.model_name || model.name;
+  const provider = model.vendor_name || 'Unknown';
+  const types = getModelType(name);
+
+  // 上架状态筛选 - 只显示已上架的模型
+  if (model.is_listed === false) {
+    return false;
+  }
+
+  // models.dev 匹配筛选 - 只显示在 models.dev 中有匹配的模型
+  if (modelsDevData) {
+    const modelIdLower = name.toLowerCase();
+    let hasMatch = false;
+
+    // 遍历所有供应商查找匹配
+    for (const vendorId in modelsDevData) {
+      const vendor = modelsDevData[vendorId];
+      if (!vendor || !vendor.models) continue;
+
+      for (const [modelKey, devModel] of Object.entries(vendor.models)) {
+        const devModelId = (devModel.id || modelKey).toLowerCase();
+        if (devModelId === modelIdLower) {
+          hasMatch = true;
+          break;
+        }
+      }
+
+      if (hasMatch) break;
+    }
+
+    // 如果没有匹配，不显示该模型
+    if (!hasMatch) {
+      return false;
+    }
+  }
+
+  // 搜索筛选
+  if (filters.searchQuery) {
+    const query = filters.searchQuery.toLowerCase();
+    if (
+      !name.toLowerCase().includes(query) &&
+      !provider.toLowerCase().includes(query) &&
+      !(model.description && model.description.toLowerCase().includes(query)) &&
+      !(model.tags && model.tags.toLowerCase().includes(query))
+    ) {
+      return false;
+    }
+  }
+
+  // 类型筛选
+  if (filters.types && filters.types.length > 0) {
+    const hasMatchingType = filters.types.some((type) => types.includes(type));
+    if (!hasMatchingType) return false;
+  }
+
+  // 标签筛选（支持特性 tags）
+  if (filters.tags && filters.tags.length > 0) {
+    // 从 models.dev 数据中获取特性 tags
+    const featureTags = getFeatureTagsFromDevData(name, modelsDevData);
+
+    // 将筛选器中的标签转换为原始 tag key（支持中英文）
+    const filterTagKeys = filters.tags.map(tag => getTagKeyFromTranslation(tag));
+
+    // 检查是否有匹配的 tag
+    const hasMatchingTag = filterTagKeys.some((filterTag) =>
+      featureTags.includes(filterTag)
+    );
+
+    if (!hasMatchingTag) return false;
+  }
+
+  // 供应商筛选
+  if (filters.providers && filters.providers.length > 0) {
+    // 如果选择了 "all"，不筛选
+    if (filters.providers.includes('all')) {
+      // 继续其他筛选
+    } else {
+      // 如果选择了 "unknown"，只显示没有供应商的模型
+      if (filters.providers.includes('unknown')) {
+        if (provider && provider !== 'Unknown') return false;
+      } else {
+        // 否则只显示匹配的供应商
+        if (!filters.providers.includes(provider)) return false;
+      }
+    }
+  }
+
+  return true;
+};
+
+export default function PricingNew() {
+  const locale = 'zh'; // 固定使用中文
+  const isMobile = useIsMobile();
+
+  const [models, setModels] = useState([]);
+  const [vendorsMap, setVendorsMap] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [groupRatio, setGroupRatio] = useState({});
+  const [usableGroup, setUsableGroup] = useState({});
+  const [endpointMap, setEndpointMap] = useState({});
+  const [autoGroups, setAutoGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState('all');
+  const [searchValue, setSearchValue] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [modelsDevData, setModelsDevData] = useState(null);
+  const [filters, setFilters] = useState({
+    types: [],
+    tags: [],
+    providers: [],
+    context: [],
+    specs: [],
+    releaseDate: [],
+    searchQuery: '',
+  });
+
+  // 价格相关配置 - 使用默认值
+  const priceRate = 1;
+  const usdExchangeRate = 1;
+  const customExchangeRate = 1;
+  const customCurrencySymbol = '¤';
+  const siteDisplayType = 'USD';
+  const [currency, setCurrency] = useState('USD');
+  const [tokenUnit, setTokenUnit] = useState('M');
+
+  useEffect(() => {
+    if (
+      siteDisplayType === 'USD' ||
+      siteDisplayType === 'CNY' ||
+      siteDisplayType === 'CUSTOM'
+    ) {
+      setCurrency(siteDisplayType);
+    }
+  }, [siteDisplayType]);
+
+  // 价格显示函数
+  const displayPrice = (usdPrice) => {
+    // 检查 undefined 和 null
+    if (usdPrice === undefined || usdPrice === null || isNaN(usdPrice)) {
+      return '$0.000';
+    }
+    let priceInUSD = usdPrice;
+    // 如果需要考虑充值汇率，可以在这里处理
+    // priceInUSD = (usdPrice * priceRate) / usdExchangeRate;
+
+    if (currency === 'CNY') {
+      return `¥${(priceInUSD * usdExchangeRate).toFixed(3)}`;
+    } else if (currency === 'CUSTOM') {
+      return `${customCurrencySymbol}${(priceInUSD * customExchangeRate).toFixed(3)}`;
+    }
+    return `$${priceInUSD.toFixed(3)}`;
+  };
+
+  // 处理模型数据格式（参考 useModelPricingData 的 setModelsFormat）
+  const setModelsFormat = (modelsData, groupRatioData, vendorMap) => {
+    const formattedModels = modelsData.map((m) => {
+      const model = { ...m };
+      model.key = model.model_name;
+      model.group_ratio = groupRatioData[model.model_name];
+
+      if (model.vendor_id && vendorMap[model.vendor_id]) {
+        const vendor = vendorMap[model.vendor_id];
+        model.vendor_name = vendor.name;
+        model.vendor_icon = vendor.icon;
+        model.vendor_description = vendor.description;
+      }
+
+      return model;
+    });
+
+    // 排序：先按 quota_type，再按 gpt 优先，最后按字母顺序
+    formattedModels.sort((a, b) => {
+      return a.quota_type - b.quota_type;
+    });
+
+    formattedModels.sort((a, b) => {
+      if (a.model_name.startsWith('gpt') && !b.model_name.startsWith('gpt')) {
+        return -1;
+      } else if (
+        !a.model_name.startsWith('gpt') &&
+        b.model_name.startsWith('gpt')
+      ) {
+        return 1;
+      } else {
+        return a.model_name.localeCompare(b.model_name);
+      }
+    });
+
+    // 过滤：只显示已上架的模型
+    return formattedModels.filter((model) => {
+      return model.is_listed !== false;
+    });
+  };
+
+  // 加载价格数据
+  const loadPricing = async () => {
+    setLoading(true);
+    try {
+      const url = '/api/pricing';
+      const res = await request.get(url);
+      const {
+        success,
+        message: msg,
+        data,
+        vendors,
+        group_ratio,
+        usable_group,
+        supported_endpoint,
+        auto_groups,
+      } = res;
+      if (success) {
+        setGroupRatio(group_ratio || {});
+        setUsableGroup(usable_group || {});
+        setSelectedGroup('all');
+        // 构建供应商 Map
+        const vendorMap = {};
+        if (Array.isArray(vendors)) {
+          vendors.forEach((v) => {
+            vendorMap[v.id] = v;
+          });
+        }
+        setVendorsMap(vendorMap);
+        setEndpointMap(supported_endpoint || {});
+        setAutoGroups(auto_groups || []);
+        const formattedModels = setModelsFormat(data, group_ratio, vendorMap);
+        setModels(formattedModels);
+      } else {
+        message.error(msg || '加载失败');
+      }
+    } catch (error) {
+      message.error('加载失败');
+      console.error('Failed to load pricing:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 加载 models.dev 数据
+  const loadModelsDevData = async () => {
+    try {
+      const url = '/api/models/dev';
+      const res = await request.get(url);
+      // API 返回格式: { data: { vendor1: {...}, vendor2: {...} } }
+      // request 拦截器已经解包，所以 res 就是原始响应
+      if (res && res.data) {
+        setModelsDevData(res.data);
+        console.log('Models.dev data loaded:', Object.keys(res.data).length, 'vendors');
+      } else if (res) {
+        // 如果没有 data 字段，可能整个 res 就是 vendors 对象
+        setModelsDevData(res);
+        console.log('Models.dev data loaded:', Object.keys(res).length, 'vendors');
+      } else {
+        console.warn('Models.dev data load failed:', res);
+      }
+    } catch (error) {
+      console.error('Failed to load models.dev data:', error);
+      // 不显示错误，因为这是可选功能
+    }
+  };
+
+  useEffect(() => {
+    loadPricing();
+    loadModelsDevData();
+  }, []);
+
+  /**
+   * 标准化模型名称（生成多种可能的匹配 key）
+   * 参考 pricing-manager 的 normalizeModelName 逻辑
+   */
+  const normalizeModelName = (name) => {
+    if (!name) return [];
+    
+    const lower = name.toLowerCase();
+    const variants = [lower];
+    
+    // 去掉日期后缀：gpt-4o-2024-05-13 -> gpt-4o
+    const noDate = lower.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+    if (noDate !== lower) variants.push(noDate);
+    
+    // 去掉 -preview, -latest 等后缀
+    const noSuffix = lower
+      .replace(/-preview$/, '')
+      .replace(/-latest$/, '')
+      .replace(/@\d+$/, '')
+      .replace(/-instruct$/, '')
+      .replace(/-chat$/, '');
+    if (noSuffix !== lower) variants.push(noSuffix);
+    
+    // 去掉路径前缀：Qwen/Qwen2.5-72B-Instruct -> qwen2.5-72b-instruct
+    if (lower.includes('/')) {
+      const afterSlash = lower.split('/').pop();
+      variants.push(afterSlash);
+      // 也去掉 -instruct 等
+      const afterSlashClean = afterSlash.replace(/-instruct$/, '').replace(/-chat$/, '');
+      if (afterSlashClean !== afterSlash) variants.push(afterSlashClean);
+    }
+    
+    // 替换分隔符：claude-3.5-sonnet <-> claude-3-5-sonnet
+    const dotToHyphen = lower.replace(/\./g, '-');
+    if (dotToHyphen !== lower) variants.push(dotToHyphen);
+    const hyphenToDot = lower.replace(/-(\d+)-/g, '.$1.');
+    if (hyphenToDot !== lower) variants.push(hyphenToDot);
+    
+    // 去掉 Pro/ 前缀
+    const noProPrefix = lower.replace(/^pro\//, '');
+    if (noProPrefix !== lower) {
+      variants.push(noProPrefix);
+      // 对去掉前缀的也应用其他规则
+      const noProNoDate = noProPrefix.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+      if (noProNoDate !== noProPrefix) variants.push(noProNoDate);
+      const noProNoSuffix = noProPrefix
+        .replace(/-preview$/, '')
+        .replace(/-latest$/, '')
+        .replace(/@\d+$/, '')
+        .replace(/-instruct$/, '')
+        .replace(/-chat$/, '');
+      if (noProNoSuffix !== noProPrefix) variants.push(noProNoSuffix);
+    }
+    
+    return [...new Set(variants)]; // 去重
+  };
+
+  // 构建模型价格映射表（仅使用 model_id 精确匹配）
+  // 匹配方式：与 pricing-manager 项目保持一致
+  // - 仅使用 model.id 的原始值（小写）作为 key
+  // - 不使用变体和模糊匹配
+  // 这个映射表会在 modelsDevData 加载后构建一次
+  const buildModelPriceMap = useMemo(() => {
+    if (!modelsDevData) return new Map();
+    
+    const map = new Map();
+    
+    // 遍历所有供应商
+    for (const vendorId in modelsDevData) {
+      const vendor = modelsDevData[vendorId];
+      if (!vendor || !vendor.models) continue;
+      
+      // 遍历供应商的所有模型
+      for (const [modelKey, model] of Object.entries(vendor.models)) {
+        if (!model.cost || (model.cost.input === 0 && model.cost.output === 0)) {
+          continue; // 跳过没有价格的模型
+        }
+        
+        // 仅使用 model.id 的原始值（小写）进行精确匹配
+        // 与 pricing-manager 的 getOfficialPriceMap 逻辑一致
+        const modelId = model.id || modelKey;
+        const modelIdLower = modelId.toLowerCase();
+        
+        // 只在没有该 key 时添加（保留第一个匹配的）
+        if (!map.has(modelIdLower)) {
+          map.set(modelIdLower, model);
+        }
+      }
+    }
+    
+    return map;
+  }, [modelsDevData]);
+
+  // 辅助函数：在 models.dev 数据中查找匹配的模型
+  // 匹配方式：与 pricing-manager 项目的 findOfficialPrice 逻辑完全一致
+  // - 仅使用 model_id 的原始值（小写）进行精确匹配
+  // - 不使用变体和模糊匹配
+  const findModelInDevData = (modelName, devData) => {
+    if (!devData || !modelName) return null;
+    
+    // 仅使用 model_id 的原始值进行精确匹配
+    // 与 pricing-manager 的 findOfficialPrice 逻辑一致
+    const modelIdLower = modelName.toLowerCase();
+    if (buildModelPriceMap.has(modelIdLower)) {
+      const matched = buildModelPriceMap.get(modelIdLower);
+      // 调试日志
+      if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview')) {
+        console.log(`[Match] Exact model_id match for "${modelName}": model_id="${matched.id || 'N/A'}", model_name="${matched.name || 'N/A'}"`);
+      }
+      return matched;
+    }
+    
+    // 如果没有匹配到，返回 null
+    if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview')) {
+      console.log(`[Match] No match found for "${modelName}"`);
+    }
+    
+    return null;
+  };
+
+  // 获取官方价格（从 models.dev 数据）
+  const getOfficialPrice = (model, modelsDevData) => {
+    if (!modelsDevData || !model) {
+      return null;
+    }
+    
+    const modelName = model.model_name || model.name;
+    if (!modelName) return null;
+
+    // 使用辅助函数查找匹配的模型
+    const modelData = findModelInDevData(modelName, modelsDevData);
+    if (!modelData) {
+      return null;
+    }
+    
+    const devCost = modelData.cost;
+    
+    if (!devCost || (devCost.input === 0 && devCost.output === 0)) {
+      return null;
+    }
+
+    // models.dev 的 cost.input 和 cost.output 已经是每百万 token 的美元价格
+    // 不需要任何单位转换
+    const inputPrice = typeof devCost.input === 'number' ? devCost.input : parseFloat(devCost.input) || 0;
+    const outputPrice = typeof devCost.output === 'number' ? devCost.output : parseFloat(devCost.output) || 0;
+
+    // 调试日志（开发环境或特定模型）
+    if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview') || modelName.includes('gpt-4-0613')) {
+      console.log(`[Official Price] Model: ${modelName}`, {
+        matchedModelId: modelData.id || 'N/A',
+        matchedModelName: modelData.name || 'N/A',
+        matchedModelKey: Object.keys(modelsDevData).find(vendorId => {
+          const vendor = modelsDevData[vendorId];
+          if (!vendor || !vendor.models) return false;
+          return Object.entries(vendor.models).some(([key, model]) => model === modelData);
+        }) || 'N/A',
+        inputPrice,
+        outputPrice,
+        rawCost: devCost,
+        queryVariants: normalizeModelName(modelName)
+      });
+    }
+
+    return {
+      input: inputPrice,
+      output: outputPrice,
+    };
+  };
+
+  // 处理筛选器变化
+  useEffect(() => {
+    const handleFilterChange = (event) => {
+      setFilters(event.detail);
+    };
+
+    window.addEventListener('filterChange', handleFilterChange);
+    return () => {
+      window.removeEventListener('filterChange', handleFilterChange);
+    };
+  }, []);
+
+  // 处理搜索框变化
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchValue(value);
+    setFilters((prev) => ({
+      ...prev,
+      searchQuery: value,
+    }));
+  };
+
+  // 处理筛选器显示/隐藏
+  const [filterToggleState, setFilterToggleState] = useState(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(() => {
+    // 移动端默认隐藏，PC端默认显示
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return false;
+  });
+  const filterToggleRef = useRef(null);
+  const userManuallyOpenedRef = useRef(false); // 记录用户是否手动打开过筛选器
+
+  useEffect(() => {
+    const handleFilterToggleState = (event) => {
+      setFilterToggleState(event.detail);
+      filterToggleRef.current = event.detail;
+      if (event.detail) {
+        setIsFilterOpen(event.detail.isOpen);
+        // 如果用户在移动端手动打开了筛选器，记录这个状态
+        if (isMobile && event.detail.isOpen) {
+          userManuallyOpenedRef.current = true;
+        }
+      }
+    };
+
+    window.addEventListener('filterToggleState', handleFilterToggleState);
+
+    // 监听窗口大小变化，更新过滤器状态
+    // 只在从移动端切换到桌面端时自动打开，从桌面端切换到移动端时保持用户的选择
+    const handleResize = () => {
+      const isNowDesktop = window.innerWidth >= 1024;
+      const wasDesktop = !isMobile;
+      
+      // 只在从移动端切换到桌面端时自动打开筛选器
+      if (isNowDesktop && !wasDesktop) {
+        if (filterToggleRef.current && filterToggleRef.current.setIsOpen) {
+          filterToggleRef.current.setIsOpen(true);
+          userManuallyOpenedRef.current = false; // 重置手动打开标记
+        }
+      }
+      // 从桌面端切换到移动端时，如果用户之前手动打开过，保持打开状态
+      // 否则保持关闭状态（移动端默认关闭）
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('filterToggleState', handleFilterToggleState);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isMobile]);
+
+  // 筛选后的模型列表
+  const filteredModels = useMemo(() => {
+    const currentFilters = {
+      ...filters,
+      searchQuery: searchValue,
+    };
+    return models.filter((model) => filterModel(model, currentFilters, modelsDevData));
+  }, [models, filters, searchValue, modelsDevData]);
+
+  // 当 modelsDevData 加载完成后，重新计算所有模型的 savings
+  // 这确保在数据加载后能正确显示节省金额
+
+  // 分页后的模型列表
+  const paginatedModels = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredModels.slice(start, end);
+  }, [filteredModels, currentPage, pageSize]);
+
+  // 当筛选条件改变时，重置到第一页
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, searchValue]);
+
+  // 页面标题和描述
+  const pageTitle = locale === 'zh' ? '模型价格' : 'Model Pricing';
+  const pageDescription =
+    locale === 'zh'
+      ? '查看所有可用 AI 模型的价格和详细信息'
+      : 'View pricing and detailed information for all available AI models';
+
+  return (
+    <div className="pricing-page">
+      {/* Page Header */}
+      <section className="pricing-page-header">
+        <div className="pricing-page-header-container">
+          <div className="pricing-page-header-content">
+            <h1 className="pricing-page-title">{pageTitle}</h1>
+            <p className="pricing-page-description">{pageDescription}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Models Grid with Filters */}
+      <section className="pricing-page-content">
+        <div className="pricing-page-content-container">
+          <div className="pricing-page-layout">
+            {loading ? (
+              <ModelFilterSkeleton />
+            ) : (
+              <ModelFilter locale={locale} allModels={models} onFilterChange={setFilters} modelsDevData={modelsDevData} />
+            )}
+            <div className="pricing-page-main">
+              {/* Search Box and Show Filters Button */}
+              <div className="pricing-page-search">
+                <button
+                  id="show-filters-btn"
+                  className={`pricing-page-show-filters-button ${!isFilterOpen ? 'pricing-page-show-filters-button-visible' : ''}`}
+                  title={locale === 'zh' ? '显示筛选器' : 'Show Filters'}
+                  onClick={() => {
+                    const toggleState = filterToggleState || filterToggleRef.current;
+                    if (toggleState && toggleState.setIsOpen) {
+                      // 切换筛选器状态（如果已打开则关闭，如果已关闭则打开）
+                      const newState = !toggleState.isOpen;
+                      toggleState.setIsOpen(newState);
+                      if (isMobile && newState) {
+                        userManuallyOpenedRef.current = true;
+                      }
+                    } else {
+                      // 如果还没有接收到状态，尝试通过事件触发
+                      window.dispatchEvent(new CustomEvent('showFilters'));
+                      if (isMobile) {
+                        userManuallyOpenedRef.current = true;
+                      }
+                    }
+                  }}
+                >
+                  <svg className="pricing-page-filter-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                    ></path>
+                  </svg>
+                </button>
+                <div className="pricing-page-search-input-wrapper">
+                  <svg
+                    className="pricing-page-search-icon"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    ></path>
+                  </svg>
+                  <input
+                    type="text"
+                    id="model-search"
+                    className="pricing-page-search-input"
+                    placeholder={locale === 'zh' ? '请输入模型名称' : 'Enter model name'}
+                    value={searchValue}
+                    onChange={handleSearchChange}
+                  />
+                </div>
+              </div>
+
+              {/* Models Grid */}
+              {loading ? (
+                <ModelCardSkeleton count={12} />
+              ) : filteredModels.length > 0 ? (
+                <>
+                  <div className="pricing-page-models-grid" id="models-grid">
+                    {paginatedModels.map((model, index) => {
+                    // 计算基础价格（用于显示，ModelCard 内部会使用 calculateModelPrice 重新计算）
+                    let input = 0;
+                    let output = 0;
+                    if (model.quota_type === 0) {
+                      // 按量计费：使用 model_ratio
+                      input = model.model_ratio ? model.model_ratio * 2 : 0;
+                      output = model.model_ratio && model.completion_ratio
+                        ? model.model_ratio * model.completion_ratio * 2
+                        : model.model_ratio ? model.model_ratio * 2 : 0;
+                    } else {
+                      // 按次计费：使用 model_price
+                      input = model.model_price || 0;
+                      output = model.model_price || 0;
+                    }
+
+                    // 获取官方价格（用于测试）
+                    const officialPrice = modelsDevData ? getOfficialPrice(model, modelsDevData) : null;
+
+                    return (
+                      <div key={model.key || model.model_name || index} className="pricing-page-model-card-item">
+                        <ModelCard
+                          model={model}
+                          name={model.model_name}
+                          input={input}
+                          output={output}
+                          freeLabel={locale === 'zh' ? '免费' : 'Free'}
+                          vendorName={model.vendor_name}
+                          vendorIcon={model.vendor_icon}
+                          icon={model.icon}
+                          description={model.description}
+                          tags={model.tags}
+                          quotaType={model.quota_type}
+                          locale={locale}
+                          selectedGroup={selectedGroup}
+                          groupRatio={groupRatio}
+                          displayPrice={displayPrice}
+                          currency={currency}
+                          tokenUnit={tokenUnit}
+                          modelsDevData={modelsDevData}
+                          savings={null}
+                          officialPrice={officialPrice}
+                        />
+                      </div>
+                    );
+                  })}
+                  </div>
+                </>
+              ) : (
+                <div id="no-results" className="pricing-page-no-results">
+                  <Empty
+                    title={locale === 'zh' ? '未找到匹配的模型' : 'No matching models found'}
+                    description={locale === 'zh' ? '请尝试调整筛选条件' : 'Try adjusting your filters'}
+                    style={{ padding: 30 }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Pagination - 基于整个页面居中 */}
+          {!loading && filteredModels.length > pageSize && (
+            <div className="pricing-page-pagination">
+              <Pagination
+                currentPage={currentPage}
+                pageSize={pageSize}
+                total={filteredModels.length}
+                onPageChange={(page) => setCurrentPage(page)}
+              />
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Model Detail Sidebar */}
+      <ModelDetailSidebar
+        freeLabel={locale === 'zh' ? '免费' : 'Free'}
+        locale={locale}
+        selectedGroup={selectedGroup}
+        groupRatio={groupRatio}
+        displayPrice={displayPrice}
+        currency={currency}
+        tokenUnit={tokenUnit}
+        endpointMap={endpointMap}
+        usableGroup={usableGroup}
+        autoGroups={autoGroups}
+        modelsDevData={modelsDevData}
+      />
+    </div>
+  );
+}
+
