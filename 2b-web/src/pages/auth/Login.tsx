@@ -140,11 +140,11 @@ const Login = () => {
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 'bold', margin: 0 }}>
+          <h1 style={{ fontSize: 32, fontWeight: 'bold', margin: 0 }}>
             欢迎登录
           </h1>
           {starEnabled && (
-            <p style={{ color: '#666', fontSize: 14, marginTop: 8 }}>
+            <p style={{ color: '#666', fontSize: 16, marginTop: 8 }}>
               使用 Star 登录
             </p>
           )}
@@ -158,7 +158,7 @@ const Login = () => {
           <>
             {renderLoginForm()}
 
-            <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <div style={{ textAlign: 'center', marginTop: 16, fontSize: 15 }}>
               <Link to="/reset-password">忘记密码?</Link>
               <span style={{ margin: '0 8px' }}>|</span>
               <Link to="/register">注册账号</Link>

@@ -132,7 +132,7 @@ const Profile = () => {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: '16px', maxWidth: 1200, margin: '0 auto' }}>
       {/* 用户信息卡片 */}
       <Card
         style={{
@@ -172,14 +172,14 @@ const Profile = () => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
           <div>
             <Text type="secondary">用户ID</Text>
             <div style={{ fontSize: 16, fontWeight: 500 }}>{user.id}</div>
           </div>
           <div>
             <Text type="secondary">邮箱</Text>
-            <div style={{ fontSize: 16, fontWeight: 500 }}>{user.email || '未设置'}</div>
+            <div style={{ fontSize: 16, fontWeight: 500, wordBreak: 'break-all' }}>{user.email || '未设置'}</div>
           </div>
           <div>
             <Text type="secondary">剩余额度</Text>

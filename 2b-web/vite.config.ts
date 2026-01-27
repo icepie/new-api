@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    host: true,
+    allowedHosts: ['fd.icepie.net', 'localhost'],
     proxy: {
       '/api': {
         target: 'https://nicerouter.com',

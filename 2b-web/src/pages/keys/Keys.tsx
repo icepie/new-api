@@ -320,7 +320,7 @@ const Keys = () => {
   ];
 
   return (
-    <div>
+    <div style={{ padding: '16px' }}>
       <Card
         title="密钥管理"
         extra={
@@ -338,9 +338,11 @@ const Keys = () => {
           dataSource={tokens}
           loading={loading}
           rowKey="id"
+          scroll={{ x: 800 }}
           pagination={{
             pageSize: 10,
             showTotal: (total) => `共 ${total} 个密钥`,
+            responsive: true,
           }}
         />
       </Card>
@@ -374,7 +376,8 @@ const Keys = () => {
         open={usageModalVisible}
         onCancel={() => setUsageModalVisible(false)}
         footer={null}
-        width={1200}
+        width="95%"
+        style={{ maxWidth: 1200, top: 20 }}
       >
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {/* 筛选条件 */}

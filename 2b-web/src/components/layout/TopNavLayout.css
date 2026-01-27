@@ -1,0 +1,37 @@
+/* 桌面端样式 */
+@media (min-width: 768px) {
+  .desktop-menu {
+    display: flex !important;
+  }
+
+  .desktop-button {
+    display: inline-flex !important;
+  }
+
+  .desktop-username {
+    display: inline !important;
+  }
+
+  .mobile-menu-button {
+    display: none !important;
+  }
+}
+
+/* 移动端样式 */
+@media (max-width: 767px) {
+  .desktop-menu {
+    display: none !important;
+  }
+
+  .desktop-button {
+    display: none !important;
+  }
+
+  .desktop-username {
+    display: none !important;
+  }
+
+  .mobile-menu-button {
+    display: inline-flex !important;
+  }
+}
