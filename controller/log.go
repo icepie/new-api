@@ -20,7 +20,21 @@ func GetAllLogs(c *gin.Context) {
 	modelName := c.Query("model_name")
 	channel, _ := strconv.Atoi(c.Query("channel"))
 	group := c.Query("group")
-	logs, total, err := model.GetAllLogs(logType, startTimestamp, endTimestamp, modelName, username, tokenName, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), channel, group)
+
+	// Get current user's role and org_id for filtering
+	userId := c.GetInt("id")
+	userRole := c.GetInt("role")
+	var orgId int
+	if userRole != common.RoleRootUser {
+		currentUser, err := model.GetUserById(userId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		orgId = currentUser.OrgId
+	}
+
+	logs, total, err := model.GetAllLogs(logType, startTimestamp, endTimestamp, modelName, username, tokenName, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), channel, group, orgId)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -53,7 +67,21 @@ func GetUserLogs(c *gin.Context) {
 
 func SearchAllLogs(c *gin.Context) {
 	keyword := c.Query("keyword")
-	logs, err := model.SearchAllLogs(keyword)
+
+	// Get current user's role and org_id for filtering
+	userId := c.GetInt("id")
+	userRole := c.GetInt("role")
+	var orgId int
+	if userRole != common.RoleRootUser {
+		currentUser, err := model.GetUserById(userId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		orgId = currentUser.OrgId
+	}
+
+	logs, err := model.SearchAllLogs(keyword, orgId)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -108,7 +136,21 @@ func GetLogsStat(c *gin.Context) {
 	modelName := c.Query("model_name")
 	channel, _ := strconv.Atoi(c.Query("channel"))
 	group := c.Query("group")
-	stat := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, group)
+
+	// Get current user's role and org_id for filtering
+	userId := c.GetInt("id")
+	userRole := c.GetInt("role")
+	var orgId int
+	if userRole != common.RoleRootUser {
+		currentUser, err := model.GetUserById(userId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		orgId = currentUser.OrgId
+	}
+
+	stat := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, group, orgId)
 	//tokenNum := model.SumUsedToken(logType, startTimestamp, endTimestamp, modelName, username, "")
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -131,7 +173,7 @@ func GetLogsSelfStat(c *gin.Context) {
 	modelName := c.Query("model_name")
 	channel, _ := strconv.Atoi(c.Query("channel"))
 	group := c.Query("group")
-	quotaNum := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, group)
+	quotaNum := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, group, 0)
 	//tokenNum := model.SumUsedToken(logType, startTimestamp, endTimestamp, modelName, username, tokenName)
 	c.JSON(200, gin.H{
 		"success": true,

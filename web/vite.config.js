@@ -87,9 +87,10 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
+    allowedHosts: ['fd.icepie.net', 'www.singzer.cn'],
     proxy: {
       '/api': {
-        target: 'https://nicerouter.com',
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
       '/mj': {

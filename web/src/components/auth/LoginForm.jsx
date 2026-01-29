@@ -71,6 +71,7 @@ const LoginForm = () => {
     username: '',
     password: '',
     wechat_verification_code: '',
+    organization_code: '',
   });
   const { username, password } = inputs;
   const [searchParams, setSearchParams] = useSearchParams();
@@ -213,6 +214,7 @@ const LoginForm = () => {
           {
             username,
             password,
+            organization_code: inputs.organization_code || '',
           },
         );
         const { success, message, data } = res.data;
@@ -717,6 +719,15 @@ const LoginForm = () => {
                   mode='password'
                   onChange={(value) => handleChange('password', value)}
                   prefix={<IconLock />}
+                />
+
+                <Form.Input
+                  field='organization_code'
+                  label={t('组织代码（可选）')}
+                  placeholder={t('留空为普通登录，填写则为组织登录')}
+                  name='organization_code'
+                  onChange={(value) => handleChange('organization_code', value)}
+                  prefix={<IconKey />}
                 />
 
                 {(hasUserAgreement || hasPrivacyPolicy) && (

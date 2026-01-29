@@ -20,7 +20,7 @@ import (
 // Otherwise, the sensitive information will be saved on local storage in plain text!
 type User struct {
 	Id               int            `json:"id"`
-	Username         string         `json:"username" gorm:"unique;index"`
+	Username         string         `json:"username" gorm:"index:idx_username_org,priority:1"` // 组织内唯一
 	Password         string         `json:"password" gorm:"not null;" validate:"min=8,max=20"`
 	OriginalPassword string         `json:"original_password" gorm:"-:all"` // this field is only for Password change verification, don't save it to database!
 	DisplayName      string         `json:"display_name" gorm:"index"`
@@ -49,6 +49,8 @@ type User struct {
 	Setting          string         `json:"setting" gorm:"type:text;column:setting"`
 	Remark           string         `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
 	StripeCustomer   string         `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
+	OrgId            int            `json:"org_id" gorm:"type:int;index:idx_username_org,priority:2;default:0;column:org_id"` // 组织ID，与username组成复合唯一索引
+	OrgName          string         `json:"org_name,omitempty" gorm:"-"`                                                       // 组织名称(不存数据库，查询时填充)
 }
 
 func (user *User) ToBaseUser() *UserBase {
@@ -60,6 +62,7 @@ func (user *User) ToBaseUser() *UserBase {
 		Username: user.Username,
 		Setting:  user.Setting,
 		Email:    user.Email,
+		OrgId:    user.OrgId,
 	}
 	return cache
 }
@@ -213,7 +216,63 @@ func GetAllUsers(pageInfo *common.PageInfo) (users []*User, total int64, err err
 		return nil, 0, err
 	}
 
+	// Load organization name for each user
+	for _, user := range users {
+		if user.OrgId > 0 {
+			org, err := GetOrganizationById(user.OrgId)
+			if err == nil {
+				user.OrgName = org.Name
+			}
+		}
+	}
+
 	// Commit transaction
+	if err = tx.Commit().Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
+// GetAllUsersByOrgId 根据组织ID获取用户列表
+func GetAllUsersByOrgId(orgId int, pageInfo *common.PageInfo) (users []*User, total int64, err error) {
+	tx := DB.Begin()
+	if tx.Error != nil {
+		return nil, 0, tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	query := tx.Unscoped().Model(&User{})
+	if orgId > 0 {
+		query = query.Where("org_id = ?", orgId)
+	}
+
+	err = query.Count(&total).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
+
+	err = query.Order("id desc").Limit(pageInfo.GetPageSize()).Offset(pageInfo.GetStartIdx()).Omit("password").Find(&users).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
+
+	// Load organization name for each user
+	for _, user := range users {
+		if user.OrgId > 0 {
+			org, err := GetOrganizationById(user.OrgId)
+			if err == nil {
+				user.OrgName = org.Name
+			}
+		}
+	}
+
 	if err = tx.Commit().Error; err != nil {
 		return nil, 0, err
 	}
@@ -280,7 +339,91 @@ func SearchUsers(keyword string, group string, startIdx int, num int) ([]*User, 
 		return nil, 0, err
 	}
 
+	// Load organization name for each user
+	for _, user := range users {
+		if user.OrgId > 0 {
+			org, err := GetOrganizationById(user.OrgId)
+			if err == nil {
+				user.OrgName = org.Name
+			}
+		}
+	}
+
 	// 提交事务
+	if err = tx.Commit().Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
+// SearchUsersByOrgId 根据组织ID搜索用户
+func SearchUsersByOrgId(orgId int, keyword string, group string, startIdx int, num int) ([]*User, int64, error) {
+	var users []*User
+	var total int64
+	var err error
+
+	tx := DB.Begin()
+	if tx.Error != nil {
+		return nil, 0, tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	query := tx.Unscoped().Model(&User{})
+
+	// 组织过滤
+	if orgId > 0 {
+		query = query.Where("org_id = ?", orgId)
+	}
+
+	// 构建搜索条件
+	likeCondition := "username LIKE ? OR email LIKE ? OR display_name LIKE ?"
+	keywordInt, err := strconv.Atoi(keyword)
+	if err == nil {
+		likeCondition = "id = ? OR " + likeCondition
+		if group != "" {
+			query = query.Where("("+likeCondition+") AND "+commonGroupCol+" = ?",
+				keywordInt, "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", group)
+		} else {
+			query = query.Where(likeCondition,
+				keywordInt, "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
+		}
+	} else {
+		if group != "" {
+			query = query.Where("("+likeCondition+") AND "+commonGroupCol+" = ?",
+				"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", group)
+		} else {
+			query = query.Where(likeCondition,
+				"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
+		}
+	}
+
+	err = query.Count(&total).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
+
+	err = query.Omit("password").Order("id desc").Limit(num).Offset(startIdx).Find(&users).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
+
+	// Load organization name for each user
+	for _, user := range users {
+		if user.OrgId > 0 {
+			org, err := GetOrganizationById(user.OrgId)
+			if err == nil {
+				user.OrgName = org.Name
+			}
+		}
+	}
+
 	if err = tx.Commit().Error; err != nil {
 		return nil, 0, err
 	}
@@ -412,6 +555,19 @@ func createDefaultTokenForUser(userId int, username string) error {
 
 func (user *User) Insert(inviterId int) error {
 	var err error
+
+	// 检查用户名在同一组织内是否已存在
+	var existingUser User
+	err = DB.Where("username = ? AND org_id = ?", user.Username, user.OrgId).First(&existingUser).Error
+	if err == nil {
+		// 找到了重复的用户名
+		return errors.New("该组织内已存在相同的用户名")
+	}
+	if err != gorm.ErrRecordNotFound {
+		// 其他数据库错误
+		return err
+	}
+
 	if user.Password != "" {
 		user.Password, err = common.Password2Hash(user.Password)
 		if err != nil {
@@ -495,6 +651,19 @@ func (user *User) Update(updatePassword bool) error {
 
 func (user *User) Edit(updatePassword bool) error {
 	var err error
+
+	// 检查用户名在同一组织内是否已存在（排除自己）
+	var existingUser User
+	err = DB.Where("username = ? AND org_id = ? AND id != ?", user.Username, user.OrgId, user.Id).First(&existingUser).Error
+	if err == nil {
+		// 找到了重复的用户名
+		return errors.New("该组织内已存在相同的用户名")
+	}
+	if err != gorm.ErrRecordNotFound {
+		// 其他数据库错误
+		return err
+	}
+
 	if updatePassword {
 		user.Password, err = common.Password2Hash(user.Password)
 		if err != nil {
@@ -509,6 +678,8 @@ func (user *User) Edit(updatePassword bool) error {
 		"group":        newUser.Group,
 		"quota":        newUser.Quota,
 		"remark":       newUser.Remark,
+		"org_id":       newUser.OrgId,
+		"role":         newUser.Role,
 	}
 	if updatePassword {
 		updates["password"] = newUser.Password
@@ -555,6 +726,39 @@ func (user *User) ValidateAndFill() (err error) {
 	}
 	// find buy username or email
 	DB.Where("username = ? OR email = ?", username, username).First(user)
+	okay := common.ValidatePasswordAndHash(password, user.Password)
+	if !okay || user.Status != common.UserStatusEnabled {
+		return errors.New("用户名或密码错误，或用户已被封禁")
+	}
+	return nil
+}
+
+// ValidateAndFillWithOrg check password & user status with organization filter
+func (user *User) ValidateAndFillWithOrg(orgId int) (err error) {
+	password := user.Password
+	username := strings.TrimSpace(user.Username)
+	if username == "" || password == "" {
+		return errors.New("用户名或密码为空")
+	}
+
+	// 根据用户名和组织ID查找用户
+	query := DB.Where("(username = ? OR email = ?)", username, username)
+	if orgId > 0 {
+		// 如果提供了组织ID，查找该组织的用户
+		query = query.Where("org_id = ?", orgId)
+	} else {
+		// 如果没有提供组织ID，查找没有组织的用户（org_id = 0）
+		query = query.Where("org_id = 0")
+	}
+
+	result := query.First(user)
+	if result.Error != nil {
+		if orgId > 0 {
+			return errors.New("用户名或密码错误，或该用户不属于此组织")
+		}
+		return errors.New("用户名或密码错误")
+	}
+
 	okay := common.ValidatePasswordAndHash(password, user.Password)
 	if !okay || user.Status != common.UserStatusEnabled {
 		return errors.New("用户名或密码错误，或用户已被封禁")

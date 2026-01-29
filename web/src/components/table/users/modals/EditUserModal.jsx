@@ -62,9 +62,9 @@ const EditUserModal = (props) => {
   const [addQuotaLocal, setAddQuotaLocal] = useState('');
   const isMobile = useIsMobile();
   const [groupOptions, setGroupOptions] = useState([]);
-  const formApiRef = useRef(null);
-
-  const isEdit = Boolean(userId);
+  const [organizations, setOrganizations] = useState([]);
+  const [selectedOrgId, setSelectedOrgId] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const getInitValues = () => ({
     username: '',
@@ -79,7 +79,38 @@ const EditUserModal = (props) => {
     quota: 0,
     group: 'default',
     remark: '',
+    org_id: 0,
   });
+
+  const [formData, setFormData] = useState(getInitValues());
+  const [formKey, setFormKey] = useState(0);
+  const formApiRef = useRef(null);
+
+  const isEdit = Boolean(userId);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await API.get('/api/user/self');
+      const { success, data } = res.data;
+      if (success) {
+        setCurrentUser(data);
+      }
+    } catch (e) {
+      showError(e.message);
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const res = await API.get('/api/organization');
+      const { success, data } = res.data;
+      if (success) {
+        setOrganizations(data || []);
+      }
+    } catch (e) {
+      showError(e.message);
+    }
+  };
 
   const fetchGroups = async () => {
     try {
@@ -99,7 +130,12 @@ const EditUserModal = (props) => {
     const { success, message, data } = res.data;
     if (success) {
       data.password = '';
-      formApiRef.current?.setValues({ ...getInitValues(), ...data });
+      const userData = { ...getInitValues(), ...data };
+      setFormData(userData);
+      setFormKey(prev => prev + 1);
+      if (data.org_id) {
+        setSelectedOrgId(data.org_id);
+      }
     } else {
       showError(message);
     }
@@ -107,19 +143,42 @@ const EditUserModal = (props) => {
   };
 
   useEffect(() => {
+    fetchCurrentUser();
     loadUser();
+    fetchOrganizations();
     if (userId) fetchGroups();
   }, [props.editingUser.id]);
 
   /* ----------------------- submit ----------------------- */
   const submit = async (values) => {
     setLoading(true);
+
     let payload = { ...values };
     if (typeof payload.quota === 'string')
       payload.quota = parseInt(payload.quota) || 0;
     if (userId) {
       payload.id = parseInt(userId);
     }
+
+    // 如果是组织管理员，强制使用自己的组织ID
+    if (currentUser) {
+      if (currentUser.role !== 100) {
+        // 非超级管理员，必须使用自己的组织ID
+        if (currentUser.org_id && currentUser.org_id > 0) {
+          payload.org_id = currentUser.org_id;
+        } else {
+          showError('当前用户没有所属组织，无法编辑用户');
+          setLoading(false);
+          return;
+        }
+      }
+      // 超级管理员使用表单中选择的值
+    } else {
+      showError('用户信息未加载，请稍后重试');
+      setLoading(false);
+      return;
+    }
+
     const url = userId ? `/api/user/` : `/api/user/self`;
     const res = await API.put(url, payload);
     const { success, message } = res.data;
@@ -185,7 +244,8 @@ const EditUserModal = (props) => {
       >
         <Spin spinning={loading}>
           <Form
-            initValues={getInitValues()}
+            initValues={formData}
+            key={`${userId || 'new'}-${formKey}`}
             getFormApi={(api) => (formApiRef.current = api)}
             onSubmit={submit}
           >
@@ -274,6 +334,23 @@ const EditUserModal = (props) => {
                     </div>
 
                     <Row gutter={12}>
+                      {currentUser && currentUser.role === 100 && (
+                        <Col span={24}>
+                          <Form.Select
+                            field='org_id'
+                            label={t('所属组织')}
+                            placeholder={t('请选择组织')}
+                            optionList={organizations.map(org => ({
+                              label: org.name,
+                              value: org.id
+                            }))}
+                            onChange={(value) => {
+                              setSelectedOrgId(value);
+                            }}
+                          />
+                        </Col>
+                      )}
+
                       <Col span={24}>
                         <Form.Select
                           field='group'

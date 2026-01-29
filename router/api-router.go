@@ -119,7 +119,19 @@ func SetApiRouter(router *gin.Engine) {
 				// Admin 2FA routes
 				adminRoute.GET("/2fa/stats", controller.Admin2FAStats)
 				adminRoute.DELETE("/:id/2fa", controller.AdminDisable2FA)
+
 			}
+		}
+
+		// Organization management (Admin can view their own org, Root can view all)
+		orgRoute := apiRouter.Group("/organization")
+		orgRoute.Use(middleware.AdminAuth())
+		{
+			orgRoute.GET("/", controller.GetOrganizations)
+			orgRoute.GET("/:id", controller.GetOrganization)
+			orgRoute.POST("/", controller.CreateOrganization)
+			orgRoute.PUT("/:id", controller.UpdateOrganization)
+			orgRoute.DELETE("/:id", controller.DeleteOrganization)
 		}
 		optionRoute := apiRouter.Group("/option")
 		optionRoute.Use(middleware.RootAuth())

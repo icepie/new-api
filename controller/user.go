@@ -26,8 +26,9 @@ import (
 )
 
 type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username         string `json:"username"`
+	Password         string `json:"password"`
+	OrganizationCode string `json:"organization_code"`
 }
 
 func Login(c *gin.Context) {
@@ -49,6 +50,7 @@ func Login(c *gin.Context) {
 	}
 	username := loginRequest.Username
 	password := loginRequest.Password
+	organizationCode := loginRequest.OrganizationCode
 	if username == "" || password == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "无效的参数",
@@ -56,11 +58,34 @@ func Login(c *gin.Context) {
 		})
 		return
 	}
-	user := model.User{
-		Username: username,
-		Password: password,
+
+	var user model.User
+	var orgId int
+
+	// 如果提供了组织代码，先获取组织ID
+	if organizationCode != "" {
+		org, err := model.GetOrganizationByCode(organizationCode)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "组织不存在",
+				"success": false,
+			})
+			return
+		}
+		if org.Status != "enabled" {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "组织已被禁用",
+				"success": false,
+			})
+			return
+		}
+		orgId = org.ID
 	}
-	err = user.ValidateAndFill()
+
+	// 根据用户名和组织ID查找用户
+	user.Username = username
+	user.Password = password
+	err = user.ValidateAndFillWithOrg(orgId)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message": err.Error(),
@@ -2211,7 +2236,36 @@ func Register(c *gin.Context) {
 
 func GetAllUsers(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
-	users, total, err := model.GetAllUsers(pageInfo)
+
+	// 获取当前用户信息
+	userId := c.GetInt("id")
+	userRole := c.GetInt("role")
+
+	var users []*model.User
+	var total int64
+	var err error
+
+	// 超级管理员可以看到所有用户
+	if userRole == common.RoleRootUser {
+		users, total, err = model.GetAllUsers(pageInfo)
+	} else {
+		// 普通管理员只能看到自己组织的用户
+		currentUser, err := model.GetUserById(userId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+
+		if currentUser.OrgId > 0 {
+			// 组织管理员只能看到自己组织的用户
+			users, total, err = model.GetAllUsersByOrgId(currentUser.OrgId, pageInfo)
+		} else {
+			// 如果管理员没有组织，返回空列表
+			users = []*model.User{}
+			total = 0
+		}
+	}
+
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -2228,7 +2282,36 @@ func SearchUsers(c *gin.Context) {
 	keyword := c.Query("keyword")
 	group := c.Query("group")
 	pageInfo := common.GetPageQuery(c)
-	users, total, err := model.SearchUsers(keyword, group, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
+
+	// 获取当前用户信息
+	userId := c.GetInt("id")
+	userRole := c.GetInt("role")
+
+	var users []*model.User
+	var total int64
+	var err error
+
+	// 超级管理员可以搜索所有用户
+	if userRole == common.RoleRootUser {
+		users, total, err = model.SearchUsers(keyword, group, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
+	} else {
+		// 普通管理员只能搜索自己组织的用户
+		currentUser, err := model.GetUserById(userId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+
+		if currentUser.OrgId > 0 {
+			// 组织管理员只能搜索自己组织的用户
+			users, total, err = model.SearchUsersByOrgId(currentUser.OrgId, keyword, group, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
+		} else {
+			// 如果管理员没有组织，返回空列表
+			users = []*model.User{}
+			total = 0
+		}
+	}
+
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -2406,6 +2489,7 @@ func GetSelf(c *gin.Context) {
 		"linux_do_id":       user.LinuxDOId,
 		"setting":           user.Setting,
 		"stripe_customer":   user.StripeCustomer,
+		"org_id":            user.OrgId, // 添加组织ID字段
 		"sidebar_modules":   userSetting.SidebarModules, // 正确提取sidebar_modules字段
 		"permissions":       permissions,                // 新增权限字段
 	}
@@ -2575,6 +2659,37 @@ func UpdateUser(c *gin.Context) {
 		})
 		return
 	}
+
+	// 组织管理员只能在自己的组织内编辑用户
+	if myRole != common.RoleRootUser {
+		currentUserId := c.GetInt("id")
+		currentUser, err := model.GetUserById(currentUserId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+
+		// 如果当前用户有组织，只能编辑自己组织内的用户
+		if currentUser.OrgId > 0 {
+			// 检查被编辑用户是否属于同一组织
+			if originUser.OrgId != currentUser.OrgId {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "您只能编辑自己组织内的用户",
+				})
+				return
+			}
+			// 不允许修改用户的组织
+			if updatedUser.OrgId != currentUser.OrgId {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "您不能修改用户的组织",
+				})
+				return
+			}
+		}
+	}
+
 	if updatedUser.Password == "$I_LOVE_U" {
 		updatedUser.Password = "" // rollback to what it should be
 	}
@@ -2583,6 +2698,7 @@ func UpdateUser(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+
 	if originUser.Quota != updatedUser.Quota {
 		model.RecordLog(originUser.Id, model.LogTypeManage, fmt.Sprintf("管理员将用户额度从 %s修改为 %s", logger.LogQuota(originUser.Quota), logger.LogQuota(updatedUser.Quota)))
 	}
@@ -2797,12 +2913,45 @@ func CreateUser(c *gin.Context) {
 		})
 		return
 	}
+
+	// 组织管理员只能在自己的组织内创建用户
+	if myRole != common.RoleRootUser {
+		currentUserId := c.GetInt("id")
+		currentUser, err := model.GetUserById(currentUserId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+
+		// 如果当前用户有组织，只能在自己的组织内创建用户
+		if currentUser.OrgId > 0 {
+			if user.OrgId != currentUser.OrgId {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "您只能在自己的组织内创建用户",
+				})
+				return
+			}
+		} else {
+			// 如果当前用户没有组织，不能创建有组织的用户
+			if user.OrgId > 0 {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "您没有权限创建组织用户",
+				})
+				return
+			}
+		}
+	}
+
 	// Even for admin users, we cannot fully trust them!
 	cleanUser := model.User{
 		Username:    user.Username,
 		Password:    user.Password,
 		DisplayName: user.DisplayName,
 		Role:        user.Role, // 保持管理员设置的角色
+		OrgId:       user.OrgId,
+		Remark:      user.Remark,
 	}
 	if err := cleanUser.Insert(0); err != nil {
 		common.ApiError(c, err)

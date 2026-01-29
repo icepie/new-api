@@ -30,6 +30,7 @@ import {
 } from '@douyinfe/semi-ui';
 import { IconMore } from '@douyinfe/semi-icons';
 import { renderGroup, renderNumber, renderQuota } from '../../../helpers';
+import { isRoot } from '../../../helpers/utils';
 
 /**
  * Render user role
@@ -215,7 +216,20 @@ const renderOperations = (
     return <></>;
   }
 
-  const moreMenu = [
+  const isSuperAdmin = isRoot();
+
+  // 组织管理员只显示注销
+  const orgAdminMenu = [
+    {
+      node: 'item',
+      name: t('注销'),
+      type: 'danger',
+      onClick: () => showDeleteModal(record),
+    },
+  ];
+
+  // 超级管理员显示所有选项
+  const superAdminMenu = [
     {
       node: 'item',
       name: t('重置 Passkey'),
@@ -236,6 +250,8 @@ const renderOperations = (
       onClick: () => showDeleteModal(record),
     },
   ];
+
+  const moreMenu = isSuperAdmin ? superAdminMenu : orgAdminMenu;
 
   return (
     <Space>
@@ -265,20 +281,24 @@ const renderOperations = (
       >
         {t('编辑')}
       </Button>
-      <Button
-        type='warning'
-        size='small'
-        onClick={() => showPromoteModal(record)}
-      >
-        {t('提升')}
-      </Button>
-      <Button
-        type='secondary'
-        size='small'
-        onClick={() => showDemoteModal(record)}
-      >
-        {t('降级')}
-      </Button>
+      {isSuperAdmin && (
+        <>
+          <Button
+            type='warning'
+            size='small'
+            onClick={() => showPromoteModal(record)}
+          >
+            {t('提升')}
+          </Button>
+          <Button
+            type='secondary'
+            size='small'
+            onClick={() => showDemoteModal(record)}
+          >
+            {t('降级')}
+          </Button>
+        </>
+      )}
       <Dropdown menu={moreMenu} trigger='click' position='bottomRight'>
         <Button type='tertiary' size='small' icon={<IconMore />} />
       </Dropdown>
@@ -309,6 +329,16 @@ export const getUsersColumns = ({
       title: t('用户名'),
       dataIndex: 'username',
       render: (text, record) => renderUsername(text, record),
+    },
+    {
+      title: t('组织'),
+      dataIndex: 'org_name',
+      render: (text, record) => {
+        if (!text) {
+          return <Tag color='grey' shape='circle' size='small'>{t('无组织')}</Tag>;
+        }
+        return <Tag color='blue' shape='circle' size='small'>{text}</Tag>;
+      },
     },
     {
       title: t('状态'),

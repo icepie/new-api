@@ -54,6 +54,7 @@ import PersonalSetting from './components/settings/PersonalSetting';
 import StarPersonalSetting from './components/settings/StarPersonalSetting';
 import Setup from './pages/Setup';
 import SetupCheck from './components/layout/SetupCheck';
+import Organization from './pages/Organization';
 
 const HomeNew = lazy(() => import('./pages/Home/HomeNew'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -174,6 +175,14 @@ function App() {
           element={
             <AdminRoute>
               <User />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path='/console/organization'
+          element={
+            <AdminRoute>
+              <Organization />
             </AdminRoute>
           }
         />

@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { API, showError, showSuccess } from '../../../../helpers';
 import { useIsMobile } from '../../../../hooks/common/useIsMobile';
 import {
@@ -43,17 +43,79 @@ const AddUserModal = (props) => {
   const formApiRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
+  const [organizations, setOrganizations] = useState([]);
+  const [selectedOrgId, setSelectedOrgId] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [formKey, setFormKey] = useState(0);
 
   const getInitValues = () => ({
     username: '',
     display_name: '',
     password: '',
     remark: '',
+    org_id: currentUser && currentUser.role !== 100 && currentUser.org_id > 0 ? currentUser.org_id : 0,
   });
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await API.get('/api/user/self');
+      const { success, data } = res.data;
+      if (success) {
+        setCurrentUser(data);
+        // 如果是组织管理员，自动设置组织ID
+        if (data.role !== 100 && data.org_id > 0) {
+          setSelectedOrgId(data.org_id);
+          setFormKey(prev => prev + 1); // 强制表单重新初始化
+        }
+      }
+    } catch (e) {
+      showError(e.message);
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const res = await API.get('/api/organization');
+      const { success, data } = res.data;
+      if (success) {
+        setOrganizations(data || []);
+      }
+    } catch (e) {
+      showError(e.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchCurrentUser();
+    fetchOrganizations();
+  }, []);
 
   const submit = async (values) => {
     setLoading(true);
-    const res = await API.post(`/api/user/`, values);
+
+    // 构建提交数据
+    const submitData = { ...values };
+
+    // 如果是组织管理员，强制使用自己的组织ID
+    if (currentUser) {
+      if (currentUser.role !== 100) {
+        // 非超级管理员，必须使用自己的组织ID
+        if (currentUser.org_id && currentUser.org_id > 0) {
+          submitData.org_id = currentUser.org_id;
+        } else {
+          showError('当前用户没有所属组织，无法创建用户');
+          setLoading(false);
+          return;
+        }
+      }
+      // 超级管理员使用表单中选择的值
+    } else {
+      showError('用户信息未加载，请稍后重试');
+      setLoading(false);
+      return;
+    }
+
+    const res = await API.post(`/api/user/`, submitData);
     const { success, message } = res.data;
     if (success) {
       showSuccess(t('用户账户创建成功！'));
@@ -114,6 +176,7 @@ const AddUserModal = (props) => {
       >
         <Spin spinning={loading}>
           <Form
+            key={formKey}
             initValues={getInitValues()}
             getFormApi={(api) => (formApiRef.current = api)}
             onSubmit={submit}
@@ -165,6 +228,22 @@ const AddUserModal = (props) => {
                       showClear
                     />
                   </Col>
+                  {currentUser && currentUser.role === 100 && (
+                    <Col span={24}>
+                      <Form.Select
+                        field='org_id'
+                        label={t('所属组织')}
+                        placeholder={t('请选择组织')}
+                        optionList={organizations.map(org => ({
+                          label: org.name,
+                          value: org.id
+                        }))}
+                        onChange={(value) => {
+                          setSelectedOrgId(value);
+                        }}
+                      />
+                    </Col>
+                  )}
                   <Col span={24}>
                     <Form.Input
                       field='remark'

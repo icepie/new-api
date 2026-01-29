@@ -51,7 +51,7 @@ func authHelper(c *gin.Context, minRole int) {
 		user := model.ValidateAccessToken(accessToken)
 		if user != nil && user.Username != "" {
 			if !validUserInfo(user.Username, user.Role) {
-				c.JSON(http.StatusOK, gin.H{
+				c.JSON(http.StatusUnauthorized, gin.H{
 					"success": false,
 					"message": "无权进行此操作，用户信息无效",
 				})
@@ -65,7 +65,7 @@ func authHelper(c *gin.Context, minRole int) {
 			status = user.Status
 			useAccessToken = true
 		} else {
-			c.JSON(http.StatusOK, gin.H{
+			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"message": "无权进行此操作，access token 无效",
 			})
@@ -102,7 +102,7 @@ func authHelper(c *gin.Context, minRole int) {
 		return
 	}
 	if status.(int) == common.UserStatusDisabled {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusForbidden, gin.H{
 			"success": false,
 			"message": "用户已被封禁",
 		})
@@ -110,7 +110,7 @@ func authHelper(c *gin.Context, minRole int) {
 		return
 	}
 	if role.(int) < minRole {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusForbidden, gin.H{
 			"success": false,
 			"message": "无权进行此操作，权限不足",
 		})
@@ -118,7 +118,7 @@ func authHelper(c *gin.Context, minRole int) {
 		return
 	}
 	if !validUserInfo(username.(string), role.(int)) {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"message": "无权进行此操作，用户信息无效",
 		})

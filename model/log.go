@@ -204,12 +204,17 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 	}
 }
 
-func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string) (logs []*Log, total int64, err error) {
+func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, orgId int) (logs []*Log, total int64, err error) {
 	var tx *gorm.DB
 	if logType == LogTypeUnknown {
 		tx = LOG_DB
 	} else {
 		tx = LOG_DB.Where("logs.type = ?", logType)
+	}
+
+	// Filter by organization if orgId is specified
+	if orgId > 0 {
+		tx = tx.Joins("INNER JOIN users ON users.id = logs.user_id").Where("users.org_id = ?", orgId)
 	}
 
 	if modelName != "" {
@@ -305,8 +310,15 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	return logs, total, err
 }
 
-func SearchAllLogs(keyword string) (logs []*Log, err error) {
-	err = LOG_DB.Where("type = ? or content LIKE ?", keyword, keyword+"%").Order("id desc").Limit(common.MaxRecentItems).Find(&logs).Error
+func SearchAllLogs(keyword string, orgId int) (logs []*Log, err error) {
+	tx := LOG_DB.Where("type = ? or content LIKE ?", keyword, keyword+"%")
+
+	// Filter by organization if orgId is specified
+	if orgId > 0 {
+		tx = tx.Joins("INNER JOIN users ON users.id = logs.user_id").Where("users.org_id = ?", orgId)
+	}
+
+	err = tx.Order("id desc").Limit(common.MaxRecentItems).Find(&logs).Error
 	return logs, err
 }
 
@@ -322,11 +334,17 @@ type Stat struct {
 	Tpm   int `json:"tpm"`
 }
 
-func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel int, group string) (stat Stat) {
+func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel int, group string, orgId int) (stat Stat) {
 	tx := LOG_DB.Table("logs").Select("sum(quota) quota")
 
 	// 为rpm和tpm创建单独的查询
 	rpmTpmQuery := LOG_DB.Table("logs").Select("count(*) rpm, sum(prompt_tokens) + sum(completion_tokens) tpm")
+
+	// Filter by organization if orgId is specified
+	if orgId > 0 {
+		tx = tx.Joins("INNER JOIN users ON users.id = logs.user_id").Where("users.org_id = ?", orgId)
+		rpmTpmQuery = rpmTpmQuery.Joins("INNER JOIN users ON users.id = logs.user_id").Where("users.org_id = ?", orgId)
+	}
 
 	if username != "" {
 		tx = tx.Where("username = ?", username)
