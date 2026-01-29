@@ -209,6 +209,7 @@ const renderOperations = (
     showDeleteModal,
     showResetPasskeyModal,
     showResetTwoFAModal,
+    showManageTokensModal,
     t,
   },
 ) => {
@@ -218,8 +219,16 @@ const renderOperations = (
 
   const isSuperAdmin = isRoot();
 
-  // 组织管理员只显示注销
+  // 组织管理员显示管理密钥和注销
   const orgAdminMenu = [
+    {
+      node: 'item',
+      name: t('管理密钥'),
+      onClick: () => showManageTokensModal(record),
+    },
+    {
+      node: 'divider',
+    },
     {
       node: 'item',
       name: t('注销'),
@@ -230,6 +239,11 @@ const renderOperations = (
 
   // 超级管理员显示所有选项
   const superAdminMenu = [
+    {
+      node: 'item',
+      name: t('管理密钥'),
+      onClick: () => showManageTokensModal(record),
+    },
     {
       node: 'item',
       name: t('重置 Passkey'),
@@ -319,6 +333,7 @@ export const getUsersColumns = ({
   showDeleteModal,
   showResetPasskeyModal,
   showResetTwoFAModal,
+  showManageTokensModal,
 }) => {
   return [
     {
@@ -385,6 +400,7 @@ export const getUsersColumns = ({
           showDeleteModal,
           showResetPasskeyModal,
           showResetTwoFAModal,
+          showManageTokensModal,
           t,
         }),
     },

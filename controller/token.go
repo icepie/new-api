@@ -324,3 +324,231 @@ func DeleteTokenBatch(c *gin.Context) {
 		"data":    count,
 	})
 }
+
+// GetUserTokensByAdmin 管理员获取指定用户的所有令牌
+func GetUserTokensByAdmin(c *gin.Context) {
+	targetUserId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	// 检查权限
+	adminId := c.GetInt("id")
+	adminRole := c.GetInt("role")
+
+	// 如果不是超级管理员，检查是否同组织
+	if adminRole != common.RoleRootUser {
+		adminUser, err := model.GetUserById(adminId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		targetUser, err := model.GetUserById(targetUserId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		if adminUser.OrgId != targetUser.OrgId {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"message": "无权管理其他组织的用户令牌",
+			})
+			return
+		}
+	}
+
+	pageInfo := common.GetPageQuery(c)
+	tokens, err := model.GetAllUserTokens(targetUserId, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	total, _ := model.CountUserTokens(targetUserId)
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(tokens)
+	common.ApiSuccess(c, pageInfo)
+}
+
+// GetUserTokenByAdmin 管理员获取指定用户的单个令牌
+func GetUserTokenByAdmin(c *gin.Context) {
+	targetUserId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	tokenId, err := strconv.Atoi(c.Param("token_id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	// 检查权限
+	adminId := c.GetInt("id")
+	adminRole := c.GetInt("role")
+
+	if adminRole != common.RoleRootUser {
+		adminUser, err := model.GetUserById(adminId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		targetUser, err := model.GetUserById(targetUserId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		if adminUser.OrgId != targetUser.OrgId {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"message": "无权管理其他组织的用户令牌",
+			})
+			return
+		}
+	}
+
+	// 验证令牌属于目标用户
+	token, err := model.GetTokenByIds(tokenId, targetUserId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    token,
+	})
+}
+
+// UpdateUserTokenByAdmin 管理员更新指定用户的令牌
+func UpdateUserTokenByAdmin(c *gin.Context) {
+	targetUserId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	// 检查权限
+	adminId := c.GetInt("id")
+	adminRole := c.GetInt("role")
+
+	if adminRole != common.RoleRootUser {
+		adminUser, err := model.GetUserById(adminId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		targetUser, err := model.GetUserById(targetUserId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		if adminUser.OrgId != targetUser.OrgId {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"message": "无权管理其他组织的用户令牌",
+			})
+			return
+		}
+	}
+
+	statusOnly := c.Query("status_only")
+	token := model.Token{}
+	err = c.ShouldBindJSON(&token)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	// 验证令牌属于目标用户
+	cleanToken, err := model.GetTokenByIds(token.Id, targetUserId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	if statusOnly != "" {
+		cleanToken.Status = token.Status
+	} else {
+		cleanToken.Name = token.Name
+		cleanToken.ExpiredTime = token.ExpiredTime
+		cleanToken.RemainQuota = token.RemainQuota
+		cleanToken.UnlimitedQuota = token.UnlimitedQuota
+		cleanToken.ModelLimitsEnabled = token.ModelLimitsEnabled
+		cleanToken.ModelLimits = token.ModelLimits
+		cleanToken.AllowIps = token.AllowIps
+		cleanToken.Group = token.Group
+		cleanToken.CrossGroupRetry = token.CrossGroupRetry
+	}
+
+	err = cleanToken.Update()
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    cleanToken,
+	})
+}
+
+// DeleteUserTokenByAdmin 管理员删除指定用户的令牌
+func DeleteUserTokenByAdmin(c *gin.Context) {
+	targetUserId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	tokenId, err := strconv.Atoi(c.Param("token_id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	// 检查权限
+	adminId := c.GetInt("id")
+	adminRole := c.GetInt("role")
+
+	if adminRole != common.RoleRootUser {
+		adminUser, err := model.GetUserById(adminId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		targetUser, err := model.GetUserById(targetUserId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		if adminUser.OrgId != targetUser.OrgId {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"message": "无权管理其他组织的用户令牌",
+			})
+			return
+		}
+	}
+
+	// 验证令牌属于目标用户
+	token, err := model.GetTokenByIds(tokenId, targetUserId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	err = token.Delete()
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
+}

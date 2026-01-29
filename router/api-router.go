@@ -120,6 +120,12 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.GET("/2fa/stats", controller.Admin2FAStats)
 				adminRoute.DELETE("/:id/2fa", controller.AdminDisable2FA)
 
+				// Admin token management for users
+				adminRoute.GET("/:id/tokens", controller.GetUserTokensByAdmin)
+				adminRoute.GET("/:id/tokens/:token_id", controller.GetUserTokenByAdmin)
+				adminRoute.PUT("/:id/tokens/:token_id", controller.UpdateUserTokenByAdmin)
+				adminRoute.DELETE("/:id/tokens/:token_id", controller.DeleteUserTokenByAdmin)
+
 			}
 		}
 

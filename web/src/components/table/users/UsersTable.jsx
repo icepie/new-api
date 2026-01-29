@@ -31,6 +31,7 @@ import EnableDisableUserModal from './modals/EnableDisableUserModal';
 import DeleteUserModal from './modals/DeleteUserModal';
 import ResetPasskeyModal from './modals/ResetPasskeyModal';
 import ResetTwoFAModal from './modals/ResetTwoFAModal';
+import ManageTokensModal from './modals/ManageTokensModal';
 
 const UsersTable = (usersData) => {
   const {
@@ -61,6 +62,7 @@ const UsersTable = (usersData) => {
   const [enableDisableAction, setEnableDisableAction] = useState('');
   const [showResetPasskeyModal, setShowResetPasskeyModal] = useState(false);
   const [showResetTwoFAModal, setShowResetTwoFAModal] = useState(false);
+  const [showManageTokensModal, setShowManageTokensModal] = useState(false);
 
   // Modal handlers
   const showPromoteUserModal = (user) => {
@@ -92,6 +94,11 @@ const UsersTable = (usersData) => {
   const showResetTwoFAUserModal = (user) => {
     setModalUser(user);
     setShowResetTwoFAModal(true);
+  };
+
+  const showManageTokensUserModal = (user) => {
+    setModalUser(user);
+    setShowManageTokensModal(true);
   };
 
   // Modal confirm handlers
@@ -132,6 +139,7 @@ const UsersTable = (usersData) => {
       showDeleteModal: showDeleteUserModal,
       showResetPasskeyModal: showResetPasskeyUserModal,
       showResetTwoFAModal: showResetTwoFAUserModal,
+      showManageTokensModal: showManageTokensUserModal,
     });
   }, [
     t,
@@ -143,6 +151,7 @@ const UsersTable = (usersData) => {
     showDeleteUserModal,
     showResetPasskeyUserModal,
     showResetTwoFAUserModal,
+    showManageTokensUserModal,
   ]);
 
   // Handle compact mode by removing fixed positioning
@@ -239,6 +248,13 @@ const UsersTable = (usersData) => {
         visible={showResetTwoFAModal}
         onCancel={() => setShowResetTwoFAModal(false)}
         onConfirm={handleResetTwoFAConfirm}
+        user={modalUser}
+        t={t}
+      />
+
+      <ManageTokensModal
+        visible={showManageTokensModal}
+        onCancel={() => setShowManageTokensModal(false)}
         user={modalUser}
         t={t}
       />
