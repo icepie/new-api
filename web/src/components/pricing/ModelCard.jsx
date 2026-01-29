@@ -483,14 +483,15 @@ export default function ModelCard({
             alignItems: 'flex-end',
             gap: '4px'
           }}>
-            {savingsAmount !== null && savingsPercent !== null && (() => {
+            {savingsAmount !== null && savingsPercent !== null && savingsAmount > 0 && (() => {
+              // 只有当价格比官方价格便宜时才显示折扣和官方价格
               // 计算折扣：折扣 = (1 - 节约百分比/100) * 10
               const discount = ((1 - savingsPercent / 100) * 10).toFixed(1);
 
               return (
                 <>
                   <div style={{
-                    backgroundColor: savingsAmount >= 0 ? '#10b981' : '#ef4444',
+                    backgroundColor: '#10b981',
                     color: 'white',
                     padding: '4px 8px',
                     borderRadius: '4px',

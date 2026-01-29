@@ -427,7 +427,7 @@ export default function ModelDetailSidebar({
 
   // 使用特性 tags（从 models.dev 获取）
   const allTags = translatedFeatureTags.length > 0 ? translatedFeatureTags : [];
-  const hasTools = featureTags.includes('tool-call') || allTags.includes('工具调用') || allTags.includes('Tool Call');
+  const hasTools = false; // 不再显示工具调用能力
   const hasPrefix = false; // 不再使用 Prefix 标签
 
   const translations = {
