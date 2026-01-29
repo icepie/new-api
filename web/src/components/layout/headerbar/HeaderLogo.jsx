@@ -71,7 +71,7 @@ const HeaderLogo = ({
               heading={4}
               className={`!text-lg !font-semibold !mb-0 ${isDefaultSystemName ? '!italic' : ''}`}
             >
-              {systemName}
+              {isDefaultSystemName ? 'NiceRouter EE' : systemName}
             </Typography.Title>
           </SkeletonWrapper>
           {(isSelfUseMode || isDemoSiteMode) && !isLoading && (

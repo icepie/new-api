@@ -472,7 +472,7 @@ const LoginForm = () => {
           <div className='flex items-center justify-center mb-6 gap-2'>
             <LogoImage src={logo} alt='Logo' className='h-10 rounded-full' />
             <Title heading={3} className={`!text-gray-800 ${systemName === 'NiceRouter' ? '!italic' : ''}`}>
-              {systemName}
+              {systemName === 'NiceRouter' ? 'NiceRouter EE' : systemName}
             </Title>
           </div>
 
@@ -679,7 +679,7 @@ const LoginForm = () => {
         <div className='w-full max-w-md'>
           <div className='flex items-center justify-center mb-6 gap-2'>
             <LogoImage src={logo} alt='Logo' className='h-10 rounded-full' />
-            <Title heading={3} className={systemName === 'NiceRouter' ? '!italic' : ''}>{systemName}</Title>
+            <Title heading={3} className={systemName === 'NiceRouter' ? '!italic' : ''}>{systemName === 'NiceRouter' ? 'NiceRouter EE' : systemName}</Title>
           </div>
 
           <Card className='border-0 !rounded-2xl overflow-hidden'>
@@ -799,19 +799,27 @@ const LoginForm = () => {
                   </Button>
 
                   <Button
-                    theme='borderless'
-                    type='tertiary'
-                    className='w-full !rounded-full transition-colors auth-page-button-borderless'
+                    theme='solid'
+                    type='primary'
+                    className='w-full !rounded-full transition-colors'
                     style={{
-                      color: '#111827',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      borderColor: '#e5e7eb',
                     }}
                     onClick={handleResetPasswordClick}
                     loading={resetPasswordLoading}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = 'white';
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                      }
                     }}
                   >
                     {t('忘记密码？')}

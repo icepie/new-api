@@ -575,7 +575,7 @@ const HomeNew = () => {
         <div className="homepage-footer-content">
           <div className="homepage-footer-copyright">
             <span className="homepage-footer-copyright-text">
-              © 2025 <span className="italic">NiceRouter</span>
+              © 2025 <span className="italic">NiceRouter EE</span>
             </span>
           </div>
         </div>

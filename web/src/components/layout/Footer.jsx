@@ -192,7 +192,7 @@ const FooterBar = () => {
         <div className='flex flex-col md:flex-row items-center justify-center w-full max-w-[1110px] gap-6'>
           <div className='flex flex-wrap items-center justify-center gap-2'>
             <Typography.Text className='text-sm !text-semi-color-text-1'>
-              © {currentYear} <span className={systemName === 'NiceRouter' ? 'italic' : ''}>{systemName}</span>
+              © {currentYear} <span className={systemName === 'NiceRouter' ? 'italic' : ''}>{systemName === 'NiceRouter' ? 'NiceRouter EE' : systemName}</span>
             </Typography.Text>
           </div>
         </div>
