@@ -51,6 +51,9 @@ const UserInfoHeader = ({ t, userState }) => {
     return 'NA';
   };
 
+  // 判断是否是组织用户
+  const isOrgUser = userState?.user && userState.user.org_id > 0;
+
   return (
     <Card
       className='!rounded-2xl overflow-hidden'
@@ -108,9 +111,12 @@ const UserInfoHeader = ({ t, userState }) => {
                         {t('普通用户')}
                       </Tag>
                     )}
-                    <Tag size='large' shape='circle' style={{ color: 'white' }}>
-                      ID: {userState?.user?.id}
-                    </Tag>
+                    {/* 组织用户不显示 ID */}
+                    {!isOrgUser && (
+                      <Tag size='large' shape='circle' style={{ color: 'white' }}>
+                        ID: {userState?.user?.id}
+                      </Tag>
+                    )}
                   </div>
                 </div>
               </div>
@@ -156,15 +162,20 @@ const UserInfoHeader = ({ t, userState }) => {
                 </Typography.Text>
               </div>
               <Divider layout='vertical' />
-              <div className='flex items-center gap-2'>
-                <Users size={16} />
-                <Typography.Text size='small' type='tertiary'>
-                  {t('用户分组')}
-                </Typography.Text>
-                <Typography.Text size='small' type='tertiary' strong>
-                  {userState?.user?.group || t('默认')}
-                </Typography.Text>
-              </div>
+              {/* 用户分组 - 组织用户隐藏 */}
+              {!isOrgUser && (
+                <>
+                  <div className='flex items-center gap-2'>
+                    <Users size={16} />
+                    <Typography.Text size='small' type='tertiary'>
+                      {t('用户分组')}
+                    </Typography.Text>
+                    <Typography.Text size='small' type='tertiary' strong>
+                      {userState?.user?.group || t('默认')}
+                    </Typography.Text>
+                  </div>
+                </>
+              )}
             </div>
           </Card>
         </div>
@@ -202,17 +213,22 @@ const UserInfoHeader = ({ t, userState }) => {
               </Typography.Text>
             </div>
             <Divider margin='8px' />
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-2'>
-                <Users size={16} />
-                <Typography.Text size='small' type='tertiary'>
-                  {t('用户分组')}
-                </Typography.Text>
-              </div>
-              <Typography.Text size='small' type='tertiary' strong>
-                {userState?.user?.group || t('默认')}
-              </Typography.Text>
-            </div>
+            {/* 用户分组 - 组织用户隐藏 */}
+            {!isOrgUser && (
+              <>
+                <div className='flex items-center justify-between'>
+                  <div className='flex items-center gap-2'>
+                    <Users size={16} />
+                    <Typography.Text size='small' type='tertiary'>
+                      {t('用户分组')}
+                    </Typography.Text>
+                  </div>
+                  <Typography.Text size='small' type='tertiary' strong>
+                    {userState?.user?.group || t('默认')}
+                  </Typography.Text>
+                </div>
+              </>
+            )}
           </div>
         </Card>
       </div>

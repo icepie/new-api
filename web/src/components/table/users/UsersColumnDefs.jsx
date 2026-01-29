@@ -219,16 +219,8 @@ const renderOperations = (
 
   const isSuperAdmin = isRoot();
 
-  // 组织管理员显示管理密钥和注销
+  // 组织管理员只显示注销
   const orgAdminMenu = [
-    {
-      node: 'item',
-      name: t('管理密钥'),
-      onClick: () => showManageTokensModal(record),
-    },
-    {
-      node: 'divider',
-    },
     {
       node: 'item',
       name: t('注销'),
@@ -237,13 +229,8 @@ const renderOperations = (
     },
   ];
 
-  // 超级管理员显示所有选项
+  // 超级管理员显示重置选项和注销
   const superAdminMenu = [
-    {
-      node: 'item',
-      name: t('管理密钥'),
-      onClick: () => showManageTokensModal(record),
-    },
     {
       node: 'item',
       name: t('重置 Passkey'),
@@ -295,6 +282,13 @@ const renderOperations = (
       >
         {t('编辑')}
       </Button>
+      <Button
+        type='secondary'
+        size='small'
+        onClick={() => showManageTokensModal(record)}
+      >
+        {t('管理密钥')}
+      </Button>
       {isSuperAdmin && (
         <>
           <Button
@@ -334,8 +328,12 @@ export const getUsersColumns = ({
   showResetPasskeyModal,
   showResetTwoFAModal,
   showManageTokensModal,
+  currentUser,
 }) => {
-  return [
+  // 判断是否是组织管理员（role=10且org_id>0）
+  const isOrgAdmin = currentUser && currentUser.role === 10 && currentUser.org_id > 0;
+
+  const columns = [
     {
       title: 'ID',
       dataIndex: 'id',
@@ -381,11 +379,6 @@ export const getUsersColumns = ({
       },
     },
     {
-      title: t('邀请信息'),
-      dataIndex: 'invite',
-      render: (text, record, index) => renderInviteInfo(text, record, t),
-    },
-    {
       title: '',
       dataIndex: 'operate',
       fixed: 'right',
@@ -405,4 +398,15 @@ export const getUsersColumns = ({
         }),
     },
   ];
+
+  // 只有非组织管理员才显示邀请信息列（超级管理员和系统管理员可以看到）
+  if (!isOrgAdmin) {
+    columns.splice(7, 0, {
+      title: t('邀请信息'),
+      dataIndex: 'invite',
+      render: (text, record, index) => renderInviteInfo(text, record, t),
+    });
+  }
+
+  return columns;
 };

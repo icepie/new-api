@@ -397,6 +397,9 @@ const PersonalSetting = () => {
     }
   };
 
+  // 判断是否是组织用户
+  const isOrgUser = userState?.user && userState.user.org_id > 0;
+
   const handleNotificationSettingChange = (type, value) => {
     setNotificationSettings((prev) => ({
       ...prev,
@@ -461,7 +464,7 @@ const PersonalSetting = () => {
           )}
 
           {/* 账户管理和其他设置 */}
-          <div className='grid grid-cols-1 xl:grid-cols-2 items-start gap-4 md:gap-6 mt-4 md:mt-6'>
+          <div className={`grid grid-cols-1 ${!isOrgUser ? 'xl:grid-cols-2' : ''} items-start gap-4 md:gap-6 mt-4 md:mt-6`}>
             {/* 左侧：账户管理设置 */}
             <AccountManagement
               t={t}
@@ -482,13 +485,15 @@ const PersonalSetting = () => {
               onPasskeyDelete={handleRemovePasskey}
             />
 
-            {/* 右侧：其他设置 */}
-            <NotificationSettings
-              t={t}
-              notificationSettings={notificationSettings}
-              handleNotificationSettingChange={handleNotificationSettingChange}
-              saveNotificationSettings={saveNotificationSettings}
-            />
+            {/* 右侧：其他设置 - 组织用户隐藏 */}
+            {!isOrgUser && (
+              <NotificationSettings
+                t={t}
+                notificationSettings={notificationSettings}
+                handleNotificationSettingChange={handleNotificationSettingChange}
+                saveNotificationSettings={saveNotificationSettings}
+              />
+            )}
           </div>
         </div>
       </div>

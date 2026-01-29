@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useContext } from 'react';
 import { Empty } from '@douyinfe/semi-ui';
 import CardTable from '../../common/ui/CardTable';
 import {
@@ -32,6 +32,7 @@ import DeleteUserModal from './modals/DeleteUserModal';
 import ResetPasskeyModal from './modals/ResetPasskeyModal';
 import ResetTwoFAModal from './modals/ResetTwoFAModal';
 import ManageTokensModal from './modals/ManageTokensModal';
+import { UserContext } from '../../../context/User';
 
 const UsersTable = (usersData) => {
   const {
@@ -52,6 +53,10 @@ const UsersTable = (usersData) => {
     resetUserTwoFA,
     t,
   } = usersData;
+
+  // Get current user from context
+  const [userState] = useContext(UserContext);
+  const currentUser = userState?.user;
 
   // Modal states
   const [showPromoteModal, setShowPromoteModal] = useState(false);
@@ -140,6 +145,7 @@ const UsersTable = (usersData) => {
       showResetPasskeyModal: showResetPasskeyUserModal,
       showResetTwoFAModal: showResetTwoFAUserModal,
       showManageTokensModal: showManageTokensUserModal,
+      currentUser,
     });
   }, [
     t,
@@ -152,6 +158,7 @@ const UsersTable = (usersData) => {
     showResetPasskeyUserModal,
     showResetTwoFAUserModal,
     showManageTokensUserModal,
+    currentUser,
   ]);
 
   // Handle compact mode by removing fixed positioning

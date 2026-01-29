@@ -88,6 +88,9 @@ const EditUserModal = (props) => {
 
   const isEdit = Boolean(userId);
 
+  // 判断当前用户是否是组织管理员
+  const isOrgAdmin = currentUser && currentUser.role === 10 && currentUser.org_id > 0;
+
   const fetchCurrentUser = async () => {
     try {
       const res = await API.get('/api/user/self');
@@ -351,17 +354,19 @@ const EditUserModal = (props) => {
                         </Col>
                       )}
 
-                      <Col span={24}>
-                        <Form.Select
-                          field='group'
-                          label={t('分组')}
-                          placeholder={t('请选择分组')}
-                          optionList={groupOptions}
-                          allowAdditions
-                          search
-                          rules={[{ required: true, message: t('请选择分组') }]}
-                        />
-                      </Col>
+                      {!isOrgAdmin && (
+                        <Col span={24}>
+                          <Form.Select
+                            field='group'
+                            label={t('分组')}
+                            placeholder={t('请选择分组')}
+                            optionList={groupOptions}
+                            allowAdditions
+                            search
+                            rules={[{ required: true, message: t('请选择分组') }]}
+                          />
+                        </Col>
+                      )}
 
                       <Col span={10}>
                         <Form.InputNumber
