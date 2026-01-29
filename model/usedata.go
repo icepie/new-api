@@ -126,3 +126,39 @@ func GetAllQuotaDates(startTime int64, endTime int64, username string) (quotaDat
 	err = DB.Table("quota_data").Select("model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, created_at").Where("created_at >= ? and created_at <= ?", startTime, endTime).Group("model_name, created_at").Find(&quotaDatas).Error
 	return quotaDatas, err
 }
+
+// GetQuotaDataByOrgId 根据组织ID获取数据（组织管理员使用）
+func GetQuotaDataByOrgId(orgId int, startTime int64, endTime int64, username string) (quotaData []*QuotaData, err error) {
+	var quotaDatas []*QuotaData
+
+	// 如果指定了用户名，先验证该用户是否属于该组织
+	if username != "" {
+		var user User
+		err = DB.Where("username = ? AND org_id = ?", username, orgId).First(&user).Error
+		if err != nil {
+			return nil, err
+		}
+		// 返回该用户的数据
+		return GetQuotaDataByUsername(username, startTime, endTime)
+	}
+
+	// 获取该组织下所有用户的ID列表
+	var userIds []int
+	err = DB.Table("users").Where("org_id = ?", orgId).Pluck("id", &userIds).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if len(userIds) == 0 {
+		return []*QuotaData{}, nil
+	}
+
+	// 查询这些用户的数据并聚合
+	err = DB.Table("quota_data").
+		Select("model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, created_at").
+		Where("user_id IN ? AND created_at >= ? AND created_at <= ?", userIds, startTime, endTime).
+		Group("model_name, created_at").
+		Find(&quotaDatas).Error
+
+	return quotaDatas, err
+}

@@ -2077,6 +2077,7 @@ func setupLogin(user *model.User, c *gin.Context) {
 	session.Set("role", user.Role)
 	session.Set("status", user.Status)
 	session.Set("group", user.Group)
+	session.Set("org_id", user.OrgId)
 	err := session.Save()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{

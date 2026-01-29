@@ -130,6 +130,7 @@ func authHelper(c *gin.Context, minRole int) {
 	c.Set("id", id)
 	c.Set("group", session.Get("group"))
 	c.Set("user_group", session.Get("group"))
+	c.Set("org_id", session.Get("org_id"))
 	c.Set("use_access_token", useAccessToken)
 
 	//userCache, err := model.GetUserCache(id.(int))

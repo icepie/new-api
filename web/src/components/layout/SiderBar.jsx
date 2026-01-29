@@ -167,31 +167,35 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         text: t('渠道管理'),
         itemKey: 'channel',
         to: '/channel',
-        // 只有超级管理员可以看到渠道管理
+        // 只有超级管理员可以看到渠道管理，组织管理员不可见
         className: isRoot() ? '' : 'tableHiddle',
       },
       {
         text: t('模型管理'),
         itemKey: 'models',
         to: '/console/models',
-        className: isAdmin() ? '' : 'tableHiddle',
+        // 组织管理员不可见
+        className: isAdmin() && !isOrgAdmin ? '' : 'tableHiddle',
       },
       {
         text: t('模型部署'),
         itemKey: 'deployment',
         to: '/deployment',
-        className: isAdmin() ? '' : 'tableHiddle',
+        // 组织管理员不可见
+        className: isAdmin() && !isOrgAdmin ? '' : 'tableHiddle',
       },
       {
         text: t('兑换码管理'),
         itemKey: 'redemption',
         to: '/redemption',
-        className: isAdmin() ? '' : 'tableHiddle',
+        // 组织管理员不可见
+        className: isAdmin() && !isOrgAdmin ? '' : 'tableHiddle',
       },
       {
         text: t('用户管理'),
         itemKey: 'user',
         to: '/user',
+        // 所有管理员（包括组织管理员）都可见
         className: isAdmin() ? '' : 'tableHiddle',
       },
       {
@@ -205,6 +209,7 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         text: t('系统设置'),
         itemKey: 'setting',
         to: '/setting',
+        // 只有超级管理员可以看到系统设置，组织管理员不可见
         className: isRoot() ? '' : 'tableHiddle',
       },
     ];
