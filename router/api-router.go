@@ -138,6 +138,7 @@ func SetApiRouter(router *gin.Engine) {
 			orgRoute.POST("/", controller.CreateOrganization)
 			orgRoute.PUT("/:id", controller.UpdateOrganization)
 			orgRoute.DELETE("/:id", controller.DeleteOrganization)
+			orgRoute.GET("/billing", controller.GetOrganizationBilling)
 		}
 		optionRoute := apiRouter.Group("/option")
 		optionRoute.Use(middleware.RootAuth())

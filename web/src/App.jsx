@@ -32,6 +32,7 @@ import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
 import Setting from './pages/Setting';
 import { StatusContext } from './context/Status';
+import TopupBillingRoute from './components/routing/TopupBillingRoute';
 
 import PasswordResetForm from './components/auth/PasswordResetForm';
 import PasswordResetConfirm from './components/auth/PasswordResetConfirm';
@@ -55,6 +56,7 @@ import StarPersonalSetting from './components/settings/StarPersonalSetting';
 import Setup from './pages/Setup';
 import SetupCheck from './components/layout/SetupCheck';
 import Organization from './pages/Organization';
+import Billing from './pages/Billing';
 
 const HomeNew = lazy(() => import('./pages/Home/HomeNew'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -291,7 +293,7 @@ function App() {
           element={
             <PrivateRoute>
               <Suspense fallback={<Loading></Loading>} key={location.pathname}>
-                <TopUp />
+                <TopupBillingRoute />
               </Suspense>
             </PrivateRoute>
           }

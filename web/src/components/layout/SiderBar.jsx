@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getLucideIcon } from '../../helpers/render';
@@ -27,6 +27,7 @@ import { useSidebar } from '../../hooks/common/useSidebar';
 import { useMinimumLoadingTime } from '../../hooks/common/useMinimumLoadingTime';
 import { isAdmin, isRoot, showError } from '../../helpers';
 import SkeletonWrapper from './components/SkeletonWrapper';
+import { UserContext } from '../../context/User';
 
 import { Nav, Divider, Button } from '@douyinfe/semi-ui';
 
@@ -36,6 +37,7 @@ const routerMap = {
   token: '/console/token',
   redemption: '/console/redemption',
   topup: '/console/topup',
+  billing: '/console/billing',
   user: '/console/user',
   log: '/console/log',
   midjourney: '/console/midjourney',
@@ -53,6 +55,7 @@ const routerMap = {
 
 const SiderBar = ({ onNavigate = () => {} }) => {
   const { t } = useTranslation();
+  const [userState] = useContext(UserContext);
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const {
     isModuleVisible,
@@ -123,9 +126,16 @@ const SiderBar = ({ onNavigate = () => {} }) => {
   ]);
 
   const financeItems = useMemo(() => {
+    // 从 UserContext 获取用户信息
+    const user = userState?.user;
+
+    // 判断是否属于组织（不论是管理员还是普通用户）
+    const isOrgUser = user && user.org_id > 0;
+
     const items = [
+      // 组织用户显示"计费管理"，非组织用户显示"钱包管理"
       {
-        text: t('钱包管理'),
+        text: isOrgUser ? t('计费管理') : t('钱包管理'),
         itemKey: 'topup',
         to: '/topup',
       },
@@ -143,15 +153,30 @@ const SiderBar = ({ onNavigate = () => {} }) => {
     });
 
     return filteredItems;
-  }, [t, isModuleVisible]);
+  }, [userState?.user, t, isModuleVisible]);
 
   const adminItems = useMemo(() => {
+    // 获取用户信息
+    let user = null;
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        user = JSON.parse(userStr);
+      }
+    } catch (e) {
+      console.error('Failed to parse user data:', e);
+    }
+
+    // 判断是否是组织管理员（role=10且org_id>0）
+    const isOrgAdmin = user && user.role === 10 && user.org_id > 0;
+
     const items = [
       {
         text: t('渠道管理'),
         itemKey: 'channel',
         to: '/channel',
-        className: isAdmin() ? '' : 'tableHiddle',
+        // 只有超级管理员可以看到渠道管理
+        className: isRoot() ? '' : 'tableHiddle',
       },
       {
         text: t('模型管理'),
@@ -181,7 +206,8 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         text: t('组织管理'),
         itemKey: 'organization',
         to: '/console/organization',
-        className: isAdmin() ? '' : 'tableHiddle',
+        // 组织管理只对超级管理员和系统管理员显示，组织管理员不显示
+        className: isAdmin() && !isOrgAdmin ? '' : 'tableHiddle',
       },
       {
         text: t('系统设置'),
@@ -191,8 +217,13 @@ const SiderBar = ({ onNavigate = () => {} }) => {
       },
     ];
 
-    // 根据配置过滤项目
+    // 根据配置过滤项目，同时过滤掉 tableHiddle 的项目
     const filteredItems = items.filter((item) => {
+      // 如果有 className 且为 tableHiddle，直接过滤掉
+      if (item.className === 'tableHiddle') {
+        return false;
+      }
+      // 检查配置是否可见
       const configVisible = isModuleVisible('admin', item.itemKey);
       return configVisible;
     });

@@ -523,6 +523,14 @@ func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQu
 		}
 	}
 
+	// Deduct organization quota
+	if relayInfo.OrgId > 0 && quota > 0 {
+		err = model.DeductOrgQuota(relayInfo.OrgId, quota)
+		if err != nil {
+			return err
+		}
+	}
+
 	if sendEmail {
 		if (quota + preConsumedQuota) != 0 {
 			checkAndSendQuotaNotify(relayInfo, quota, preConsumedQuota)

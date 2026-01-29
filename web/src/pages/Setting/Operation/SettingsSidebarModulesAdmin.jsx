@@ -125,6 +125,7 @@ export default function SettingsSidebarModulesAdmin(props) {
         deployment: true,
         redemption: true,
         user: true,
+        organization: true,
         setting: true,
       },
     };
@@ -193,6 +194,7 @@ export default function SettingsSidebarModulesAdmin(props) {
             deployment: true,
             redemption: true,
             user: true,
+            organization: true,
             setting: true,
           },
         };

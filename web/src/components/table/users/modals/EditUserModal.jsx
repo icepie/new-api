@@ -387,50 +387,52 @@ const EditUserModal = (props) => {
                   </Card>
                 )}
 
-                {/* 绑定信息 */}
-                <Card className='!rounded-2xl shadow-sm border-0'>
-                  <div className='flex items-center mb-2'>
-                    <Avatar
-                      size='small'
-                      color='purple'
-                      className='mr-2 shadow-md'
-                    >
-                      <IconLink size={16} />
-                    </Avatar>
-                    <div>
-                      <Text className='text-lg font-medium'>
-                        {t('绑定信息')}
-                      </Text>
-                      <div className='text-xs text-gray-600'>
-                        {t('第三方账户绑定状态（只读）')}
+                {/* 绑定信息 - 只对超级管理员显示 */}
+                {currentUser && currentUser.role === 100 && (
+                  <Card className='!rounded-2xl shadow-sm border-0'>
+                    <div className='flex items-center mb-2'>
+                      <Avatar
+                        size='small'
+                        color='purple'
+                        className='mr-2 shadow-md'
+                      >
+                        <IconLink size={16} />
+                      </Avatar>
+                      <div>
+                        <Text className='text-lg font-medium'>
+                          {t('绑定信息')}
+                        </Text>
+                        <div className='text-xs text-gray-600'>
+                          {t('第三方账户绑定状态（只读）')}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <Row gutter={12}>
-                    {[
-                      'github_id',
-                      'discord_id',
-                      'oidc_id',
-                      'wechat_id',
-                      'email',
-                      'telegram_id',
-                    ].map((field) => (
-                      <Col span={24} key={field}>
-                        <Form.Input
-                          field={field}
-                          label={t(
-                            `已绑定的 ${field.replace('_id', '').toUpperCase()} 账户`,
-                          )}
-                          readonly
-                          placeholder={t(
-                            '此项只读，需要用户通过个人设置页面的相关绑定按钮进行绑定，不可直接修改',
-                          )}
-                        />
-                      </Col>
-                    ))}
-                  </Row>
-                </Card>
+                    <Row gutter={12}>
+                      {[
+                        'github_id',
+                        'discord_id',
+                        'oidc_id',
+                        'wechat_id',
+                        'email',
+                        'telegram_id',
+                      ].map((field) => (
+                        <Col span={24} key={field}>
+                          <Form.Input
+                            field={field}
+                            label={t(
+                              `已绑定的 ${field.replace('_id', '').toUpperCase()} 账户`,
+                            )}
+                            readonly
+                            placeholder={t(
+                              '此项只读，需要用户通过个人设置页面的相关绑定按钮进行绑定，不可直接修改',
+                            )}
+                          />
+                        </Col>
+                      ))}
+                    </Row>
+                  </Card>
+                )}
               </div>
             )}
           </Form>

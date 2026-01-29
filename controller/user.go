@@ -2944,6 +2944,17 @@ func CreateUser(c *gin.Context) {
 		}
 	}
 
+	// 检查组织限制（仅对普通用户 role=1 进行检查）
+	if user.Role == 1 && user.OrgId > 0 {
+		if err := model.CheckOrgLimits(user.OrgId); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+	}
+
 	// Even for admin users, we cannot fully trust them!
 	cleanUser := model.User{
 		Username:    user.Username,

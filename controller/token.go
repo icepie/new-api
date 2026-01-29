@@ -168,6 +168,17 @@ func AddToken(c *gin.Context) {
 			return
 		}
 	}
+
+	// 检查令牌限制
+	userId := c.GetInt("id")
+	if err := model.CheckTokenLimits(userId); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
 	key, err := common.GenerateKey()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{

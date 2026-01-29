@@ -41,6 +41,10 @@ const UserArea = ({
   t,
 }) => {
   const dropdownRef = useRef(null);
+
+  // 判断是否属于组织（不论是管理员还是普通用户）
+  const isOrgUser = userState?.user && userState.user.org_id > 0;
+
   if (isLoading) {
     return (
       <SkeletonWrapper
@@ -99,7 +103,7 @@ const UserArea = ({
                     size='small'
                     className='text-gray-500 dark:text-gray-400'
                   />
-                  <span>{t('钱包管理')}</span>
+                  <span>{isOrgUser ? t('计费管理') : t('钱包管理')}</span>
                 </div>
               </Dropdown.Item>
               <Dropdown.Item

@@ -280,6 +280,13 @@ func GetAllUsersByOrgId(orgId int, pageInfo *common.PageInfo) (users []*User, to
 	return users, total, nil
 }
 
+// GetUsersByOrgId 根据组织ID获取所有用户（不分页，用于计费统计）
+func GetUsersByOrgId(orgId int) ([]*User, error) {
+	var users []*User
+	err := DB.Where("org_id = ?", orgId).Omit("password").Find(&users).Error
+	return users, err
+}
+
 func SearchUsers(keyword string, group string, startIdx int, num int) ([]*User, int64, error) {
 	var users []*User
 	var total int64
