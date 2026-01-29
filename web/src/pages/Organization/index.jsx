@@ -82,77 +82,6 @@ const Organization = () => {
         width: 200,
       },
       {
-        title: t('描述'),
-        dataIndex: 'description',
-        width: 200,
-      },
-      {
-        title: t('备注'),
-        dataIndex: 'remark',
-        width: 200,
-      },
-      {
-        title: t('计费方式'),
-        dataIndex: 'billing_type',
-        width: 100,
-        render: (type) => {
-          return type === 'prepaid' ? (
-            <Tag color="blue">{t('预付费')}</Tag>
-          ) : (
-            <Tag color="orange">{t('后付费')}</Tag>
-          );
-        },
-      },
-      {
-        title: t('计费周期'),
-        dataIndex: 'billing_cycle',
-        width: 100,
-        render: (cycle) => {
-          const cycleMap = {
-            monthly: t('月付'),
-            quarterly: t('季付'),
-            yearly: t('年付'),
-          };
-          return <Tag color="cyan">{cycleMap[cycle] || cycle}</Tag>;
-        },
-      },
-      {
-        title: t('子账号上限'),
-        dataIndex: 'max_sub_accounts',
-        width: 120,
-        render: (value) => {
-          return value === -1 ? (
-            <Tag color="green">{t('无限制')}</Tag>
-          ) : (
-            <Tag color="white">{value}</Tag>
-          );
-        },
-      },
-      {
-        title: t('单用户密钥上限'),
-        dataIndex: 'max_keys_per_sub_account',
-        width: 140,
-        render: (value) => {
-          return value === -1 ? (
-            <Tag color="green">{t('无限制')}</Tag>
-          ) : (
-            <Tag color="white">{value}</Tag>
-          );
-        },
-      },
-      {
-        title: t('组织密钥上限'),
-        dataIndex: 'max_keys_per_org',
-        width: 130,
-        render: (value) => {
-          return value === -1 ? (
-            <Tag color="green">{t('无限制')}</Tag>
-          ) : (
-            <Tag color="white">{value}</Tag>
-          );
-        },
-      },
-      {
         title: t('额度使用'),
         dataIndex: 'quota',
         width: 150,
@@ -243,6 +172,67 @@ const Organization = () => {
         },
       },
       {
+        title: t('计费方式'),
+        dataIndex: 'billing_type',
+        width: 100,
+        render: (type) => {
+          return type === 'prepaid' ? (
+            <Tag color="blue">{t('预付费')}</Tag>
+          ) : (
+            <Tag color="orange">{t('后付费')}</Tag>
+          );
+        },
+      },
+      {
+        title: t('计费周期'),
+        dataIndex: 'billing_cycle',
+        width: 100,
+        render: (cycle) => {
+          const cycleMap = {
+            monthly: t('月付'),
+            quarterly: t('季付'),
+            yearly: t('年付'),
+          };
+          return <Tag color="cyan">{cycleMap[cycle] || cycle}</Tag>;
+        },
+      },
+      {
+        title: t('子账号上限'),
+        dataIndex: 'max_sub_accounts',
+        width: 120,
+        render: (value) => {
+          return value === -1 ? (
+            <Tag color="green">{t('无限制')}</Tag>
+          ) : (
+            <Tag color="white">{value}</Tag>
+          );
+        },
+      },
+      {
+        title: t('单用户密钥上限'),
+        dataIndex: 'max_keys_per_sub_account',
+        width: 140,
+        render: (value) => {
+          return value === -1 ? (
+            <Tag color="green">{t('无限制')}</Tag>
+          ) : (
+            <Tag color="white">{value}</Tag>
+          );
+        },
+      },
+      {
+        title: t('组织密钥上限'),
+        dataIndex: 'max_keys_per_org',
+        width: 130,
+        render: (value) => {
+          return value === -1 ? (
+            <Tag color="green">{t('无限制')}</Tag>
+          ) : (
+            <Tag color="white">{value}</Tag>
+          );
+        },
+      },
+      {
         title: t('创建时间'),
         dataIndex: 'created_at',
         width: 180,
@@ -251,10 +241,20 @@ const Organization = () => {
         },
       },
       {
+        title: t('描述'),
+        dataIndex: 'description',
+        width: 200,
+      },
+      {
+        title: t('备注'),
+        dataIndex: 'remark',
+        width: 200,
+      },
+      {
         title: t('操作'),
         dataIndex: 'operate',
         fixed: 'right',
-        width: 200,
+        width: 280,
         render: (text, record) => (
           <Space>
             <Button
@@ -265,6 +265,19 @@ const Organization = () => {
             >
               {t('编辑')}
             </Button>
+            <Popconfirm
+              title={record.status === 'enabled' ? t('确定禁用该组织吗?') : t('确定启用该组织吗?')}
+              content={record.status === 'enabled' ? t('禁用后该组织下的用户将无法访问') : t('启用后该组织下的用户将恢复访问')}
+              onConfirm={() => handleStatusChange(record.id, record.status)}
+            >
+              <Button
+                theme="light"
+                type={record.status === 'enabled' ? 'warning' : 'secondary'}
+                size="small"
+              >
+                {record.status === 'enabled' ? t('禁用') : t('启用')}
+              </Button>
+            </Popconfirm>
             <Popconfirm
               title={t('确定删除该组织吗?')}
               content={t('删除后无法恢复,且该组织下的用户也将无法访问')}
@@ -378,6 +391,22 @@ const Organization = () => {
       }
     } catch (error) {
       showError(t('删除失败'));
+    }
+  };
+
+  const handleStatusChange = async (id, currentStatus) => {
+    try {
+      const newStatus = currentStatus === 'enabled' ? 'disabled' : 'enabled';
+      const res = await API.put(`/api/organization/${id}`, { status: newStatus });
+      const { success, message } = res.data;
+      if (success) {
+        showSuccess(newStatus === 'enabled' ? t('启用成功') : t('禁用成功'));
+        loadOrganizations();
+      } else {
+        showError(message);
+      }
+    } catch (error) {
+      showError(t('操作失败'));
     }
   };
 
