@@ -102,6 +102,7 @@ const LoginForm = () => {
   const [hasPrivacyPolicy, setHasPrivacyPolicy] = useState(false);
   const [githubButtonState, setGithubButtonState] = useState('idle');
   const [githubButtonDisabled, setGithubButtonDisabled] = useState(false);
+  const [orgCodeFromDomain, setOrgCodeFromDomain] = useState(false);
   const githubTimeoutRef = useRef(null);
   const githubButtonText = t(githubButtonTextKeyByState[githubButtonState]);
 
@@ -134,6 +135,34 @@ const LoginForm = () => {
     setHasUserAgreement(status?.user_agreement_enabled || false);
     setHasPrivacyPolicy(status?.privacy_policy_enabled || false);
   }, [status]);
+
+  // 从域名提取组织代码
+  useEffect(() => {
+    const hostname = window.location.hostname;
+
+    // 检查是否是 IP 地址（IPv4 或 IPv6）
+    const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+    const isIPv6 = hostname.includes(':');
+    const isLocalhost = hostname === 'localhost';
+
+    // 如果是 IP 地址或 localhost，不进行组织代码提取
+    if (isIPv4 || isIPv6 || isLocalhost) {
+      return;
+    }
+
+    const parts = hostname.split('.');
+
+    // 检查是否是子域名格式 (至少3个部分，如 xxx.abc.com)
+    if (parts.length >= 3) {
+      const subdomain = parts[0];
+
+      // 排除 ee 和 enterprise
+      if (subdomain && subdomain !== 'ee' && subdomain !== 'enterprise') {
+        setInputs((prev) => ({ ...prev, organization_code: subdomain }));
+        setOrgCodeFromDomain(true);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     isPasskeySupported()
@@ -723,11 +752,12 @@ const LoginForm = () => {
 
                 <Form.Input
                   field='organization_code'
-                  label={t('组织代码（可选）')}
+                  label={orgCodeFromDomain ? t('组织代码') : t('组织代码（可选）')}
                   placeholder={t('留空为普通登录，填写则为组织登录')}
                   name='organization_code'
                   onChange={(value) => handleChange('organization_code', value)}
                   prefix={<IconKey />}
+                  disabled={orgCodeFromDomain}
                 />
 
                 {(hasUserAgreement || hasPrivacyPolicy) && (

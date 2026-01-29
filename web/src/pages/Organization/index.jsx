@@ -87,6 +87,11 @@ const Organization = () => {
         width: 200,
       },
       {
+        title: t('备注'),
+        dataIndex: 'remark',
+        width: 200,
+      },
+      {
         title: t('计费方式'),
         dataIndex: 'billing_type',
         width: 100,
