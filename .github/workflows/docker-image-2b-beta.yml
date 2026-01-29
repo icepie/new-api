@@ -3,7 +3,7 @@ name: Publish Docker image (alpha)
 on:
   push:
     branches:
-      - main
+      - 2b-beta
   workflow_dispatch:
     inputs:
       name:
@@ -33,7 +33,7 @@ jobs:
       - name: Determine alpha version
         id: version
         run: |
-          VERSION="alpha-$(date +'%Y%m%d')-$(git rev-parse --short HEAD)"
+          VERSION="2b-beta-$(date +'%Y%m%d')-$(git rev-parse --short HEAD)"
           echo "$VERSION" > VERSION
           echo "value=$VERSION" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -63,7 +63,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/new-api:alpha-${{ matrix.arch }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/new-api:2b-beta-${{ matrix.arch }}
             ${{ secrets.DOCKERHUB_USERNAME }}/new-api:${{ steps.version.outputs.value }}-${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -86,7 +86,7 @@ jobs:
       - name: Determine alpha version
         id: version
         run: |
-          VERSION="alpha-$(date +'%Y%m%d')-$(git rev-parse --short HEAD)"
+          VERSION="2b-beta-$(date +'%Y%m%d')-$(git rev-parse --short HEAD)"
           echo "value=$VERSION" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> $GITHUB_ENV
@@ -97,11 +97,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Create & push manifest (Docker Hub - alpha)
+      - name: Create & push manifest (Docker Hub - 2b-beta)
         run: |
           docker buildx imagetools create \
-            -t ${DOCKERHUB_USERNAME}/new-api:alpha \
-            ${DOCKERHUB_USERNAME}/new-api:alpha-amd64
+            -t ${DOCKERHUB_USERNAME}/new-api:2b-beta \
+            ${DOCKERHUB_USERNAME}/new-api:2b-beta-amd64
 
       - name: Create & push manifest (Docker Hub - versioned alpha)
         run: |

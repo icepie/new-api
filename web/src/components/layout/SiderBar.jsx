@@ -156,16 +156,8 @@ const SiderBar = ({ onNavigate = () => {} }) => {
   }, [userState?.user, t, isModuleVisible]);
 
   const adminItems = useMemo(() => {
-    // 获取用户信息
-    let user = null;
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        user = JSON.parse(userStr);
-      }
-    } catch (e) {
-      console.error('Failed to parse user data:', e);
-    }
+    // 从 UserContext 获取用户信息
+    const user = userState?.user;
 
     // 判断是否是组织管理员（role=10且org_id>0）
     const isOrgAdmin = user && user.role === 10 && user.org_id > 0;
@@ -229,7 +221,7 @@ const SiderBar = ({ onNavigate = () => {} }) => {
     });
 
     return filteredItems;
-  }, [isAdmin(), isRoot(), t, isModuleVisible]);
+  }, [userState?.user, isAdmin(), isRoot(), t, isModuleVisible]);
 
   const chatMenuItems = useMemo(() => {
     const items = [
