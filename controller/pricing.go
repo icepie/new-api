@@ -1,12 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
-	"io"
-	"net/http"
-	"strconv"
-	"time"
-
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
@@ -143,63 +137,73 @@ func BatchUpdateModelListing(c *gin.Context) {
 	})
 }
 
-// GetModelsDevAPI 转发 models.dev/api.json 接口
-func GetModelsDevAPI(c *gin.Context) {
-	client := service.GetHttpClient()
-	if client.Timeout == 0 {
-		client.Timeout = 30 * time.Second
+// UpdateModelOfficialPrice 更新单个模型的官方价格（仅更新传入的字段）
+func UpdateModelOfficialPrice(c *gin.Context) {
+	var req struct {
+		ModelName          string   `json:"model_name" binding:"required"`
+		OfficialPriceUnit  *float64 `json:"official_price_unit"`
+		OfficialInputPrice *float64 `json:"official_input_price"`
+		OfficialOutputPrice *float64 `json:"official_output_price"`
 	}
-
-	req, err := http.NewRequest("GET", "https://models.dev/api.json", nil)
-	if err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(200, gin.H{
 			"success": false,
-			"message": "创建请求失败: " + err.Error(),
+			"message": "请求参数错误: " + err.Error(),
 		})
 		return
 	}
-
-	req.Header.Set("User-Agent", "NewAPI/1.0")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
+	if req.ModelName == "" {
 		c.JSON(200, gin.H{
 			"success": false,
-			"message": "请求失败: " + err.Error(),
+			"message": "model_name 不能为空",
 		})
 		return
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
+	if err := model.SetModelOfficialPrice(req.ModelName, req.OfficialPriceUnit, req.OfficialInputPrice, req.OfficialOutputPrice); err != nil {
 		c.JSON(200, gin.H{
 			"success": false,
-			"message": "外部API返回错误状态码: " + strconv.Itoa(resp.StatusCode),
+			"message": "更新官方价格失败: " + err.Error(),
 		})
 		return
 	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		c.JSON(200, gin.H{
-			"success": false,
-			"message": "读取响应失败: " + err.Error(),
-		})
-		return
-	}
-
-	var data interface{}
-	if err := json.Unmarshal(body, &data); err != nil {
-		c.JSON(200, gin.H{
-			"success": false,
-			"message": "解析响应失败: " + err.Error(),
-		})
-		return
-	}
-
+	model.RefreshPricingCache()
 	c.JSON(200, gin.H{
 		"success": true,
-		"data":    data,
+		"message": "更新官方价格成功",
+	})
+}
+
+// UpdateModelListingMeta 更新单个模型的类型与标签（用于定价页筛选）
+func UpdateModelListingMeta(c *gin.Context) {
+	var req struct {
+		ModelName string  `json:"model_name" binding:"required"`
+		ListTypes *string `json:"list_types"` // 逗号分隔，如 dialogue,imageGen
+		ListTags  *string `json:"list_tags"`   // 逗号分隔
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "请求参数错误: " + err.Error(),
+		})
+		return
+	}
+	if req.ModelName == "" {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "model_name 不能为空",
+		})
+		return
+	}
+	if err := model.SetModelTypesAndTags(req.ModelName, req.ListTypes, req.ListTags); err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "更新类型/标签失败: " + err.Error(),
+		})
+		return
+	}
+	model.RefreshPricingCache()
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "更新成功",
 	})
 }

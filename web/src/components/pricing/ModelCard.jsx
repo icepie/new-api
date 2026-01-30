@@ -17,10 +17,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Copy, Check } from 'lucide-react';
+import { Toast } from '@douyinfe/semi-ui';
 import ProviderIcon from './ProviderIcon';
 import { calculateModelPrice } from '../../helpers';
-import { getFeatureTagsFromDevData, getTagTranslation } from './modelTags';
+import { getTagTranslation } from './modelTags';
 
 // 为不同的 tag 生成不同的渐变颜色 - 使用更协调的配色方案
 const getTagColor = (tag) => {
@@ -297,12 +299,29 @@ export default function ModelCard({
   displayPrice,
   currency = 'USD',
   tokenUnit = 'M',
-  modelsDevData = null, // models.dev 的数据
   savings = null, // 节省金额
-  officialPrice = null, // 官方价格（用于测试）
+  officialPrice = null, // 官方价格（来自 API 的官方价格字段）
 }) {
-  // 从 models.dev 数据中获取 tags（不使用之前的 API tags）
-  const parsedTags = getFeatureTagsFromDevData(name, modelsDevData);
+  const [copied, setCopied] = useState(false);
+  const parsedTags = model?.list_tags ? model.list_tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
+
+  const nameToCopy = model?.name || model?.model_name || name || '';
+  const handleCopyModelName = async (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!nameToCopy) return;
+    try {
+      await navigator.clipboard.writeText(nameToCopy);
+      setCopied(true);
+      Toast.success(locale === 'zh' ? '已复制模型名称' : 'Model name copied');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      Toast.error(locale === 'zh' ? '复制失败' : 'Copy failed');
+    }
+  };
 
   // 翻译 tags
   const translatedTags = parsedTags.map(tag => getTagTranslation(tag, locale));
@@ -467,9 +486,25 @@ export default function ModelCard({
         };
 
         const officialInputPrice = formatOfficialPrice(officialPrice.input);
-        const officialOutputPrice = priceData && priceData.isPerToken 
-          ? formatOfficialPrice(officialPrice.output) 
+        const officialOutputPrice = priceData && priceData.isPerToken
+          ? formatOfficialPrice(officialPrice.output)
           : null;
+
+        // 涨价或价格不变时不显示折扣和官方价格，仅比官方便宜时显示
+        if (savingsAmount == null || savingsPercent == null || savingsAmount <= 0 || savingsPercent <= 0) {
+          return null;
+        }
+
+        const rawDiscount = (1 - savingsPercent / 100) * 10;
+        const rounded = Math.round(rawDiscount * 100) / 100;
+        const discount = rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(2).replace(/\.?0+$/, '');
+        const officialTextStyle = {
+          color: 'rgba(128, 128, 128, 0.95)',
+          fontSize: '12px',
+          lineHeight: 1.4,
+          whiteSpace: 'nowrap',
+        };
+        const strikethroughStyle = { textDecoration: 'line-through' };
 
         return (
           <div style={{
@@ -483,53 +518,48 @@ export default function ModelCard({
             alignItems: 'flex-end',
             gap: '4px'
           }}>
-            {savingsAmount !== null && savingsPercent !== null && savingsAmount > 0 && (() => {
-              // 只有当价格比官方价格便宜时才显示折扣和官方价格
-              // 计算折扣：折扣 = (1 - 节约百分比/100) * 10
-              const discount = ((1 - savingsPercent / 100) * 10).toFixed(1);
-
-              return (
-                <>
-                  <div style={{
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    whiteSpace: 'nowrap',
-                    lineHeight: '1.4'
-                  }}>
-                    {locale === 'zh' ? (
-                      <>≈官方 {discount} 折</>
-                    ) : (
-                      <>≈{discount}0% of official</>
-                    )}
-                  </div>
-                  {officialInputPrice && (
-                    <div style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
-                      padding: '3px 6px',
-                      borderRadius: '4px',
-                      fontSize: '10px',
-                      fontWeight: 'normal',
-                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                      whiteSpace: 'nowrap',
-                      lineHeight: '1.3',
-                      backdropFilter: 'blur(4px)'
-                    }}>
-                      {locale === 'zh' ? (
-                        <>官方: {officialInputPrice}{priceData && priceData.isPerToken ? ` /${tokenUnit}` : ''}</>
-                      ) : (
-                        <>Official: {officialInputPrice}{priceData && priceData.isPerToken ? ` /${tokenUnit}` : ''}</>
-                      )}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+            <div style={{
+              backgroundColor: '#10b981',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+              whiteSpace: 'nowrap',
+              lineHeight: '1.4'
+            }}>
+              {locale === 'zh' ? (
+                <>≈官方 {discount} 折</>
+              ) : (
+                <>≈{discount}0% of official</>
+              )}
+            </div>
+            {officialInputPrice && (
+              <div style={officialTextStyle}>
+                {priceData && priceData.isPerToken ? (
+                  locale === 'zh' ? (
+                    <>
+                      输入: <span style={strikethroughStyle}>{officialInputPrice}</span> /{tokenUnit}
+                      {' '}
+                      输出: <span style={strikethroughStyle}>{officialOutputPrice || '-'}</span> /{tokenUnit}
+                    </>
+                  ) : (
+                    <>
+                      In: <span style={strikethroughStyle}>{officialInputPrice}</span> /{tokenUnit}
+                      {' '}
+                      Out: <span style={strikethroughStyle}>{officialOutputPrice || '-'}</span> /{tokenUnit}
+                    </>
+                  )
+                ) : (
+                  locale === 'zh' ? (
+                    <>单价: <span style={strikethroughStyle}>{officialInputPrice}</span></>
+                  ) : (
+                    <>Price: <span style={strikethroughStyle}>{officialInputPrice}</span></>
+                  )
+                )}
+              </div>
+            )}
           </div>
         );
       })()}
@@ -557,26 +587,43 @@ export default function ModelCard({
         </div>
       )}
 
-      {/* Model Name - 现在显示在顶部，使用主文字样式（之前厂商的样式） */}
-      <h3 
-        className="pricing-model-card-provider-name" 
-        style={{ 
-          marginTop: '12px', 
-          marginBottom: '4px',
-          fontSize: '1.125rem',
-          whiteSpace: 'normal',
-          wordBreak: 'break-word',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          lineHeight: '1.4',
-          minHeight: '2.8rem'
-        }}
-      >
-        {name}
-      </h3>
+      {/* Model Name - 复制按钮紧挨名称右侧，避免与右上角折扣重叠 */}
+      <div className="pricing-detail-model-name-wrapper" style={{ marginTop: '12px', marginBottom: '4px', gap: '6px', alignItems: 'flex-start' }}>
+        <h3 
+          className="pricing-model-card-provider-name" 
+          style={{ 
+            margin: 0,
+            flex: '0 1 auto',
+            maxWidth: '100%',
+            minWidth: 0,
+            fontSize: '1.125rem',
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            lineHeight: '1.4',
+            minHeight: '2.8rem'
+          }}
+        >
+          {name}
+        </h3>
+        <button
+          type="button"
+          className="pricing-detail-copy-button"
+          onClick={handleCopyModelName}
+          title={locale === 'zh' ? '复制模型名称' : 'Copy model name'}
+          style={{ pointerEvents: 'auto' }}
+        >
+          {copied ? (
+            <Check className="pricing-detail-copy-icon" size={16} />
+          ) : (
+            <Copy className="pricing-detail-copy-icon" size={16} />
+          )}
+        </button>
+      </div>
 
       {/* Provider Logo and Name - 现在显示在模型名称下方，使用次要文字样式（之前模型名称的样式） */}
       <div className="pricing-model-card-provider" style={{ marginBottom: '8px' }}>

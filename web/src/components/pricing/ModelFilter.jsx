@@ -20,13 +20,12 @@ For commercial licensing, please contact support@quantumnous.com
 import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Filter, X } from 'lucide-react';
 import ProviderIcon from './ProviderIcon';
-import { getFeatureTagsFromDevData, getTagTranslation } from './modelTags';
+import { getTagTranslation } from './modelTags';
 
 export default function ModelFilter({
   locale = 'zh',
   onFilterChange,
   allModels = [],
-  modelsDevData = null,
 }) {
   const [isOpen, setIsOpen] = useState(() => {
     // 移动端默认隐藏，PC端默认显示
@@ -111,27 +110,20 @@ export default function ModelFilter({
     };
   }, [allModels]);
 
-  // 从所有模型中收集唯一的特性 tags（从 models.dev 数据中）
-  // 使用 useMemo 缓存结果，避免在渲染时重复计算
+  // 从所有模型中收集唯一的特性 tags（来自 API 的 list_tags，不自动推断）
   const allTags = useMemo(() => {
     const tagSet = new Set();
     allModels.forEach((model) => {
-      const name = model.model_name || model.name;
-      if (name) {
-        // 从 models.dev 数据中获取特性 tags
-        const featureTags = getFeatureTagsFromDevData(name, modelsDevData);
-        featureTags.forEach(tag => tagSet.add(tag));
+      const tagsStr = model.list_tags;
+      if (tagsStr) {
+        tagsStr.split(',').map((t) => t.trim()).filter(Boolean).forEach((tag) => tagSet.add(tag));
       }
     });
-    // 转换为翻译后的标签并排序
     const translatedTags = Array.from(tagSet)
-      .map(tag => ({
-        key: tag,
-        label: getTagTranslation(tag, locale)
-      }))
+      .map(tag => ({ key: tag, label: getTagTranslation(tag, locale) }))
       .sort((a, b) => a.label.localeCompare(b.label));
     return translatedTags;
-  }, [allModels, modelsDevData, locale]);
+  }, [allModels, locale]);
 
   const translations = {
     zh: {
