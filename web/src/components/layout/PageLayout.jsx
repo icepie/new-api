@@ -106,7 +106,7 @@ const PageLayout = () => {
     loadStatus().catch(console.error);
     let systemName = getSystemName();
     if (systemName) {
-      document.title = systemName;
+      document.title = systemName === 'NiceRouter' ? 'NiceRouter EE' : systemName;
     }
     let logo = getLogo();
     if (logo) {
