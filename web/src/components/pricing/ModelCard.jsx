@@ -587,13 +587,14 @@ export default function ModelCard({
         </div>
       )}
 
-      {/* Model Name - 紧挨名称旁，复制不穿透到卡片点击 */}
-      <div className="pricing-detail-model-name-wrapper" style={{ marginTop: '12px', marginBottom: '4px', gap: '6px' }}>
+      {/* Model Name - 复制按钮紧挨名称右侧，避免与右上角折扣重叠 */}
+      <div className="pricing-detail-model-name-wrapper" style={{ marginTop: '12px', marginBottom: '4px', gap: '6px', alignItems: 'flex-start' }}>
         <h3 
           className="pricing-model-card-provider-name" 
           style={{ 
             margin: 0,
-            flex: 1,
+            flex: '0 1 auto',
+            maxWidth: '100%',
             minWidth: 0,
             fontSize: '1.125rem',
             whiteSpace: 'normal',
