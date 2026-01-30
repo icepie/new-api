@@ -20,7 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React from 'react';
 import ProviderIcon from './ProviderIcon';
 import { calculateModelPrice } from '../../helpers';
-import { getFeatureTagsFromDevData, getTagTranslation } from './modelTags';
+import { getTagTranslation } from './modelTags';
 
 // 为不同的 tag 生成不同的渐变颜色 - 使用更协调的配色方案
 const getTagColor = (tag) => {
@@ -297,12 +297,10 @@ export default function ModelCard({
   displayPrice,
   currency = 'USD',
   tokenUnit = 'M',
-  modelsDevData = null, // models.dev 的数据
   savings = null, // 节省金额
-  officialPrice = null, // 官方价格（用于测试）
+  officialPrice = null, // 官方价格（来自 API 的官方价格字段）
 }) {
-  // 从 models.dev 数据中获取 tags（不使用之前的 API tags）
-  const parsedTags = getFeatureTagsFromDevData(name, modelsDevData);
+  const parsedTags = model?.tags ? model.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
 
   // 翻译 tags
   const translatedTags = parsedTags.map(tag => getTagTranslation(tag, locale));
@@ -471,6 +469,12 @@ export default function ModelCard({
           ? formatOfficialPrice(officialPrice.output) 
           : null;
 
+        // 涨价或价格不变时不显示折扣和官方价格，仅比官方便宜时显示
+        if (savingsAmount == null || savingsPercent == null || savingsAmount <= 0 || savingsPercent <= 0) {
+          return null;
+        }
+
+        const discount = ((1 - savingsPercent / 100) * 10).toFixed(1);
         return (
           <div style={{
             position: 'absolute',
@@ -483,52 +487,43 @@ export default function ModelCard({
             alignItems: 'flex-end',
             gap: '4px'
           }}>
-            {savingsAmount !== null && savingsPercent !== null && (() => {
-              // 计算折扣：折扣 = (1 - 节约百分比/100) * 10
-              const discount = ((1 - savingsPercent / 100) * 10).toFixed(1);
-
-              return (
-                <>
-                  <div style={{
-                    backgroundColor: savingsAmount >= 0 ? '#10b981' : '#ef4444',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    whiteSpace: 'nowrap',
-                    lineHeight: '1.4'
-                  }}>
-                    {locale === 'zh' ? (
-                      <>≈官方 {discount} 折</>
-                    ) : (
-                      <>≈{discount}0% of official</>
-                    )}
-                  </div>
-                  {officialInputPrice && (
-                    <div style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
-                      padding: '3px 6px',
-                      borderRadius: '4px',
-                      fontSize: '10px',
-                      fontWeight: 'normal',
-                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                      whiteSpace: 'nowrap',
-                      lineHeight: '1.3',
-                      backdropFilter: 'blur(4px)'
-                    }}>
-                      {locale === 'zh' ? (
-                        <>官方: {officialInputPrice}{priceData && priceData.isPerToken ? ` /${tokenUnit}` : ''}</>
-                      ) : (
-                        <>Official: {officialInputPrice}{priceData && priceData.isPerToken ? ` /${tokenUnit}` : ''}</>
-                      )}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+            <div style={{
+              backgroundColor: '#10b981',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+              whiteSpace: 'nowrap',
+              lineHeight: '1.4'
+            }}>
+              {locale === 'zh' ? (
+                <>≈官方 {discount} 折</>
+              ) : (
+                <>≈{discount}0% of official</>
+              )}
+            </div>
+            {officialInputPrice && (
+              <div style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                color: 'white',
+                padding: '3px 6px',
+                borderRadius: '4px',
+                fontSize: '10px',
+                fontWeight: 'normal',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                whiteSpace: 'nowrap',
+                lineHeight: '1.3',
+                backdropFilter: 'blur(4px)'
+              }}>
+                {locale === 'zh' ? (
+                  <>官方: {officialInputPrice}{priceData && priceData.isPerToken ? ` /${tokenUnit}` : ''}</>
+                ) : (
+                  <>Official: {officialInputPrice}{priceData && priceData.isPerToken ? ` /${tokenUnit}` : ''}</>
+                )}
+              </div>
+            )}
           </div>
         );
       })()}

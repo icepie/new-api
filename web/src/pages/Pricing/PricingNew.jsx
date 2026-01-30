@@ -107,19 +107,15 @@ const filterModel = (model, filters, modelsDevData = null) => {
     if (!hasMatchingType) return false;
   }
 
-  // 标签筛选（支持特性 tags）
+  // 标签筛选（支持特性 tags：无 models.dev 时从 model.tags 解析）
   if (filters.tags && filters.tags.length > 0) {
-    // 从 models.dev 数据中获取特性 tags
-    const featureTags = getFeatureTagsFromDevData(name, modelsDevData);
-    
-    // 将筛选器中的标签转换为原始 tag key（支持中英文）
+    const featureTags = modelsDevData
+      ? getFeatureTagsFromDevData(name, modelsDevData)
+      : (model.tags ? model.tags.split(',').map((t) => t.trim()).filter(Boolean) : []);
     const filterTagKeys = filters.tags.map(tag => getTagKeyFromTranslation(tag));
-    
-    // 检查是否有匹配的 tag
     const hasMatchingTag = filterTagKeys.some((filterTag) =>
       featureTags.includes(filterTag)
     );
-    
     if (!hasMatchingTag) return false;
   }
 
@@ -159,7 +155,6 @@ export default function PricingNew() {
   const [searchValue, setSearchValue] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [modelsDevData, setModelsDevData] = useState(null);
   const [filters, setFilters] = useState({
     types: [],
     tags: [],
@@ -306,194 +301,28 @@ export default function PricingNew() {
     }
   };
 
-  // 加载 models.dev 数据
-  const loadModelsDevData = async () => {
-    try {
-      const url = '/api/models/dev';
-      const res = await API.get(url);
-      if (res.data.success && res.data.data) {
-        setModelsDevData(res.data.data);
-        console.log('Models.dev data loaded:', Object.keys(res.data.data).length, 'vendors');
-      } else {
-        console.warn('Models.dev data load failed:', res.data);
-      }
-    } catch (error) {
-      console.error('Failed to load models.dev data:', error);
-      // 不显示错误，因为这是可选功能
-    }
-  };
-
   useEffect(() => {
     loadPricing();
-    loadModelsDevData();
   }, []);
 
-  /**
-   * 标准化模型名称（生成多种可能的匹配 key）
-   * 参考 pricing-manager 的 normalizeModelName 逻辑
-   */
-  const normalizeModelName = (name) => {
-    if (!name) return [];
-    
-    const lower = name.toLowerCase();
-    const variants = [lower];
-    
-    // 去掉日期后缀：gpt-4o-2024-05-13 -> gpt-4o
-    const noDate = lower.replace(/-\d{4}-\d{2}-\d{2}$/, '');
-    if (noDate !== lower) variants.push(noDate);
-    
-    // 去掉 -preview, -latest 等后缀
-    const noSuffix = lower
-      .replace(/-preview$/, '')
-      .replace(/-latest$/, '')
-      .replace(/@\d+$/, '')
-      .replace(/-instruct$/, '')
-      .replace(/-chat$/, '');
-    if (noSuffix !== lower) variants.push(noSuffix);
-    
-    // 去掉路径前缀：Qwen/Qwen2.5-72B-Instruct -> qwen2.5-72b-instruct
-    if (lower.includes('/')) {
-      const afterSlash = lower.split('/').pop();
-      variants.push(afterSlash);
-      // 也去掉 -instruct 等
-      const afterSlashClean = afterSlash.replace(/-instruct$/, '').replace(/-chat$/, '');
-      if (afterSlashClean !== afterSlash) variants.push(afterSlashClean);
+  // 从定价 API 返回的官方价格字段构造 { input, output }，供 ModelCard 折扣显示
+  // 按次付费用 official_price_unit；按量用 official_input_price / official_output_price
+  const getOfficialPriceFromModel = (model) => {
+    if (!model) return null;
+    const unit = model.official_price_unit;
+    const inputPrice = model.official_input_price;
+    const outputPrice = model.official_output_price;
+    const hasUnit = typeof unit === 'number' && !isNaN(unit) && unit > 0;
+    const hasInput = typeof inputPrice === 'number' && !isNaN(inputPrice);
+    const hasOutput = typeof outputPrice === 'number' && !isNaN(outputPrice);
+    if (model.quota_type === 1) {
+      if (!hasUnit) return null;
+      return { input: unit, output: unit };
     }
-    
-    // 替换分隔符：claude-3.5-sonnet <-> claude-3-5-sonnet
-    const dotToHyphen = lower.replace(/\./g, '-');
-    if (dotToHyphen !== lower) variants.push(dotToHyphen);
-    const hyphenToDot = lower.replace(/-(\d+)-/g, '.$1.');
-    if (hyphenToDot !== lower) variants.push(hyphenToDot);
-    
-    // 去掉 Pro/ 前缀
-    const noProPrefix = lower.replace(/^pro\//, '');
-    if (noProPrefix !== lower) {
-      variants.push(noProPrefix);
-      // 对去掉前缀的也应用其他规则
-      const noProNoDate = noProPrefix.replace(/-\d{4}-\d{2}-\d{2}$/, '');
-      if (noProNoDate !== noProPrefix) variants.push(noProNoDate);
-      const noProNoSuffix = noProPrefix
-        .replace(/-preview$/, '')
-        .replace(/-latest$/, '')
-        .replace(/@\d+$/, '')
-        .replace(/-instruct$/, '')
-        .replace(/-chat$/, '');
-      if (noProNoSuffix !== noProPrefix) variants.push(noProNoSuffix);
-    }
-    
-    return [...new Set(variants)]; // 去重
-  };
-
-  // 构建模型价格映射表（仅使用 model_id 精确匹配）
-  // 匹配方式：与 pricing-manager 项目保持一致
-  // - 仅使用 model.id 的原始值（小写）作为 key
-  // - 不使用变体和模糊匹配
-  // 这个映射表会在 modelsDevData 加载后构建一次
-  const buildModelPriceMap = useMemo(() => {
-    if (!modelsDevData) return new Map();
-    
-    const map = new Map();
-    
-    // 遍历所有供应商
-    for (const vendorId in modelsDevData) {
-      const vendor = modelsDevData[vendorId];
-      if (!vendor || !vendor.models) continue;
-      
-      // 遍历供应商的所有模型
-      for (const [modelKey, model] of Object.entries(vendor.models)) {
-        if (!model.cost || (model.cost.input === 0 && model.cost.output === 0)) {
-          continue; // 跳过没有价格的模型
-        }
-        
-        // 仅使用 model.id 的原始值（小写）进行精确匹配
-        // 与 pricing-manager 的 getOfficialPriceMap 逻辑一致
-        const modelId = model.id || modelKey;
-        const modelIdLower = modelId.toLowerCase();
-        
-        // 只在没有该 key 时添加（保留第一个匹配的）
-        if (!map.has(modelIdLower)) {
-          map.set(modelIdLower, model);
-        }
-      }
-    }
-    
-    return map;
-  }, [modelsDevData]);
-
-  // 辅助函数：在 models.dev 数据中查找匹配的模型
-  // 匹配方式：与 pricing-manager 项目的 findOfficialPrice 逻辑完全一致
-  // - 仅使用 model_id 的原始值（小写）进行精确匹配
-  // - 不使用变体和模糊匹配
-  const findModelInDevData = (modelName, devData) => {
-    if (!devData || !modelName) return null;
-    
-    // 仅使用 model_id 的原始值进行精确匹配
-    // 与 pricing-manager 的 findOfficialPrice 逻辑一致
-    const modelIdLower = modelName.toLowerCase();
-    if (buildModelPriceMap.has(modelIdLower)) {
-      const matched = buildModelPriceMap.get(modelIdLower);
-      // 调试日志
-      if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview')) {
-        console.log(`[Match] Exact model_id match for "${modelName}": model_id="${matched.id || 'N/A'}", model_name="${matched.name || 'N/A'}"`);
-      }
-      return matched;
-    }
-    
-    // 如果没有匹配到，返回 null
-    if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview')) {
-      console.log(`[Match] No match found for "${modelName}"`);
-    }
-    
-    return null;
-  };
-
-  // 获取官方价格（从 models.dev 数据）
-  const getOfficialPrice = (model, modelsDevData) => {
-    if (!modelsDevData || !model) {
-      return null;
-    }
-    
-    const modelName = model.model_name || model.name;
-    if (!modelName) return null;
-
-    // 使用辅助函数查找匹配的模型
-    const modelData = findModelInDevData(modelName, modelsDevData);
-    if (!modelData) {
-      return null;
-    }
-    
-    const devCost = modelData.cost;
-    
-    if (!devCost || (devCost.input === 0 && devCost.output === 0)) {
-      return null;
-    }
-
-    // models.dev 的 cost.input 和 cost.output 已经是每百万 token 的美元价格
-    // 不需要任何单位转换
-    const inputPrice = typeof devCost.input === 'number' ? devCost.input : parseFloat(devCost.input) || 0;
-    const outputPrice = typeof devCost.output === 'number' ? devCost.output : parseFloat(devCost.output) || 0;
-
-    // 调试日志（开发环境或特定模型）
-    if (process.env.NODE_ENV === 'development' || modelName.includes('gpt-4-1106-preview') || modelName.includes('gpt-4-0613')) {
-      console.log(`[Official Price] Model: ${modelName}`, {
-        matchedModelId: modelData.id || 'N/A',
-        matchedModelName: modelData.name || 'N/A',
-        matchedModelKey: Object.keys(modelsDevData).find(vendorId => {
-          const vendor = modelsDevData[vendorId];
-          if (!vendor || !vendor.models) return false;
-          return Object.entries(vendor.models).some(([key, model]) => model === modelData);
-        }) || 'N/A',
-        inputPrice,
-        outputPrice,
-        rawCost: devCost,
-        queryVariants: normalizeModelName(modelName)
-      });
-    }
-
+    if (!hasInput && !hasOutput) return null;
     return {
-      input: inputPrice,
-      output: outputPrice,
+      input: hasInput ? inputPrice : 0,
+      output: hasOutput ? outputPrice : 0,
     };
   };
 
@@ -577,11 +406,8 @@ export default function PricingNew() {
       ...filters,
       searchQuery: searchValue,
     };
-    return models.filter((model) => filterModel(model, currentFilters, modelsDevData));
-  }, [models, filters, searchValue, modelsDevData]);
-
-  // 当 modelsDevData 加载完成后，重新计算所有模型的 savings
-  // 这确保在数据加载后能正确显示节省金额
+    return models.filter((model) => filterModel(model, currentFilters, null));
+  }, [models, filters, searchValue]);
 
   // 分页后的模型列表
   const paginatedModels = useMemo(() => {
@@ -621,7 +447,7 @@ export default function PricingNew() {
             {loading ? (
               <ModelFilterSkeleton />
             ) : (
-              <ModelFilter locale={locale} allModels={models} onFilterChange={setFilters} modelsDevData={modelsDevData} />
+              <ModelFilter locale={locale} allModels={models} onFilterChange={setFilters} />
             )}
             <div className="pricing-page-main">
               {/* Search Box and Show Filters Button */}
@@ -704,8 +530,7 @@ export default function PricingNew() {
                       output = model.model_price || 0;
                     }
 
-                    // 获取官方价格（用于测试）
-                    const officialPrice = modelsDevData ? getOfficialPrice(model, modelsDevData) : null;
+                    const officialPrice = getOfficialPriceFromModel(model);
 
                     return (
                       <div key={model.key || model.model_name || index} className="pricing-page-model-card-item">
@@ -727,7 +552,6 @@ export default function PricingNew() {
                           displayPrice={displayPrice}
                           currency={currency}
                           tokenUnit={tokenUnit}
-                          modelsDevData={modelsDevData}
                           savings={null}
                           officialPrice={officialPrice}
                         />
@@ -788,7 +612,6 @@ export default function PricingNew() {
         endpointMap={endpointMap}
         usableGroup={usableGroup}
         autoGroups={autoGroups}
-        modelsDevData={modelsDevData}
       />
 
       {/* Footer Section */}

@@ -28,6 +28,10 @@ type Pricing struct {
 	EnableGroup            []string                `json:"enable_groups"`
 	SupportedEndpointTypes []constant.EndpointType `json:"supported_endpoint_types"`
 	IsListed               bool                    `json:"is_listed"`
+	// 官方价格（手动维护，用于折扣计算）
+	OfficialPriceUnit   float64 `json:"official_price_unit,omitempty"`   // 官方单价（按次付费，美元/次）
+	OfficialInputPrice  float64 `json:"official_input_price,omitempty"`   // 官方输入价格（按量，美元/百万 token）
+	OfficialOutputPrice float64 `json:"official_output_price,omitempty"`  // 官方输出价格（按量，美元/百万 token）
 }
 
 type PricingVendor struct {
@@ -272,11 +276,12 @@ func updatePricing() {
 		}
 	}
 
-	// 获取所有模型的上架状态
-	modelListingStatusMap, err := GetAllModelListingStatus()
+	// 获取所有模型的上架状态与官方价格
+	modelListingStatusMap, officialPriceMap, err := GetAllModelListingWithOfficialPrices()
 	if err != nil {
-		common.SysLog(fmt.Sprintf("GetAllModelListingStatus error: %v", err))
+		common.SysLog(fmt.Sprintf("GetAllModelListingWithOfficialPrices error: %v", err))
 		modelListingStatusMap = make(map[string]bool)
+		officialPriceMap = make(map[string]ModelOfficialPrice)
 	}
 
 	pricingMap = make([]Pricing, 0)
@@ -314,6 +319,19 @@ func updatePricing() {
 			pricing.IsListed = isListed
 		} else {
 			pricing.IsListed = true
+		}
+
+		// 设置官方价格（来自 model_listings）
+		if off, ok := officialPriceMap[model]; ok {
+			if off.Unit != nil {
+				pricing.OfficialPriceUnit = *off.Unit
+			}
+			if off.Input != nil {
+				pricing.OfficialInputPrice = *off.Input
+			}
+			if off.Output != nil {
+				pricing.OfficialOutputPrice = *off.Output
+			}
 		}
 
 		pricingMap = append(pricingMap, pricing)
