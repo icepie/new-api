@@ -77,11 +77,13 @@ const getModelType = (name) => {
   return types.length > 0 ? types : ['dialogue'];
 };
 
-// 筛选模型函数
+// 筛选模型函数（类型优先用 API 的 list_types，否则从名称推断；标签仅用 list_tags，不自动推断）
 const filterModel = (model, filters, modelsDevData = null) => {
   const name = model.model_name || model.name;
   const provider = model.vendor_name || 'Unknown';
-  const types = getModelType(name);
+  const types = (model.list_types && model.list_types.trim())
+    ? model.list_types.split(',').map((t) => t.trim()).filter(Boolean)
+    : getModelType(name);
 
   // 上架状态筛选 - 只显示已上架的模型
   if (model.is_listed === false) {
@@ -107,11 +109,11 @@ const filterModel = (model, filters, modelsDevData = null) => {
     if (!hasMatchingType) return false;
   }
 
-  // 标签筛选（支持特性 tags：无 models.dev 时从 model.tags 解析）
+  // 标签筛选（仅用 API 的 list_tags，不自动推断）
   if (filters.tags && filters.tags.length > 0) {
-    const featureTags = modelsDevData
-      ? getFeatureTagsFromDevData(name, modelsDevData)
-      : (model.tags ? model.tags.split(',').map((t) => t.trim()).filter(Boolean) : []);
+    const featureTags = (model.list_tags && model.list_tags.trim())
+      ? model.list_tags.split(',').map((t) => t.trim()).filter(Boolean)
+      : [];
     const filterTagKeys = filters.tags.map(tag => getTagKeyFromTranslation(tag));
     const hasMatchingTag = filterTagKeys.some((filterTag) =>
       featureTags.includes(filterTag)

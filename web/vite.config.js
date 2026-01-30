@@ -101,7 +101,7 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/u': {
-        target: 'http://localhost:3000',
+        target: 'https://nicerouter.com',
         changeOrigin: true,
       },
     },

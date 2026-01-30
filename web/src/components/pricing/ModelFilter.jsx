@@ -110,11 +110,11 @@ export default function ModelFilter({
     };
   }, [allModels]);
 
-  // 从所有模型中收集唯一的特性 tags（来自 API 的 model.tags）
+  // 从所有模型中收集唯一的特性 tags（来自 API 的 list_tags，不自动推断）
   const allTags = useMemo(() => {
     const tagSet = new Set();
     allModels.forEach((model) => {
-      const tagsStr = model.tags;
+      const tagsStr = model.list_tags;
       if (tagsStr) {
         tagsStr.split(',').map((t) => t.trim()).filter(Boolean).forEach((tag) => tagSet.add(tag));
       }

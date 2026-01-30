@@ -172,3 +172,38 @@ func UpdateModelOfficialPrice(c *gin.Context) {
 		"message": "更新官方价格成功",
 	})
 }
+
+// UpdateModelListingMeta 更新单个模型的类型与标签（用于定价页筛选）
+func UpdateModelListingMeta(c *gin.Context) {
+	var req struct {
+		ModelName string  `json:"model_name" binding:"required"`
+		ListTypes *string `json:"list_types"` // 逗号分隔，如 dialogue,imageGen
+		ListTags  *string `json:"list_tags"`   // 逗号分隔
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "请求参数错误: " + err.Error(),
+		})
+		return
+	}
+	if req.ModelName == "" {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "model_name 不能为空",
+		})
+		return
+	}
+	if err := model.SetModelTypesAndTags(req.ModelName, req.ListTypes, req.ListTags); err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "更新类型/标签失败: " + err.Error(),
+		})
+		return
+	}
+	model.RefreshPricingCache()
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "更新成功",
+	})
+}

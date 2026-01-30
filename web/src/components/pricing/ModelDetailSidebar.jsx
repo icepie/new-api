@@ -403,11 +403,11 @@ export default function ModelDetailSidebar({
   const providerDisplayName = getProviderDisplayName(currentModelName, model.vendor_name);
   const providerIconName = getProviderIconName(currentModelName);
   
-  // 特性 tags 来自 API 的 model.tags
-  const featureTags = model.tags ? model.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
+  // 特性 tags 来自 API 的 list_tags，不自动推断
+  const featureTags = model.list_tags ? model.list_tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
   const translatedFeatureTags = featureTags.map(tag => getTagTranslation(tag, locale));
 
-  const { billingTag } = getTags(modelName, model.tags, model.quota_type, locale);
+  const { billingTag } = getTags(modelName, model.list_tags || model.tags, model.quota_type, locale);
 
   const displayProviderName = providerDisplayName === 'Unknown'
     ? currentModelName
