@@ -46,6 +46,16 @@ export function isRoot() {
   return user.role >= 100;
 }
 
+/** 是否属于某组织（含组织管理员与普通成员） */
+export function isOrgUser(user) {
+  return user && typeof user.org_id === 'number' && user.org_id > 0;
+}
+
+/** 是否为组织管理员：role=10 且 org_id>0 */
+export function isOrgAdmin(user) {
+  return user && user.role === 10 && isOrgUser(user);
+}
+
 export function getSystemName() {
   let system_name = localStorage.getItem('system_name');
   if (!system_name) return 'NiceRouter';

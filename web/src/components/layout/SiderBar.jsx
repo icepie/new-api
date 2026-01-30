@@ -25,7 +25,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useSidebarCollapsed } from '../../hooks/common/useSidebarCollapsed';
 import { useSidebar } from '../../hooks/common/useSidebar';
 import { useMinimumLoadingTime } from '../../hooks/common/useMinimumLoadingTime';
-import { isAdmin, isRoot, showError } from '../../helpers';
+import { isAdmin, isRoot, isOrgUser, isOrgAdmin, showError } from '../../helpers';
 import SkeletonWrapper from './components/SkeletonWrapper';
 import { UserContext } from '../../context/User';
 
@@ -126,16 +126,12 @@ const SiderBar = ({ onNavigate = () => {} }) => {
   ]);
 
   const financeItems = useMemo(() => {
-    // 从 UserContext 获取用户信息
     const user = userState?.user;
-
-    // 判断是否属于组织（不论是管理员还是普通用户）
-    const isOrgUser = user && user.org_id > 0;
+    const orgUser = isOrgUser(user);
 
     const items = [
-      // 组织用户显示"计费管理"，非组织用户显示"钱包管理"
       {
-        text: isOrgUser ? t('计费管理') : t('钱包管理'),
+        text: orgUser ? t('计费管理') : t('钱包管理'),
         itemKey: 'topup',
         to: '/topup',
       },
@@ -156,11 +152,8 @@ const SiderBar = ({ onNavigate = () => {} }) => {
   }, [userState?.user, t, isModuleVisible]);
 
   const adminItems = useMemo(() => {
-    // 从 UserContext 获取用户信息
     const user = userState?.user;
-
-    // 判断是否是组织管理员（role=10且org_id>0）
-    const isOrgAdmin = user && user.role === 10 && user.org_id > 0;
+    const orgAdmin = isOrgAdmin(user);
 
     const items = [
       {
@@ -174,36 +167,31 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         text: t('模型管理'),
         itemKey: 'models',
         to: '/console/models',
-        // 组织管理员不可见
-        className: isAdmin() && !isOrgAdmin ? '' : 'tableHiddle',
+        className: isAdmin() && !orgAdmin ? '' : 'tableHiddle',
       },
       {
         text: t('模型部署'),
         itemKey: 'deployment',
         to: '/deployment',
-        // 组织管理员不可见
-        className: isAdmin() && !isOrgAdmin ? '' : 'tableHiddle',
+        className: isAdmin() && !orgAdmin ? '' : 'tableHiddle',
       },
       {
         text: t('兑换码管理'),
         itemKey: 'redemption',
         to: '/redemption',
-        // 组织管理员不可见
-        className: isAdmin() && !isOrgAdmin ? '' : 'tableHiddle',
+        className: isAdmin() && !orgAdmin ? '' : 'tableHiddle',
       },
       {
         text: t('用户管理'),
         itemKey: 'user',
         to: '/user',
-        // 所有管理员（包括组织管理员）都可见
         className: isAdmin() ? '' : 'tableHiddle',
       },
       {
         text: t('组织管理'),
         itemKey: 'organization',
         to: '/console/organization',
-        // 组织管理只对超级管理员和系统管理员显示，组织管理员不显示
-        className: isAdmin() && !isOrgAdmin ? '' : 'tableHiddle',
+        className: isAdmin() && !orgAdmin ? '' : 'tableHiddle',
       },
       {
         text: t('系统设置'),
@@ -426,7 +414,7 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         type='sidebar'
         className=''
         collapsed={collapsed}
-        showAdmin={isAdmin()}
+        showAdmin={isAdmin() && !isOrgUser(userState?.user)}
       >
         <Nav
           className='sidebar-nav'
@@ -504,7 +492,7 @@ const SiderBar = ({ onNavigate = () => {} }) => {
           )}
 
           {/* 管理员区域 - 只在管理员时显示且配置允许时显示 */}
-          {isAdmin() && hasSectionVisibleModules('admin') && (
+          {isAdmin() && !isOrgUser(userState?.user) && hasSectionVisibleModules('admin') && (
             <>
               <Divider className='sidebar-divider' />
               <div>
