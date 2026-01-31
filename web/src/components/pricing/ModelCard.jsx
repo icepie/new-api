@@ -414,6 +414,82 @@ export default function ModelCard({
     );
   };
 
+  // 官方价/折扣块：仅比官方便宜时显示，与模型名同一行 flex 布局避免重叠
+  let officialBlockContent = null;
+  if (officialPrice) {
+    let savingsAmount = null;
+    let savingsPercent = null;
+    if (priceData && priceData.isPerToken) {
+      let currentInputUSD = priceData.inputPriceUSD;
+      if (currentInputUSD === undefined || currentInputUSD === null) {
+        currentInputUSD = input || 0;
+        if (typeof priceData.inputPrice === 'string') {
+          const parsed = parseFloat(priceData.inputPrice.replace('$', '').replace(freeLabel, '0'));
+          if (!isNaN(parsed)) {
+            currentInputUSD = priceData.unitLabel === 'K' ? parsed * 1000 : parsed;
+          }
+        }
+      }
+      let currentOutput = output || 0;
+      if (typeof priceData.completionPrice === 'string' || typeof priceData.outputPrice === 'string') {
+        const parsed = parseFloat((priceData.completionPrice || priceData.outputPrice || '').replace('$', '').replace(freeLabel, '0'));
+        if (!isNaN(parsed)) {
+          currentOutput = priceData.unitLabel === 'K' ? parsed * 1000 : parsed;
+        }
+      }
+      const inputSavings = officialPrice.input - currentInputUSD;
+      if (officialPrice.input > 0) {
+        savingsAmount = Math.round(inputSavings * 100) / 100;
+        savingsPercent = (inputSavings / officialPrice.input) * 100;
+      }
+    } else {
+      let currentPrice = output || input || 0;
+      if (typeof priceData?.price === 'string') {
+        const parsed = parseFloat(priceData.price.replace('$', '').replace(freeLabel, '0'));
+        if (!isNaN(parsed)) currentPrice = parsed;
+      }
+      const officialRequestPrice = officialPrice.input || 0;
+      savingsAmount = officialRequestPrice - currentPrice;
+      if (officialRequestPrice > 0) {
+        savingsPercent = (savingsAmount / officialRequestPrice) * 100;
+      }
+    }
+    const formatOfficialPrice = (price) => {
+      if (!price || price === 0) return '';
+      if (displayPrice) return displayPrice(price);
+      return `$${price.toFixed(3)}`;
+    };
+    const officialInputPrice = formatOfficialPrice(officialPrice.input);
+    const officialOutputPrice = priceData && priceData.isPerToken ? formatOfficialPrice(officialPrice.output) : null;
+    if (savingsAmount != null && savingsPercent != null && savingsAmount > 0 && savingsPercent > 0) {
+      const rawDiscount = (1 - savingsPercent / 100) * 10;
+      const rounded = Math.round(rawDiscount * 100) / 100;
+      const discount = rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(2).replace(/\.?0+$/, '');
+      const discountNum = parseFloat(discount);
+      const tier = discountNum <= 3 ? 'best' : discountNum <= 5 ? 'good' : discountNum <= 7 ? 'medium' : discountNum <= 9 ? 'slight' : 'minimal';
+      officialBlockContent = (
+        <div className="pricing-model-card-official">
+          <div className={`pricing-model-card-official-badge pricing-model-card-official-badge--${tier}`}>
+            {locale === 'zh' ? <>≈官方 {discount} 折</> : <>≈{discount}0% of official</>}
+          </div>
+          {officialInputPrice && (
+            <div className="pricing-model-card-official-line">
+              {priceData && priceData.isPerToken ? (
+                locale === 'zh' ? (
+                  <>输入: <span className="pricing-detail-price-strikethrough">{officialInputPrice}</span> 输出: <span className="pricing-detail-price-strikethrough">{officialOutputPrice || '-'}</span> /{tokenUnit}</>
+                ) : (
+                  <>In: <span className="pricing-detail-price-strikethrough">{officialInputPrice}</span> Out: <span className="pricing-detail-price-strikethrough">{officialOutputPrice || '-'}</span> /{tokenUnit}</>
+                )
+              ) : (
+                locale === 'zh' ? <>单价: <span className="pricing-detail-price-strikethrough">{officialInputPrice}</span></> : <>Price: <span className="pricing-detail-price-strikethrough">{officialInputPrice}</span></>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+  }
+
   return (
     <div
       className="pricing-model-card"
@@ -421,207 +497,27 @@ export default function ModelCard({
       data-model-input={input}
       data-model-output={output}
       onClick={handleCardClick}
-      style={{ position: 'relative' }}
     >
-      {/* Official Price - 显示在右上角（测试用） */}
-      {officialPrice && (() => {
-        // 计算节约金额
-        let savingsAmount = null;
-        let savingsPercent = null;
-        
-        if (priceData && priceData.isPerToken) {
-          // 按 token 计费：优先用 USD/百万 token 数值算折扣，避免 K/M、CNY/USD 单位不一致
-          let currentInputUSD = priceData.inputPriceUSD;
-          if (currentInputUSD === undefined || currentInputUSD === null) {
-            currentInputUSD = input || 0;
-            if (typeof priceData.inputPrice === 'string') {
-              const parsed = parseFloat(priceData.inputPrice.replace('$', '').replace(freeLabel, '0'));
-              if (!isNaN(parsed)) {
-                // 若展示为 per-K，解析出的是 per-K，需乘 1000 才等于 per-M
-                currentInputUSD = priceData.unitLabel === 'K' ? parsed * 1000 : parsed;
-              }
-            }
-          }
-
-          let currentOutput = output || 0;
-          if (typeof priceData.completionPrice === 'string' || typeof priceData.outputPrice === 'string') {
-            const parsed = parseFloat((priceData.completionPrice || priceData.outputPrice || '').replace('$', '').replace(freeLabel, '0'));
-            if (!isNaN(parsed)) {
-              currentOutput = priceData.unitLabel === 'K' ? parsed * 1000 : parsed;
-            }
-          }
-          
-          // 只按照 input 价格计算折扣（用精确数值算百分比，再四舍五入展示，避免先舍入节约额导致 5 折变 4.8 折）
-          const inputSavings = officialPrice.input - currentInputUSD;
-          if (officialPrice.input > 0) {
-            savingsAmount = Math.round(inputSavings * 100) / 100;
-            savingsPercent = (inputSavings / officialPrice.input) * 100;
-          }
-        } else {
-          // 按请求计费
-          let currentPrice = output || input || 0;
-          if (typeof priceData?.price === 'string') {
-            const parsed = parseFloat(priceData.price.replace('$', '').replace(freeLabel, '0'));
-            if (!isNaN(parsed)) {
-              currentPrice = parsed;
-            }
-          }
-
-          // 对于按请求计费，使用 input 作为官方价格（如果没有单独的请求价格）
-          const officialRequestPrice = officialPrice.input || 0;
-          savingsAmount = officialRequestPrice - currentPrice;
-          if (officialRequestPrice > 0) {
-            savingsPercent = (savingsAmount / officialRequestPrice) * 100;
-          }
-        }
-        
-        // 格式化官方价格
-        const formatOfficialPrice = (price) => {
-          if (!price || price === 0) return '';
-          if (displayPrice) {
-            return displayPrice(price);
-          }
-          return `$${price.toFixed(3)}`;
-        };
-
-        const officialInputPrice = formatOfficialPrice(officialPrice.input);
-        const officialOutputPrice = priceData && priceData.isPerToken
-          ? formatOfficialPrice(officialPrice.output)
-          : null;
-
-        // 涨价或价格不变时不显示折扣和官方价格，仅比官方便宜时显示
-        if (savingsAmount == null || savingsPercent == null || savingsAmount <= 0 || savingsPercent <= 0) {
-          return null;
-        }
-
-        const rawDiscount = (1 - savingsPercent / 100) * 10;
-        const rounded = Math.round(rawDiscount * 100) / 100;
-        const discount = rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(2).replace(/\.?0+$/, '');
-        const officialTextStyle = {
-          color: 'rgba(128, 128, 128, 0.95)',
-          fontSize: '12px',
-          lineHeight: 1.4,
-          whiteSpace: 'nowrap',
-        };
-        const strikethroughStyle = { textDecoration: 'line-through' };
-
-        return (
-          <div style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            zIndex: 10,
-            pointerEvents: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            gap: '4px'
-          }}>
-            <div style={{
-              backgroundColor: '#10b981',
-              color: 'white',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '11px',
-              fontWeight: 'bold',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-              whiteSpace: 'nowrap',
-              lineHeight: '1.4'
-            }}>
-              {locale === 'zh' ? (
-                <>≈官方 {discount} 折</>
-              ) : (
-                <>≈{discount}0% of official</>
-              )}
-            </div>
-            {officialInputPrice && (
-              <div style={officialTextStyle}>
-                {priceData && priceData.isPerToken ? (
-                  locale === 'zh' ? (
-                    <>
-                      输入: <span style={strikethroughStyle}>{officialInputPrice}</span> /{tokenUnit}
-                      {' '}
-                      输出: <span style={strikethroughStyle}>{officialOutputPrice || '-'}</span> /{tokenUnit}
-                    </>
-                  ) : (
-                    <>
-                      In: <span style={strikethroughStyle}>{officialInputPrice}</span> /{tokenUnit}
-                      {' '}
-                      Out: <span style={strikethroughStyle}>{officialOutputPrice || '-'}</span> /{tokenUnit}
-                    </>
-                  )
-                ) : (
-                  locale === 'zh' ? (
-                    <>单价: <span style={strikethroughStyle}>{officialInputPrice}</span></>
-                  ) : (
-                    <>Price: <span style={strikethroughStyle}>{officialInputPrice}</span></>
-                  )
-                )}
-              </div>
+      {/* 顶部一行：模型名 + 复制 | 折扣与官方价（flex 自然分流，不重叠） */}
+      <div className="pricing-model-card-header">
+        <div className="pricing-detail-model-name-wrapper">
+          <h3 className="pricing-model-card-provider-name">
+            {name}
+          </h3>
+          <button
+            type="button"
+            className="pricing-detail-copy-button"
+            onClick={handleCopyModelName}
+            title={locale === 'zh' ? '复制模型名称' : 'Copy model name'}
+          >
+            {copied ? (
+              <Check className="pricing-detail-copy-icon" size={16} />
+            ) : (
+              <Copy className="pricing-detail-copy-icon" size={16} />
             )}
-          </div>
-        );
-      })()}
-      {/* Savings - 显示在右上角（暂时隐藏） */}
-      {savings !== null && savings > 0 && false && (
-        <div style={{ 
-          position: 'absolute',
-          top: '12px',
-          right: '12px',
-          zIndex: 10,
-          pointerEvents: 'none'
-        }}>
-          <div style={{ 
-            backgroundColor: '#10b981', 
-            color: 'white', 
-            padding: '4px 8px', 
-            borderRadius: '4px', 
-            fontSize: '12px',
-            fontWeight: 'bold',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-            whiteSpace: 'nowrap'
-          }}>
-            {locale === 'zh' ? `省${savings.toFixed(1)}%` : `Save ${savings.toFixed(1)}%`}
-          </div>
+          </button>
         </div>
-      )}
-
-      {/* Model Name - 复制按钮紧挨名称右侧，避免与右上角折扣重叠 */}
-      <div className="pricing-detail-model-name-wrapper" style={{ marginTop: '12px', marginBottom: '4px', gap: '6px', alignItems: 'flex-start' }}>
-        <h3 
-          className="pricing-model-card-provider-name" 
-          style={{ 
-            margin: 0,
-            flex: '0 1 auto',
-            maxWidth: '100%',
-            minWidth: 0,
-            fontSize: '1.125rem',
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            lineHeight: '1.4',
-            minHeight: '2.8rem'
-          }}
-        >
-          {name}
-        </h3>
-        <button
-          type="button"
-          className="pricing-detail-copy-button"
-          onClick={handleCopyModelName}
-          title={locale === 'zh' ? '复制模型名称' : 'Copy model name'}
-          style={{ pointerEvents: 'auto' }}
-        >
-          {copied ? (
-            <Check className="pricing-detail-copy-icon" size={16} />
-          ) : (
-            <Copy className="pricing-detail-copy-icon" size={16} />
-          )}
-        </button>
+        {officialBlockContent}
       </div>
 
       {/* Provider Logo and Name - 现在显示在模型名称下方，使用次要文字样式（之前模型名称的样式） */}
@@ -692,6 +588,7 @@ export default function ModelCard({
           )}
         </div>
       )}
+
     </div>
   );
 }

@@ -23,6 +23,7 @@ import ProviderIcon from './ProviderIcon';
 import { calculateModelPrice } from '../../helpers/utils';
 import { StatusContext } from '../../context/Status';
 import { getTagTranslation } from './modelTags';
+import OfficialMetadataBlock from './OfficialMetadataBlock';
 
 // 为不同的 tag 生成不同的渐变颜色
 const getTagColor = (tag) => {
@@ -497,6 +498,74 @@ export default function ModelDetailSidebar({
     }
   }
 
+  // 官方价格与折扣（与卡片一致：仅比官方便宜时显示）
+  const getOfficialPriceFromModel = (m) => {
+    if (!m) return null;
+    const unit = m.official_price_unit;
+    const inputPrice = m.official_input_price;
+    const outputPrice = m.official_output_price;
+    const hasUnit = typeof unit === 'number' && !isNaN(unit) && unit > 0;
+    const hasInput = typeof inputPrice === 'number' && !isNaN(inputPrice);
+    const hasOutput = typeof outputPrice === 'number' && !isNaN(outputPrice);
+    if (m.quota_type === 1) {
+      if (!hasUnit) return null;
+      return { input: unit, output: unit };
+    }
+    if (!hasInput && !hasOutput) return null;
+    return {
+      input: hasInput ? inputPrice : 0,
+      output: hasOutput ? outputPrice : 0,
+    };
+  };
+  const officialPrice = getOfficialPriceFromModel(model);
+  let discountInfo = null; // { discount: string, officialInputPrice: string, officialOutputPrice: string | null }
+  if (officialPrice && priceData) {
+    let savingsPercent = null;
+    if (priceData.isPerToken) {
+      let currentInputUSD = priceData.inputPriceUSD;
+      if (currentInputUSD === undefined || currentInputUSD === null) {
+        currentInputUSD = model.input || 0;
+        if (typeof priceData.inputPrice === 'string') {
+          const parsed = parseFloat(priceData.inputPrice.replace(/[^0-9.]/g, ''));
+          if (!isNaN(parsed)) {
+            currentInputUSD = priceData.unitLabel === 'K' ? parsed * 1000 : parsed;
+          }
+        }
+      }
+      const inputSavings = officialPrice.input - currentInputUSD;
+      if (officialPrice.input > 0) {
+        savingsPercent = (inputSavings / officialPrice.input) * 100;
+      }
+    } else {
+      let currentPrice = model.output || model.input || 0;
+      if (typeof priceData.price === 'string') {
+        const parsed = parseFloat(priceData.price.replace(/[^0-9.]/g, ''));
+        if (!isNaN(parsed)) currentPrice = parsed;
+      }
+      const officialRequestPrice = officialPrice.input || 0;
+      if (officialRequestPrice > 0) {
+        savingsPercent = ((officialRequestPrice - currentPrice) / officialRequestPrice) * 100;
+      }
+    }
+    if (savingsPercent != null && savingsPercent > 0) {
+      const rawDiscount = (1 - savingsPercent / 100) * 10;
+      const rounded = Math.round(rawDiscount * 100) / 100;
+      const discount = rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(2).replace(/\.?0+$/, '');
+      const formatOfficialPrice = (price) => {
+        if (!price || price === 0) return '';
+        return displayPrice ? displayPrice(price) : `$${price.toFixed(3)}`;
+      };
+      const discountNum = parseFloat(discount);
+      const discountTier = discountNum <= 3 ? 'best' : discountNum <= 5 ? 'good' : discountNum <= 7 ? 'medium' : discountNum <= 9 ? 'slight' : 'minimal';
+      discountInfo = {
+        discount,
+        discountTier,
+        officialInputPrice: formatOfficialPrice(officialPrice.input),
+        officialOutputPrice: priceData.isPerToken ? formatOfficialPrice(officialPrice.output) : null,
+      };
+    }
+  }
+
   // 渲染API端点
   const renderAPIEndpoints = () => {
     if (!model || !endpointMap) return null;
@@ -771,6 +840,15 @@ export default function ModelDetailSidebar({
             </div>
           </div>
 
+          {/* 官方元数据（与卡片底部协调展示） */}
+          {model.official_metadata && (
+            <OfficialMetadataBlock
+              officialMetadata={model.official_metadata}
+              variant="detail"
+              locale={locale}
+            />
+          )}
+
           {/* API Endpoints */}
           {renderAPIEndpoints() && (
             <div className="pricing-detail-endpoints">
@@ -790,8 +868,38 @@ export default function ModelDetailSidebar({
             </div>
           )}
 
-          {/* Price */}
+          {/* Price（与卡片一致：有官方价且更便宜时显示折扣 + 官方价） */}
           <div className="pricing-detail-price">
+            {discountInfo && (
+              <div className="pricing-detail-price-official">
+                <span className={`pricing-detail-price-discount-badge pricing-detail-price-discount-badge--${discountInfo.discountTier || 'good'}`}>
+                  {locale === 'zh' ? `≈官方 ${discountInfo.discount} 折` : `≈${discountInfo.discount}0% of official`}
+                </span>
+                <span className="pricing-detail-price-official-line">
+                  {priceData && priceData.isPerToken ? (
+                    locale === 'zh' ? (
+                      <>
+                        输入 <span className="pricing-detail-price-strikethrough">{discountInfo.officialInputPrice}</span>
+                        {' · '}
+                        输出 <span className="pricing-detail-price-strikethrough">{discountInfo.officialOutputPrice || '-'}</span> /{tokenUnit}
+                      </>
+                    ) : (
+                      <>
+                        In <span className="pricing-detail-price-strikethrough">{discountInfo.officialInputPrice}</span>
+                        {' · '}
+                        Out <span className="pricing-detail-price-strikethrough">{discountInfo.officialOutputPrice || '-'}</span> /{tokenUnit}
+                      </>
+                    )
+                  ) : (
+                    locale === 'zh' ? (
+                      <>官方单价 <span className="pricing-detail-price-strikethrough">{discountInfo.officialInputPrice}</span></>
+                    ) : (
+                      <>Official <span className="pricing-detail-price-strikethrough">{discountInfo.officialInputPrice}</span></>
+                    )
+                  )}
+                </span>
+              </div>
+            )}
             <div className="pricing-detail-price-container">
               <div className="pricing-detail-price-list">
                 {model.quota_type === 1 ? (
