@@ -137,13 +137,14 @@ func BatchUpdateModelListing(c *gin.Context) {
 	})
 }
 
-// UpdateModelOfficialPrice 更新单个模型的官方价格（仅更新传入的字段）
+// UpdateModelOfficialPrice 更新单个模型的官方价格与元数据（仅更新传入的字段）
 func UpdateModelOfficialPrice(c *gin.Context) {
 	var req struct {
-		ModelName          string   `json:"model_name" binding:"required"`
-		OfficialPriceUnit  *float64 `json:"official_price_unit"`
-		OfficialInputPrice *float64 `json:"official_input_price"`
+		ModelName           string   `json:"model_name" binding:"required"`
+		OfficialPriceUnit   *float64 `json:"official_price_unit"`
+		OfficialInputPrice  *float64 `json:"official_input_price"`
 		OfficialOutputPrice *float64 `json:"official_output_price"`
+		OfficialMetadata    *string  `json:"official_metadata"` // JSON：modalities/attachment/reasoning/limit/knowledge 等
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(200, gin.H{
@@ -165,6 +166,15 @@ func UpdateModelOfficialPrice(c *gin.Context) {
 			"message": "更新官方价格失败: " + err.Error(),
 		})
 		return
+	}
+	if req.OfficialMetadata != nil {
+		if err := model.SetModelOfficialMetadata(req.ModelName, req.OfficialMetadata); err != nil {
+			c.JSON(200, gin.H{
+				"success": false,
+				"message": "更新官方元数据失败: " + err.Error(),
+			})
+			return
+		}
 	}
 	model.RefreshPricingCache()
 	c.JSON(200, gin.H{
