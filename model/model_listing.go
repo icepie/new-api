@@ -144,35 +144,51 @@ func SetModelTypesAndTags(modelName string, listTypes, listTags *string) error {
 	return DB.Save(&listing).Error
 }
 
-// SetModelListingStatus 设置单个模型的上架状态
+// SetModelListingStatus 设置单个模型的上架状态（仅更新 is_listed，不覆盖官方价格等字段）
 func SetModelListingStatus(modelName string, isListed bool) error {
-	listing := ModelListing{
-		ModelName: modelName,
-		IsListed:  isListed,
-		UpdatedAt: time.Now(),
+	now := time.Now()
+	res := DB.Model(&ModelListing{}).Where("model_name = ?", modelName).Updates(map[string]interface{}{
+		"is_listed":  isListed,
+		"updated_at": now,
+	})
+	if res.Error != nil {
+		return res.Error
 	}
-
-	// 使用 GORM 的 Save 方法，如果记录存在则更新，不存在则创建
-	return DB.Save(&listing).Error
+	if res.RowsAffected == 0 {
+		// 记录不存在则创建，仅含上架状态
+		return DB.Create(&ModelListing{
+			ModelName: modelName,
+			IsListed:  isListed,
+			UpdatedAt: now,
+		}).Error
+	}
+	return nil
 }
 
-// BatchSetModelListingStatus 批量设置模型的上架状态
+// BatchSetModelListingStatus 批量设置模型的上架状态（仅更新 is_listed，不覆盖官方价格等字段）
 func BatchSetModelListingStatus(modelNames []string, isListed bool) error {
 	if len(modelNames) == 0 {
 		return nil
 	}
 
-	// 使用事务批量更新
+	now := time.Now()
 	return DB.Transaction(func(tx *gorm.DB) error {
-		now := time.Now()
 		for _, modelName := range modelNames {
-			listing := ModelListing{
-				ModelName: modelName,
-				IsListed:  isListed,
-				UpdatedAt: now,
+			res := tx.Model(&ModelListing{}).Where("model_name = ?", modelName).Updates(map[string]interface{}{
+				"is_listed":  isListed,
+				"updated_at": now,
+			})
+			if res.Error != nil {
+				return res.Error
 			}
-			if err := tx.Save(&listing).Error; err != nil {
-				return err
+			if res.RowsAffected == 0 {
+				if err := tx.Create(&ModelListing{
+					ModelName: modelName,
+					IsListed:  isListed,
+					UpdatedAt: now,
+				}).Error; err != nil {
+					return err
+				}
 			}
 		}
 		return nil
