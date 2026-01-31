@@ -6,13 +6,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// ModelListing 模型上架状态表（含官方价格、类型、标签）
+// ModelListing 模型上架状态表（含官方价格、类型、标签、官方元数据）
 type ModelListing struct {
-	ModelName          string     `gorm:"primaryKey;type:varchar(255)" json:"model_name"`
-	IsListed           bool       `gorm:"default:true;index" json:"is_listed"`
-	OfficialPriceUnit   *float64  `gorm:"type:decimal(20,6)" json:"official_price_unit,omitempty"`
-	OfficialInputPrice  *float64  `gorm:"type:decimal(20,6)" json:"official_input_price,omitempty"`
-	OfficialOutputPrice *float64  `gorm:"type:decimal(20,6)" json:"official_output_price,omitempty"`
+	ModelName           string     `gorm:"primaryKey;type:varchar(255)" json:"model_name"`
+	IsListed            bool       `gorm:"default:true;index" json:"is_listed"`
+	OfficialPriceUnit   *float64   `gorm:"type:decimal(20,6)" json:"official_price_unit,omitempty"`
+	OfficialInputPrice  *float64   `gorm:"type:decimal(20,6)" json:"official_input_price,omitempty"`
+	OfficialOutputPrice *float64   `gorm:"type:decimal(20,6)" json:"official_output_price,omitempty"`
+	OfficialMetadata    *string    `gorm:"column:official_metadata;type:text" json:"official_metadata,omitempty"` // JSON：modalities/attachment/reasoning/limit/knowledge 等
 	ListTypes           *string   `gorm:"column:list_types;type:text" json:"list_types,omitempty"`   // 类型，逗号分隔
 	ListTags            *string   `gorm:"column:list_tags;type:text" json:"list_tags,omitempty"`     // 标签，逗号分隔
 	UpdatedAt           time.Time `json:"updated_at"`
@@ -52,11 +53,12 @@ func GetAllModelListingStatus() (map[string]bool, error) {
 	return statusMap, nil
 }
 
-// ModelOfficialPrice 单个模型的官方价格（用于定价组装）
+// ModelOfficialPrice 单个模型的官方价格与元数据（用于定价组装）
 type ModelOfficialPrice struct {
-	Unit   *float64
-	Input  *float64
-	Output *float64
+	Unit     *float64
+	Input    *float64
+	Output   *float64
+	Metadata *string // JSON：modalities/attachment/reasoning/limit/knowledge 等
 }
 
 // ModelListingMeta 单个模型的类型与标签（用于定价组装）
@@ -81,11 +83,12 @@ func GetAllModelListingWithOfficialPrices() (
 	metaMap = make(map[string]ModelListingMeta)
 	for _, listing := range listings {
 		statusMap[listing.ModelName] = listing.IsListed
-		if listing.OfficialPriceUnit != nil || listing.OfficialInputPrice != nil || listing.OfficialOutputPrice != nil {
+		if listing.OfficialPriceUnit != nil || listing.OfficialInputPrice != nil || listing.OfficialOutputPrice != nil || listing.OfficialMetadata != nil {
 			officialMap[listing.ModelName] = ModelOfficialPrice{
-				Unit:   listing.OfficialPriceUnit,
-				Input:  listing.OfficialInputPrice,
-				Output: listing.OfficialOutputPrice,
+				Unit:     listing.OfficialPriceUnit,
+				Input:    listing.OfficialInputPrice,
+				Output:   listing.OfficialOutputPrice,
+				Metadata: listing.OfficialMetadata,
 			}
 		}
 		if listing.ListTypes != nil || listing.ListTags != nil {
@@ -117,6 +120,22 @@ func SetModelOfficialPrice(modelName string, unit, input, output *float64) error
 		listing.OfficialOutputPrice = output
 	}
 	// 若记录不存在，默认上架
+	if err == gorm.ErrRecordNotFound {
+		listing.IsListed = true
+	}
+	return DB.Save(&listing).Error
+}
+
+// SetModelOfficialMetadata 设置单个模型的官方元数据（JSON 字符串，来自 models.dev 等）
+func SetModelOfficialMetadata(modelName string, metadata *string) error {
+	var listing ModelListing
+	err := DB.Where("model_name = ?", modelName).First(&listing).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return err
+	}
+	listing.ModelName = modelName
+	listing.UpdatedAt = time.Now()
+	listing.OfficialMetadata = metadata
 	if err == gorm.ErrRecordNotFound {
 		listing.IsListed = true
 	}

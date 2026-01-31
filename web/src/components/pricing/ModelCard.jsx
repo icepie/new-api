@@ -430,12 +430,16 @@ export default function ModelCard({
         let savingsPercent = null;
         
         if (priceData && priceData.isPerToken) {
-          // 按 token 计费：计算 input 和 output 的节约
-          let currentInput = input || 0;
-          if (typeof priceData.inputPrice === 'string') {
-            const parsed = parseFloat(priceData.inputPrice.replace('$', '').replace(freeLabel, '0'));
-            if (!isNaN(parsed)) {
-              currentInput = parsed;
+          // 按 token 计费：优先用 USD/百万 token 数值算折扣，避免 K/M、CNY/USD 单位不一致
+          let currentInputUSD = priceData.inputPriceUSD;
+          if (currentInputUSD === undefined || currentInputUSD === null) {
+            currentInputUSD = input || 0;
+            if (typeof priceData.inputPrice === 'string') {
+              const parsed = parseFloat(priceData.inputPrice.replace('$', '').replace(freeLabel, '0'));
+              if (!isNaN(parsed)) {
+                // 若展示为 per-K，解析出的是 per-K，需乘 1000 才等于 per-M
+                currentInputUSD = priceData.unitLabel === 'K' ? parsed * 1000 : parsed;
+              }
             }
           }
 
@@ -443,20 +447,15 @@ export default function ModelCard({
           if (typeof priceData.completionPrice === 'string' || typeof priceData.outputPrice === 'string') {
             const parsed = parseFloat((priceData.completionPrice || priceData.outputPrice || '').replace('$', '').replace(freeLabel, '0'));
             if (!isNaN(parsed)) {
-              currentOutput = parsed;
+              currentOutput = priceData.unitLabel === 'K' ? parsed * 1000 : parsed;
             }
           }
           
-          // 只按照 input 价格计算折扣
-          const inputSavings = officialPrice.input - currentInput;
-
-          // 四舍五入到小数点后2位，避免浮点数精度问题
-          const roundedSavings = Math.round(inputSavings * 100) / 100;
-
+          // 只按照 input 价格计算折扣（用精确数值算百分比，再四舍五入展示，避免先舍入节约额导致 5 折变 4.8 折）
+          const inputSavings = officialPrice.input - currentInputUSD;
           if (officialPrice.input > 0) {
-            // 即使节约为0或负数，也显示
-            savingsAmount = roundedSavings;
-            savingsPercent = (roundedSavings / officialPrice.input) * 100;
+            savingsAmount = Math.round(inputSavings * 100) / 100;
+            savingsPercent = (inputSavings / officialPrice.input) * 100;
           }
         } else {
           // 按请求计费

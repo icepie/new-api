@@ -32,6 +32,8 @@ type Pricing struct {
 	OfficialPriceUnit   float64 `json:"official_price_unit,omitempty"`
 	OfficialInputPrice  float64 `json:"official_input_price,omitempty"`
 	OfficialOutputPrice float64 `json:"official_output_price,omitempty"`
+	// 官方元数据（JSON：modalities/attachment/reasoning/limit/knowledge 等，来自 models.dev）
+	OfficialMetadata string `json:"official_metadata,omitempty"`
 	// 类型与标签（用于定价页筛选，仅来自 model_listings，逗号分隔；不自动推断）
 	ListTypes string `json:"list_types,omitempty"`
 	ListTags  string `json:"list_tags,omitempty"`
@@ -325,7 +327,7 @@ func updatePricing() {
 			pricing.IsListed = true
 		}
 
-		// 设置官方价格（来自 model_listings）
+		// 设置官方价格与元数据（来自 model_listings）
 		if off, ok := officialPriceMap[model]; ok {
 			if off.Unit != nil {
 				pricing.OfficialPriceUnit = *off.Unit
@@ -335,6 +337,9 @@ func updatePricing() {
 			}
 			if off.Output != nil {
 				pricing.OfficialOutputPrice = *off.Output
+			}
+			if off.Metadata != nil && *off.Metadata != "" {
+				pricing.OfficialMetadata = *off.Metadata
 			}
 		}
 
