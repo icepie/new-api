@@ -114,6 +114,28 @@ const Billing = () => {
     const used = parseInt(record.used_quota) || 0;
     const remain = parseInt(record.quota) || 0;
     const total = used + remain;
+
+    // 如果是无限额度用户，只显示已用额度
+    if (record.unlimited_quota) {
+      const popoverContent = (
+        <div className='space-y-2 p-2'>
+          <div className='flex justify-between gap-4'>
+            <span className='text-gray-600'>{t('已用额度')}:</span>
+            <span className='font-medium'>{renderQuota(used)}</span>
+          </div>
+        </div>
+      );
+
+      return (
+        <Popover content={popoverContent} position='top'>
+          <Tag color='green' shape='circle'>
+            {t('无限额度')}
+          </Tag>
+        </Popover>
+      );
+    }
+
+    // 有限额度用户，显示完整的额度信息
     const percent = total > 0 ? (remain / total) * 100 : 0;
 
     const popoverContent = (
@@ -513,23 +535,42 @@ const Billing = () => {
                                 style={{ borderColor: 'var(--semi-color-border)' }}
                               >
                                 <span className='text-sm font-medium text-[var(--semi-color-text-2)] mr-2 whitespace-nowrap select-none'>
-                                  {t('已用额度')}
+                                  {user.unlimited_quota ? t('额度类型') : t('已用额度')}
                                 </span>
                                 <div className='flex-1 break-all flex justify-end items-center gap-1'>
-                                  {renderQuota(user.used_quota)}
+                                  {user.unlimited_quota ? (
+                                    <Tag color='green' size='small'>{t('无限额度')}</Tag>
+                                  ) : (
+                                    renderQuota(user.used_quota)
+                                  )}
                                 </div>
                               </div>
-                              <div
-                                className='flex justify-between items-start py-1 border-b last:border-b-0 border-dashed'
-                                style={{ borderColor: 'var(--semi-color-border)' }}
-                              >
-                                <span className='text-sm font-medium text-[var(--semi-color-text-2)] mr-2 whitespace-nowrap select-none'>
-                                  {t('剩余额度')}
-                                </span>
-                                <div className='flex-1 break-all flex justify-end items-center gap-1'>
-                                  {renderQuota(user.quota)}
+                              {!user.unlimited_quota && (
+                                <div
+                                  className='flex justify-between items-start py-1 border-b last:border-b-0 border-dashed'
+                                  style={{ borderColor: 'var(--semi-color-border)' }}
+                                >
+                                  <span className='text-sm font-medium text-[var(--semi-color-text-2)] mr-2 whitespace-nowrap select-none'>
+                                    {t('剩余额度')}
+                                  </span>
+                                  <div className='flex-1 break-all flex justify-end items-center gap-1'>
+                                    {renderQuota(user.quota)}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
+                              {user.unlimited_quota && (
+                                <div
+                                  className='flex justify-between items-start py-1 border-b last:border-b-0 border-dashed'
+                                  style={{ borderColor: 'var(--semi-color-border)' }}
+                                >
+                                  <span className='text-sm font-medium text-[var(--semi-color-text-2)] mr-2 whitespace-nowrap select-none'>
+                                    {t('已用额度')}
+                                  </span>
+                                  <div className='flex-1 break-all flex justify-end items-center gap-1'>
+                                    {renderQuota(user.used_quota)}
+                                  </div>
+                                </div>
+                              )}
                               <div
                                 className='flex justify-between items-start py-1 border-b last:border-b-0 border-dashed'
                                 style={{ borderColor: 'var(--semi-color-border)' }}
@@ -599,31 +640,48 @@ const Billing = () => {
               >
               <div className='space-y-4'>
                 {/* 额度进度条 */}
-                <div>
-                  <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0 mb-2'>
-                    <span className='text-sm text-[var(--semi-color-text-2)]'>{t('剩余额度')}</span>
-                    <span className='text-sm font-medium text-[var(--semi-color-text-0)]'>
-                      {renderQuota(currentUser.quota)} /{' '}
-                      {renderQuota(currentUser.quota + currentUser.used_quota)}
-                    </span>
+                {currentUser.unlimited_quota ? (
+                  // 无限额度用户
+                  <div className='rounded-xl bg-gray-50 dark:bg-gray-800/50 px-4 py-4 sm:px-5 sm:py-4'>
+                    <div className='flex justify-between items-center gap-2 mb-2'>
+                      <span className='text-sm text-[var(--semi-color-text-2)]'>{t('额度类型')}</span>
+                      <Tag color='green' size='large'>{t('无限额度')}</Tag>
+                    </div>
+                    <div className='flex justify-between items-center gap-2'>
+                      <span className='text-sm text-[var(--semi-color-text-2)]'>{t('已用额度')}</span>
+                      <span className='text-sm sm:text-base font-semibold tabular-nums text-[var(--semi-color-text-0)]'>
+                        {renderQuota(currentUser.used_quota)}
+                      </span>
+                    </div>
                   </div>
-                  <Progress
-                    percent={(() => {
-                      const total = currentUser.quota + currentUser.used_quota;
-                      if (total === 0) return 0;
-                      return Math.round((currentUser.quota / total) * 100);
-                    })()}
-                    stroke={(() => {
-                      const total = currentUser.quota + currentUser.used_quota;
-                      if (total === 0) return 'success';
-                      const percent = (currentUser.quota / total) * 100;
-                      if (percent > 30) return 'success';
-                      if (percent > 10) return 'warning';
-                      return 'danger';
-                    })()}
-                    showInfo
-                  />
-                </div>
+                ) : (
+                  // 有限额度用户
+                  <div>
+                    <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0 mb-2'>
+                      <span className='text-sm text-[var(--semi-color-text-2)]'>{t('剩余额度')}</span>
+                      <span className='text-sm font-medium text-[var(--semi-color-text-0)]'>
+                        {renderQuota(currentUser.quota)} /{' '}
+                        {renderQuota(currentUser.quota + currentUser.used_quota)}
+                      </span>
+                    </div>
+                    <Progress
+                      percent={(() => {
+                        const total = currentUser.quota + currentUser.used_quota;
+                        if (total === 0) return 0;
+                        return Math.round((currentUser.quota / total) * 100);
+                      })()}
+                      stroke={(() => {
+                        const total = currentUser.quota + currentUser.used_quota;
+                        if (total === 0) return 'success';
+                        const percent = (currentUser.quota / total) * 100;
+                        if (percent > 30) return 'success';
+                        if (percent > 10) return 'warning';
+                        return 'danger';
+                      })()}
+                      showInfo
+                    />
+                  </div>
+                )}
 
                 {/* 详细信息 */}
                 <Descriptions
@@ -643,14 +701,16 @@ const Billing = () => {
                       key: t('已用额度'),
                       value: renderQuota(currentUser.used_quota),
                     },
-                    {
-                      key: t('剩余额度'),
-                      value: renderQuota(currentUser.quota),
-                    },
-                    {
-                      key: t('总额度'),
-                      value: renderQuota(currentUser.quota + currentUser.used_quota),
-                    },
+                    ...(currentUser.unlimited_quota ? [] : [
+                      {
+                        key: t('剩余额度'),
+                        value: renderQuota(currentUser.quota),
+                      },
+                      {
+                        key: t('总额度'),
+                        value: renderQuota(currentUser.quota + currentUser.used_quota),
+                      },
+                    ]),
                     {
                       key: t('账户状态'),
                       value:
