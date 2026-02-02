@@ -2490,7 +2490,8 @@ func GetSelf(c *gin.Context) {
 		"linux_do_id":       user.LinuxDOId,
 		"setting":           user.Setting,
 		"stripe_customer":   user.StripeCustomer,
-		"org_id":            user.OrgId, // 添加组织ID字段
+		"org_id":            user.OrgId,            // 添加组织ID字段
+		"unlimited_quota":   user.UnlimitedQuota,  // 添加无限额度标志
 		"sidebar_modules":   userSetting.SidebarModules, // 正确提取sidebar_modules字段
 		"permissions":       permissions,                // 新增权限字段
 	}

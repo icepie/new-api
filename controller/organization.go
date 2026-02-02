@@ -292,25 +292,27 @@ func GetOrganizationBilling(c *gin.Context) {
 
 	// 构建用户使用详情列表
 	type UserUsage struct {
-		Id          int    `json:"id"`
-		Username    string `json:"username"`
-		DisplayName string `json:"display_name"`
-		Role        int    `json:"role"`
-		UsedQuota   int    `json:"used_quota"`
-		Quota       int    `json:"quota"`
-		Status      int    `json:"status"`
+		Id             int    `json:"id"`
+		Username       string `json:"username"`
+		DisplayName    string `json:"display_name"`
+		Role           int    `json:"role"`
+		UsedQuota      int    `json:"used_quota"`
+		Quota          int    `json:"quota"`
+		Status         int    `json:"status"`
+		UnlimitedQuota bool   `json:"unlimited_quota"`
 	}
 
 	userUsages := make([]UserUsage, 0, len(users))
 	for _, u := range users {
 		userUsages = append(userUsages, UserUsage{
-			Id:          u.Id,
-			Username:    u.Username,
-			DisplayName: u.DisplayName,
-			Role:        u.Role,
-			UsedQuota:   u.UsedQuota,
-			Quota:       u.Quota,
-			Status:      u.Status,
+			Id:             u.Id,
+			Username:       u.Username,
+			DisplayName:    u.DisplayName,
+			Role:           u.Role,
+			UsedQuota:      u.UsedQuota,
+			Quota:          u.Quota,
+			Status:         u.Status,
+			UnlimitedQuota: u.UnlimitedQuota,
 		})
 	}
 
