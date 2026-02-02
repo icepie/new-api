@@ -2958,12 +2958,13 @@ func CreateUser(c *gin.Context) {
 
 	// Even for admin users, we cannot fully trust them!
 	cleanUser := model.User{
-		Username:    user.Username,
-		Password:    user.Password,
-		DisplayName: user.DisplayName,
-		Role:        user.Role, // 保持管理员设置的角色
-		OrgId:       user.OrgId,
-		Remark:      user.Remark,
+		Username:       user.Username,
+		Password:       user.Password,
+		DisplayName:    user.DisplayName,
+		Role:           user.Role, // 保持管理员设置的角色
+		OrgId:          user.OrgId,
+		Remark:         user.Remark,
+		UnlimitedQuota: user.UnlimitedQuota, // 支持无限额度设置
 	}
 	if err := cleanUser.Insert(0); err != nil {
 		common.ApiError(c, err)

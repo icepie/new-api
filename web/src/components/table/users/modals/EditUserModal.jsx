@@ -80,6 +80,7 @@ const EditUserModal = (props) => {
     group: 'default',
     remark: '',
     org_id: 0,
+    unlimited_quota: false,
   });
 
   const [formData, setFormData] = useState(getInitValues());
@@ -368,26 +369,43 @@ const EditUserModal = (props) => {
                         </Col>
                       )}
 
-                      <Col span={10}>
-                        <Form.InputNumber
-                          field='quota'
-                          label={t('剩余额度')}
-                          placeholder={t('请输入新的剩余额度')}
-                          step={500000}
-                          extraText={renderQuotaWithPrompt(values.quota || 0)}
-                          rules={[{ required: true, message: t('请输入额度') }]}
-                          style={{ width: '100%' }}
+                      <Col span={24}>
+                        <Form.Select
+                          field='unlimited_quota'
+                          label={t('额度类型')}
+                          placeholder={t('请选择额度类型')}
+                          optionList={[
+                            { label: t('有限额度'), value: false },
+                            { label: t('无限额度'), value: true },
+                          ]}
+                          rules={[{ required: true, message: t('请选择额度类型') }]}
                         />
                       </Col>
 
-                      <Col span={14}>
-                        <Form.Slot label={t('添加额度')}>
-                          <Button
-                            icon={<IconPlus />}
-                            onClick={() => setIsModalOpen(true)}
-                          />
-                        </Form.Slot>
-                      </Col>
+                      {!values.unlimited_quota && (
+                        <>
+                          <Col span={10}>
+                            <Form.InputNumber
+                              field='quota'
+                              label={t('剩余额度')}
+                              placeholder={t('请输入新的剩余额度')}
+                              step={500000}
+                              extraText={renderQuotaWithPrompt(values.quota || 0)}
+                              rules={[{ required: true, message: t('请输入额度') }]}
+                              style={{ width: '100%' }}
+                            />
+                          </Col>
+
+                          <Col span={14}>
+                            <Form.Slot label={t('添加额度')}>
+                              <Button
+                                icon={<IconPlus />}
+                                onClick={() => setIsModalOpen(true)}
+                              />
+                            </Form.Slot>
+                          </Col>
+                        </>
+                      )}
                     </Row>
                   </Card>
                 )}
