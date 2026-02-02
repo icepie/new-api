@@ -9,22 +9,22 @@ importers:
   .:
     dependencies:
       '@douyinfe/semi-icons':
-        specifier: ^2.88.3
-        version: 2.88.3(react@18.3.1)
+        specifier: ^2.63.1
+        version: 2.90.13(react@18.3.1)
       '@douyinfe/semi-illustrations':
         specifier: ^2.90.1
         version: 2.90.1(react@18.3.1)
       '@douyinfe/semi-ui':
-        specifier: ^2.90.12
+        specifier: ^2.69.1
         version: 2.90.13(@floating-ui/dom@1.7.4)(@tiptap/suggestion@3.11.0(@tiptap/core@3.11.0(@tiptap/pm@3.11.0))(@tiptap/pm@3.11.0))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@lobehub/icons':
         specifier: ^2.43.1
         version: 2.43.1(@babel/core@7.28.5)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(antd@5.29.1(date-fns@2.30.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(framer-motion@12.23.24(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(micromark-util-types@2.0.2)(micromark@4.0.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@visactor/react-vchart':
-        specifier: ~1.8.11
+        specifier: ~1.8.8
         version: 1.8.11(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@visactor/vchart':
-        specifier: ~1.8.11
+        specifier: ~1.8.8
         version: 1.8.11
       '@visactor/vchart-semi-theme':
         specifier: ~1.8.8
@@ -403,11 +403,6 @@ packages:
 
   '@douyinfe/semi-foundation@2.90.13':
     resolution: {integrity: sha512-sTQVfk2UdF79VffSFy3DwPtT4qGHp9LkaFPeeW7mGUu8c3el6fKd6WSYJXNyE8Iba5bnqzxWAyfjtCxUYA+sfQ==}
-
-  '@douyinfe/semi-icons@2.88.3':
-    resolution: {integrity: sha512-g3YFaM8Jr0GRY9rV5OuxvmZiqZUN9grj+TdRC930StxBjxdp901WGhuaPGpkaVahO0mkX3hSAJVlQYPEF/MOzQ==}
-    peerDependencies:
-      react: '>=16.0.0'
 
   '@douyinfe/semi-icons@2.90.13':
     resolution: {integrity: sha512-9OiKvleOMB+t0h+Vbq/6Tz90JJPANJDvW5g3XtVWmIwIgScgy/N52fMhWXDf6Avr6wi9MDPcQZ6SYPO2S7m4sQ==}
@@ -5415,11 +5410,6 @@ snapshots:
       scroll-into-view-if-needed: 2.2.31
     transitivePeerDependencies:
       - supports-color
-
-  '@douyinfe/semi-icons@2.88.3(react@18.3.1)':
-    dependencies:
-      classnames: 2.5.1
-      react: 18.3.1
 
   '@douyinfe/semi-icons@2.90.13(react@18.3.1)':
     dependencies:

@@ -484,6 +484,18 @@ func PreConsumeTokenQuota(relayInfo *relaycommon.RelayInfo, quota int) error {
 	if relayInfo.IsPlayground {
 		return nil
 	}
+
+	// 获取用户信息检查是否无限额度
+	user, err := model.GetUserById(relayInfo.UserId, false)
+	if err != nil {
+		return err
+	}
+
+	// 如果用户是无限额度,直接通过
+	if user.UnlimitedQuota {
+		return nil
+	}
+
 	//if relayInfo.TokenUnlimited {
 	//	return nil
 	//}
@@ -503,16 +515,26 @@ func PreConsumeTokenQuota(relayInfo *relaycommon.RelayInfo, quota int) error {
 
 func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQuota int, sendEmail bool) (err error) {
 
-	if quota > 0 {
-		err = model.DecreaseUserQuota(relayInfo.UserId, quota)
-	} else {
-		err = model.IncreaseUserQuota(relayInfo.UserId, -quota, false)
-	}
+	// 获取用户信息检查是否无限额度
+	user, err := model.GetUserById(relayInfo.UserId, false)
 	if err != nil {
 		return err
 	}
 
-	if !relayInfo.IsPlayground {
+	// 用户级别扣除:只有非无限用户才扣除
+	if !user.UnlimitedQuota {
+		if quota > 0 {
+			err = model.DecreaseUserQuota(relayInfo.UserId, quota)
+		} else {
+			err = model.IncreaseUserQuota(relayInfo.UserId, -quota, false)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	// Token 级别扣除:只有非无限用户且非 playground 才扣除
+	if !relayInfo.IsPlayground && !user.UnlimitedQuota {
 		if quota > 0 {
 			err = model.DecreaseTokenQuota(relayInfo.TokenId, relayInfo.TokenKey, quota)
 		} else {
@@ -523,7 +545,7 @@ func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQu
 		}
 	}
 
-	// Deduct organization quota
+	// 组织级别扣除:即使用户无限,组织额度仍然消耗(选项 B)
 	if relayInfo.OrgId > 0 && quota > 0 {
 		err = model.DeductOrgQuota(relayInfo.OrgId, quota)
 		if err != nil {

@@ -38,6 +38,7 @@ type User struct {
 	Quota            int            `json:"quota" gorm:"type:int;default:0"`
 	UsedQuota        int            `json:"used_quota" gorm:"type:int;default:0;column:used_quota"` // used quota
 	RequestCount     int            `json:"request_count" gorm:"type:int;default:0;"`               // request number
+	UnlimitedQuota   bool           `json:"unlimited_quota" gorm:"type:boolean;default:false"`      // unlimited quota flag
 	Group            string         `json:"group" gorm:"type:varchar(64);default:'default'"`
 	AffCode          string         `json:"aff_code" gorm:"type:varchar(32);column:aff_code;uniqueIndex"`
 	AffCount         int            `json:"aff_count" gorm:"type:int;default:0;column:aff_count"`
@@ -55,14 +56,15 @@ type User struct {
 
 func (user *User) ToBaseUser() *UserBase {
 	cache := &UserBase{
-		Id:       user.Id,
-		Group:    user.Group,
-		Quota:    user.Quota,
-		Status:   user.Status,
-		Username: user.Username,
-		Setting:  user.Setting,
-		Email:    user.Email,
-		OrgId:    user.OrgId,
+		Id:             user.Id,
+		Group:          user.Group,
+		Quota:          user.Quota,
+		Status:         user.Status,
+		Username:       user.Username,
+		Setting:        user.Setting,
+		Email:          user.Email,
+		OrgId:          user.OrgId,
+		UnlimitedQuota: user.UnlimitedQuota,
 	}
 	return cache
 }
@@ -531,7 +533,7 @@ func (user *User) TransferAffQuotaToQuota(quota int) error {
 }
 
 // createDefaultTokenForUser 为新用户创建默认令牌
-func createDefaultTokenForUser(userId int, username string) error {
+func createDefaultTokenForUser(userId int, username string, userUnlimitedQuota bool) error {
 	key, err := common.GenerateKey()
 	if err != nil {
 		return fmt.Errorf("生成令牌密钥失败: %w", err)
@@ -545,7 +547,7 @@ func createDefaultTokenForUser(userId int, username string) error {
 		AccessedTime:       common.GetTimestamp(),
 		ExpiredTime:        -1,     // 永不过期
 		RemainQuota:        500000, // 默认额度
-		UnlimitedQuota:     true,
+		UnlimitedQuota:     userUnlimitedQuota, // 继承用户的无限额度状态
 		ModelLimitsEnabled: false,
 	}
 
@@ -581,7 +583,20 @@ func (user *User) Insert(inviterId int) error {
 			return err
 		}
 	}
-	user.Quota = common.QuotaForNewUser
+
+	// 如果是组织用户,默认设置为无限额度
+	if user.OrgId > 0 {
+		user.UnlimitedQuota = true
+		user.Quota = 0 // 无限用户额度值无意义
+	} else {
+		// 非组织用户,使用配置的初始额度
+		if !user.UnlimitedQuota {
+			user.Quota = common.QuotaForNewUser
+		} else {
+			user.Quota = 0
+		}
+	}
+
 	//user.SetAccessToken(common.GetUUID())
 	user.AffCode = common.GetRandomString(4)
 
@@ -630,7 +645,7 @@ func (user *User) Insert(inviterId int) error {
 	}
 
 	// 为新用户创建默认令牌
-	if err := createDefaultTokenForUser(user.Id, user.Username); err != nil {
+	if err := createDefaultTokenForUser(user.Id, user.Username, user.UnlimitedQuota); err != nil {
 		common.SysLog(fmt.Sprintf("为新用户 %s (ID: %d) 创建默认令牌失败: %v", user.Username, user.Id, err))
 		// 不返回错误,因为令牌创建失败不应该影响用户注册
 	}
@@ -680,13 +695,14 @@ func (user *User) Edit(updatePassword bool) error {
 
 	newUser := *user
 	updates := map[string]interface{}{
-		"username":     newUser.Username,
-		"display_name": newUser.DisplayName,
-		"group":        newUser.Group,
-		"quota":        newUser.Quota,
-		"remark":       newUser.Remark,
-		"org_id":       newUser.OrgId,
-		"role":         newUser.Role,
+		"username":        newUser.Username,
+		"display_name":    newUser.DisplayName,
+		"group":           newUser.Group,
+		"quota":           newUser.Quota,
+		"remark":          newUser.Remark,
+		"org_id":          newUser.OrgId,
+		"role":            newUser.Role,
+		"unlimited_quota": newUser.UnlimitedQuota,
 	}
 	if updatePassword {
 		updates["password"] = newUser.Password

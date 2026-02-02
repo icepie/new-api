@@ -140,6 +140,26 @@ const renderQuotaUsage = (text, record, t) => {
   const used = parseInt(record.used_quota) || 0;
   const remain = parseInt(record.quota) || 0;
   const total = used + remain;
+
+  // 如果是无限额度用户,只显示已用额度
+  if (record.unlimited_quota) {
+    const popoverContent = (
+      <div className='text-xs p-2'>
+        <Paragraph copyable={{ content: renderQuota(used) }}>
+          {t('已用额度')}: {renderQuota(used)}
+        </Paragraph>
+      </div>
+    );
+    return (
+      <Popover content={popoverContent} position='top'>
+        <Tag color='green' shape='circle'>
+          {t('无限额度')}
+        </Tag>
+      </Popover>
+    );
+  }
+
+  // 有限额度用户,显示完整的额度信息
   const percent = total > 0 ? (remain / total) * 100 : 0;
   const popoverContent = (
     <div className='text-xs p-2'>
