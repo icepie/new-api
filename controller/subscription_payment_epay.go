@@ -121,6 +121,11 @@ func SubscriptionEpayNotify(c *gin.Context) {
 		return
 	}
 
+	if len(params) == 0 {
+		_, _ = c.Writer.Write([]byte("fail"))
+		return
+	}
+
 	client := GetEpayClient()
 	if client == nil {
 		_, _ = c.Writer.Write([]byte("fail"))
@@ -155,6 +160,11 @@ func SubscriptionEpayReturn(c *gin.Context) {
 	redirectBaseURL := getRequestBaseURL(c)
 
 	if err != nil || len(params) == 0 {
+		c.Redirect(http.StatusFound, redirectBaseURL+"/console/topup?pay=fail")
+		return
+	}
+
+	if len(params) == 0 {
 		c.Redirect(http.StatusFound, redirectBaseURL+"/console/topup?pay=fail")
 		return
 	}

@@ -266,6 +266,12 @@ func EpayNotify(c *gin.Context) {
 		_, _ = c.Writer.Write([]byte("fail"))
 		return
 	}
+
+	if len(params) == 0 {
+		log.Println("易支付回调参数为空")
+		_, _ = c.Writer.Write([]byte("fail"))
+		return
+	}
 	client := GetEpayClient()
 	if client == nil {
 		log.Println("易支付回调失败 未找到配置信息")
