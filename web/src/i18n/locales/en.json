@@ -2637,7 +2637,7 @@
     "hero.features.scalable.desc": "Multi-channel quotas, intelligent routing, batch task scheduling, flexible cost and concurrency control, maximizing resource utilization.",
     "hero.features.developer.title": "Developer-Friendly Experience",
     "hero.features.developer.desc": "Compatible with OpenAI API protocol, providing SDKs, examples and Web Playground for easy iteration and deployment.",
-    "hero.footer.copyright": "© 2025. NiceRouter All rights reserved."
+    "hero.footer.copyright": "© 2025. NiceRouter All rights reserved.",
     "Stripe/Creem 需在第三方平台创建商品并填入 ID": "Stripe/Creem products must be created on the third-party platform and the ID filled in",
     "暂无订阅套餐": "No subscription plans",
     "订阅管理": "Subscription Management",

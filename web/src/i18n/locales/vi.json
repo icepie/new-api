@@ -3200,7 +3200,7 @@
     "hero.features.scalable.desc": "Hạn ngạch đa kênh, định tuyến thông minh, lập lịch tác vụ hàng loạt, kiểm soát chi phí và đồng thời linh hoạt, tối đa hóa việc sử dụng tài nguyên.",
     "hero.features.developer.title": "Trải nghiệm thân thiện với nhà phát triển",
     "hero.features.developer.desc": "Tương thích với giao thức API OpenAI, cung cấp SDK, ví dụ và Web Playground để lặp lại và triển khai dễ dàng.",
-    "hero.footer.copyright": "© 2025. NiceRouter Bảo lưu mọi quyền."
+    "hero.footer.copyright": "© 2025. NiceRouter Bảo lưu mọi quyền.",
     "Stripe/Creem 需在第三方平台创建商品并填入 ID": "Sản phẩm Stripe/Creem phải được tạo trên nền tảng bên thứ ba và điền ID",
     "暂无订阅套餐": "Chưa có gói đăng ký",
     "订阅管理": "Quản lý đăng ký",
