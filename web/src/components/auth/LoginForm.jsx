@@ -111,6 +111,7 @@ const LoginForm = () => {
   const [githubButtonState, setGithubButtonState] = useState('idle');
   const [githubButtonDisabled, setGithubButtonDisabled] = useState(false);
   const [orgCodeFromDomain, setOrgCodeFromDomain] = useState(false);
+  const [formApi, setFormApi] = useState(null);
   const githubTimeoutRef = useRef(null);
   const githubButtonText = t(githubButtonTextKeyByState[githubButtonState]);
 
@@ -121,6 +122,7 @@ const LoginForm = () => {
   if (affCode) {
     localStorage.setItem('aff', affCode);
   }
+  const orgCodeParam = searchParams.get('oc');
 
   const status = useMemo(() => {
     if (statusState?.status) return statusState.status;
@@ -144,8 +146,23 @@ const LoginForm = () => {
     setHasPrivacyPolicy(status?.privacy_policy_enabled || false);
   }, [status]);
 
+  // 从 URL 参数获取组织代码
+  useEffect(() => {
+    if (!orgCodeParam) {
+      return;
+    }
+    setInputs((prev) => ({ ...prev, organization_code: orgCodeParam }));
+    setOrgCodeFromDomain(false);
+    if (formApi) {
+      formApi.setValue('organization_code', orgCodeParam);
+    }
+  }, [orgCodeParam, formApi]);
+
   // 从域名提取组织代码
   useEffect(() => {
+    if (orgCodeParam) {
+      return;
+    }
     const hostname = window.location.hostname;
 
     // 检查是否是 IP 地址（IPv4 或 IPv6）
@@ -167,10 +184,13 @@ const LoginForm = () => {
       // 排除 ee 和 enterprise
       if (subdomain && subdomain !== 'ee' && subdomain !== 'enterprise') {
         setInputs((prev) => ({ ...prev, organization_code: subdomain }));
+        if (formApi) {
+          formApi.setValue('organization_code', subdomain);
+        }
         setOrgCodeFromDomain(true);
       }
     }
-  }, []);
+  }, [orgCodeParam, formApi]);
 
   useEffect(() => {
     isPasskeySupported()
@@ -746,7 +766,10 @@ const LoginForm = () => {
                   <span className='ml-3'>{t('使用 Passkey 登录')}</span>
                 </Button>
               )}
-              <Form className='space-y-3'>
+              <Form
+                className='space-y-3'
+                getFormApi={(api) => setFormApi((prev) => prev ?? api)}
+              >
                 <Form.Input
                   field='username'
                   label={t('用户名或邮箱')}
