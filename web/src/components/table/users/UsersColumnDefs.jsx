@@ -230,6 +230,7 @@ const renderOperations = (
     showResetPasskeyModal,
     showResetTwoFAModal,
     showManageTokensModal,
+    showUserSubscriptionsModal,
     t,
   },
 ) => {
@@ -251,6 +252,14 @@ const renderOperations = (
 
   // 超级管理员显示重置选项和注销
   const superAdminMenu = [
+    {
+      node: 'item',
+      name: t('订阅管理'),
+      onClick: () => showUserSubscriptionsModal(record),
+    },
+    {
+      node: 'divider',
+    },
     {
       node: 'item',
       name: t('重置 Passkey'),
@@ -348,6 +357,7 @@ export const getUsersColumns = ({
   showResetPasskeyModal,
   showResetTwoFAModal,
   showManageTokensModal,
+  showUserSubscriptionsModal,
   currentUser,
 }) => {
   // 判断是否是组织管理员（role=10且org_id>0）
@@ -414,6 +424,7 @@ export const getUsersColumns = ({
           showResetPasskeyModal,
           showResetTwoFAModal,
           showManageTokensModal,
+          showUserSubscriptionsModal,
           t,
         }),
     },

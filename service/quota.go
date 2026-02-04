@@ -521,15 +521,29 @@ func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQu
 		return err
 	}
 
-	// 用户级别扣除:只有非无限用户才扣除
-	if !user.UnlimitedQuota {
-		if quota > 0 {
-			err = model.DecreaseUserQuota(relayInfo.UserId, quota)
-		} else {
-			err = model.IncreaseUserQuota(relayInfo.UserId, -quota, false)
+	// 1) Consume from wallet quota OR subscription item
+	if relayInfo != nil && relayInfo.BillingSource == BillingSourceSubscription {
+		if relayInfo.SubscriptionId == 0 {
+			return errors.New("subscription id is missing")
 		}
-		if err != nil {
-			return err
+		delta := int64(quota)
+		if delta != 0 {
+			if err := model.PostConsumeUserSubscriptionDelta(relayInfo.SubscriptionId, delta); err != nil {
+				return err
+			}
+			relayInfo.SubscriptionPostDelta += delta
+		}
+	} else {
+		// Wallet - 用户级别扣除:只有非无限用户才扣除
+		if !user.UnlimitedQuota {
+			if quota > 0 {
+				err = model.DecreaseUserQuota(relayInfo.UserId, quota)
+			} else {
+				err = model.IncreaseUserQuota(relayInfo.UserId, -quota, false)
+			}
+			if err != nil {
+				return err
+			}
 		}
 	}
 

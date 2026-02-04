@@ -54,6 +54,7 @@ export const DEFAULT_ADMIN_CONFIG = {
     organization: true,
     menu: true,
     role: true,
+    subscription: true,
     setting: true,
   },
 };

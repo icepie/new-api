@@ -126,7 +126,7 @@ func GetStatus(c *gin.Context) {
 		"star_user_system_enabled":    common.StarUserSystemEnabled && common.StarBackendAddress != "",
 		"star_wechat_enabled":         common.StarWeChatEnabled,
 		"checkin_enabled":             operation_setting.GetCheckinSetting().Enabled,
-		"_qn":                          "new-api",
+		"_qn":                         "new-api",
 	}
 
 	// 根据启用状态注入可选内容

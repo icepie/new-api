@@ -39,6 +39,7 @@ const routerMap = {
   topup: '/console/topup',
   billing: '/console/billing',
   user: '/console/user',
+  subscription: '/console/subscription',
   log: '/console/log',
   midjourney: '/console/midjourney',
   setting: '/console/setting',
@@ -162,6 +163,12 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         to: '/channel',
         // 只有超级管理员可以看到渠道管理，组织管理员不可见
         className: isRoot() ? '' : 'tableHiddle',
+      },
+      {
+        text: t('订阅管理'),
+        itemKey: 'subscription',
+        to: '/subscription',
+        className: isAdmin() ? '' : 'tableHiddle',
       },
       {
         text: t('模型管理'),
