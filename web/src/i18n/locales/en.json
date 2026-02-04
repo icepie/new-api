@@ -2605,7 +2605,6 @@
     "关闭提示": "Close notice",
     "说明：本页测试为非流式请求；若渠道仅支持流式返回，可能出现测试失败，请以实际使用为准。": "Note: Tests on this page use non-streaming requests. If a channel only supports streaming responses, tests may fail. Please rely on actual usage.",
     "提示：端点映射仅用于模型广场展示，不会影响模型真实调用。如需配置真实调用，请前往「渠道管理」。": "Notice: Endpoint mapping is for Model Marketplace display only and does not affect real model invocation. To configure real invocation, please go to Channel Management.",
-<<<<<<< HEAD
     "hero.title": "Next-Generation AIGC Gateway Service - Enterprise Edition",
     "hero.subtitle": "Providing stable, fast, and secure AI API solutions",
     "hero.cta": "Get Started",
@@ -2702,8 +2701,7 @@
     "暂无用户数据": "No user data available",
     "账户状态": "Account Status",
     "使用率": "Usage Rate",
-    "紧凑模式": "Compact Mode"
-=======
+    "紧凑模式": "Compact Mode",
     "Stripe/Creem 需在第三方平台创建商品并填入 ID": "Stripe/Creem products must be created on the third-party platform and the ID filled in",
     "暂无订阅套餐": "No subscription plans",
     "订阅管理": "Subscription Management",
@@ -2790,6 +2788,5 @@
     "应付金额": "Amount Due",
     "支付": "Pay",
     "管理员未开启在线支付功能，请联系管理员配置。": "Online payment is not enabled by the admin. Please contact the administrator."
->>>>>>> upstream/main
   }
 }
