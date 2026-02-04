@@ -827,7 +827,6 @@ const LoginForm = () => {
                     htmlType='submit'
                     onClick={handleSubmit}
                     loading={loginLoading}
-<<<<<<< HEAD
                     disabled={(hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms}
                     onMouseEnter={(e) => {
                       if (!e.currentTarget.disabled) {
@@ -841,11 +840,6 @@ const LoginForm = () => {
                         e.currentTarget.style.borderColor = 'black';
                       }
                     }}
-=======
-                    disabled={
-                      (hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms
-                    }
->>>>>>> upstream/main
                   >
                     {t('继续')}
                   </Button>
