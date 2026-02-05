@@ -466,11 +466,8 @@ func (user *User) Insert(inviterId int) error {
 		_ = inviteUser(inviterId)
 	}
 
-	// 为新用户创建默认令牌
-	if err := createDefaultTokenForUser(user.Id, user.Username); err != nil {
-		common.SysLog(fmt.Sprintf("为新用户 %s (ID: %d) 创建默认令牌失败: %v", user.Username, user.Id, err))
-		// 不返回错误,因为令牌创建失败不应该影响用户注册
-	}
+	// 注意：默认令牌的创建由 controller 层处理（controller/user.go Register函数）
+	// 这样可以使用 i18n 错误消息并正确检查 constant.GenerateDefaultToken
 
 	return nil
 }
