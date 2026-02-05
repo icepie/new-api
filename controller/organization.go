@@ -41,10 +41,7 @@ func GetOrganizations(c *gin.Context) {
 
 	orgs, total, err := model.GetAllOrganizations(page, pageSize, keyword, status, orgId)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgGetListFailed)
 		return
 	}
 
