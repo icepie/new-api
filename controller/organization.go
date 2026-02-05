@@ -202,10 +202,7 @@ func GetOrganizationBilling(c *gin.Context) {
 
 	// 检查权限：必须是组织管理员(role=10)或超级管理员(role=100)
 	if userRole != common.RoleAdminUser && userRole != common.RoleRootUser {
-		c.JSON(http.StatusForbidden, gin.H{
-			"success": false,
-			"message": i18n.Get(c, i18n.MsgForbidden),
-		})
+		common.ApiErrorI18n(c, i18n.MsgForbidden)
 		return
 	}
 
