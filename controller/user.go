@@ -586,6 +586,42 @@ func StarLogin(c *gin.Context) {
 			return
 		}
 
+		common.SysLog(fmt.Sprintf("成功创建 Star 登录用户 %s (star_user_id: %s)", newUser.Username, starUserId))
+
+		// 为新用户创建默认令牌（与 Register 函数保持一致）
+		if constant.GenerateDefaultToken {
+			key, err := common.GenerateKey()
+			if err != nil {
+				common.SysLog(fmt.Sprintf("为用户 %s 生成令牌密钥失败: %v", newUser.Username, err))
+			} else {
+				// 获取插入后的用户ID
+				var insertedUser model.User
+				if err := model.DB.Where("star_user_id = ?", starUserId).First(&insertedUser).Error; err != nil {
+					common.SysLog(fmt.Sprintf("获取新创建的用户失败，无法创建默认令牌: %v", err))
+				} else {
+					token := model.Token{
+						UserId:             insertedUser.Id,
+						Name:               insertedUser.Username + "的初始令牌",
+						Key:                key,
+						CreatedTime:        common.GetTimestamp(),
+						AccessedTime:       common.GetTimestamp(),
+						ExpiredTime:        -1,
+						RemainQuota:        500000,
+						UnlimitedQuota:     true,
+						ModelLimitsEnabled: false,
+					}
+					if setting.DefaultUseAutoGroup {
+						token.Group = "auto"
+					}
+					if err := token.Insert(); err != nil {
+						common.SysLog(fmt.Sprintf("为用户 %s 创建默认令牌失败: %v", insertedUser.Username, err))
+					} else {
+						common.SysLog(fmt.Sprintf("成功为用户 %s 创建默认令牌", insertedUser.Username))
+					}
+				}
+			}
+		}
+
 		// 重新获取创建的用户
 		err = model.DB.Where("star_user_id = ?", starUserId).First(&user).Error
 		if err != nil {
@@ -824,6 +860,40 @@ func StarRegister(c *gin.Context) {
 					// 不影响 Star 注册成功，只记录日志
 				} else {
 					common.SysLog(fmt.Sprintf("成功创建 new-api 用户 %s (star_user_id: %s, inviter_id: %d)", newUser.Username, xuserid, inviterId))
+
+					// 为新用户创建默认令牌（与 Register 函数保持一致）
+					if constant.GenerateDefaultToken {
+						// 获取插入后的用户ID
+						var insertedUser model.User
+						if err := model.DB.Where("username = ?", newUser.Username).First(&insertedUser).Error; err != nil {
+							common.SysLog(fmt.Sprintf("获取新创建的用户失败，无法创建默认令牌: %v", err))
+						} else {
+							key, err := common.GenerateKey()
+							if err != nil {
+								common.SysLog(fmt.Sprintf("为用户 %s 生成令牌密钥失败: %v", insertedUser.Username, err))
+							} else {
+								token := model.Token{
+									UserId:             insertedUser.Id,
+									Name:               insertedUser.Username + "的初始令牌",
+									Key:                key,
+									CreatedTime:        common.GetTimestamp(),
+									AccessedTime:       common.GetTimestamp(),
+									ExpiredTime:        -1,
+									RemainQuota:        500000,
+									UnlimitedQuota:     true,
+									ModelLimitsEnabled: false,
+								}
+								if setting.DefaultUseAutoGroup {
+									token.Group = "auto"
+								}
+								if err := token.Insert(); err != nil {
+									common.SysLog(fmt.Sprintf("为用户 %s 创建默认令牌失败: %v", insertedUser.Username, err))
+								} else {
+									common.SysLog(fmt.Sprintf("成功为用户 %s 创建默认令牌", insertedUser.Username))
+								}
+							}
+						}
+					}
 				}
 			} else if err == nil {
 				// 用户已存在，只更新 star_user_id（参考原版 Register：已存在的用户不处理邀请关系）
@@ -1413,6 +1483,42 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 					"message": errMsg,
 				})
 				return
+			}
+
+			common.SysLog(fmt.Sprintf("成功创建 Star 微信登录用户 %s (star_user_id: %s)", newUser.Username, starUserId))
+
+			// 为新用户创建默认令牌（与 Register 函数保持一致）
+			if constant.GenerateDefaultToken {
+				key, err := common.GenerateKey()
+				if err != nil {
+					common.SysLog(fmt.Sprintf("为用户 %s 生成令牌密钥失败: %v", newUser.Username, err))
+				} else {
+					// 获取插入后的用户ID
+					var insertedUser model.User
+					if err := model.DB.Where("star_user_id = ?", starUserId).First(&insertedUser).Error; err != nil {
+						common.SysLog(fmt.Sprintf("获取新创建的用户失败，无法创建默认令牌: %v", err))
+					} else {
+						token := model.Token{
+							UserId:             insertedUser.Id,
+							Name:               insertedUser.Username + "的初始令牌",
+							Key:                key,
+							CreatedTime:        common.GetTimestamp(),
+							AccessedTime:       common.GetTimestamp(),
+							ExpiredTime:        -1,
+							RemainQuota:        500000,
+							UnlimitedQuota:     true,
+							ModelLimitsEnabled: false,
+						}
+						if setting.DefaultUseAutoGroup {
+							token.Group = "auto"
+						}
+						if err := token.Insert(); err != nil {
+							common.SysLog(fmt.Sprintf("为用户 %s 创建默认令牌失败: %v", insertedUser.Username, err))
+						} else {
+							common.SysLog(fmt.Sprintf("成功为用户 %s 创建默认令牌", insertedUser.Username))
+						}
+					}
+				}
 			}
 
 			// 重新获取创建的用户
