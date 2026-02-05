@@ -276,3 +276,23 @@ const (
 	MsgUuidDuplicate         = "common.uuid_duplicate"
 	MsgInvalidInput          = "common.invalid_input"
 )
+
+// Organization related messages
+const (
+	MsgOrgInvalidId           = "organization.invalid_id"
+	MsgOrgNotFound            = "organization.not_found"
+	MsgOrgCreateSuccess       = "organization.create_success"
+	MsgOrgCreateFailed        = "organization.create_failed"
+	MsgOrgUpdateSuccess       = "organization.update_success"
+	MsgOrgUpdateFailed        = "organization.update_failed"
+	MsgOrgDeleteSuccess       = "organization.delete_success"
+	MsgOrgDeleteFailed        = "organization.delete_failed"
+	MsgOrgEnableSuccess       = "organization.enable_success"
+	MsgOrgDisableSuccess      = "organization.disable_success"
+	MsgOrgCodeExists          = "organization.code_exists"
+	MsgOrgCodeEmpty           = "organization.code_empty"
+	MsgOrgNameEmpty           = "organization.name_empty"
+	MsgOrgUsernameExists      = "organization.username_exists"
+	MsgOrgGetListFailed       = "organization.get_list_failed"
+	MsgOrgSyncQuotaFailed     = "organization.sync_quota_failed"
+)

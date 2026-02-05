@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/gin-gonic/gin"
 )
@@ -32,10 +33,7 @@ func GetOrganizations(c *gin.Context) {
 	if userRole != 100 { // 100 是超级管理员
 		user, err := model.GetUserById(userId, false)
 		if err != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "获取用户信息失败",
-			})
+			common.ApiErrorI18n(c, i18n.MsgUserNotExists)
 			return
 		}
 		orgId = user.OrgId
@@ -62,19 +60,13 @@ func GetOrganizations(c *gin.Context) {
 func GetOrganization(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "无效的组织ID",
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgInvalidId)
 		return
 	}
 
 	org, err := model.GetOrganizationById(id)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgNotFound)
 		return
 	}
 
@@ -89,10 +81,7 @@ func GetOrganization(c *gin.Context) {
 func CreateOrganization(c *gin.Context) {
 	var form model.OrganizationForm
 	if err := c.ShouldBindJSON(&form); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "参数错误: " + err.Error(),
-		})
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
 
@@ -113,46 +102,30 @@ func CreateOrganization(c *gin.Context) {
 	}
 
 	if err := org.Insert(); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgCreateFailed)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "组织创建成功",
-		"data":    org,
-	})
+	common.ApiSuccessI18n(c, i18n.MsgOrgCreateSuccess, org)
 }
 
 // UpdateOrganization 更新组织
 func UpdateOrganization(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "无效的组织ID",
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgInvalidId)
 		return
 	}
 
 	var form model.OrganizationForm
 	if err := c.ShouldBindJSON(&form); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "参数错误: " + err.Error(),
-		})
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
 
 	org, err := model.GetOrganizationById(id)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "组织不存在",
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgNotFound)
 		return
 	}
 
@@ -171,70 +144,45 @@ func UpdateOrganization(c *gin.Context) {
 	org.MaxKeysPerOrg = form.MaxKeysPerOrg
 
 	if err := org.Update(); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgUpdateFailed)
 		return
 	}
 
 	// 先同步组织的已用额度（从用户汇总）
 	if err := model.SyncOrgUsedQuotaFromUsers(id); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "组织更新成功，但同步已用额度失败: " + err.Error(),
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgSyncQuotaFailed)
 		return
 	}
 
 	// 再同步组织内所有用户的额度
 	if err := model.SyncUserQuotasFromOrg(id); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "组织更新成功，但同步用户额度失败: " + err.Error(),
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgSyncQuotaFailed)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "组织更新成功，已同步额度信息",
-		"data":    org,
-	})
+	common.ApiSuccessI18n(c, i18n.MsgOrgUpdateSuccess, org)
 }
 
 // DeleteOrganization 删除组织
 func DeleteOrganization(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "无效的组织ID",
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgInvalidId)
 		return
 	}
 
 	org, err := model.GetOrganizationById(id)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "组织不存在",
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgNotFound)
 		return
 	}
 
 	if err := org.Delete(); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgDeleteFailed)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "组织删除成功",
-	})
+	common.ApiSuccessI18n(c, i18n.MsgOrgDeleteSuccess, nil)
 }
 
 // GetOrganizationBilling 获取组织计费信息（包含用户使用详情）
@@ -245,19 +193,13 @@ func GetOrganizationBilling(c *gin.Context) {
 	// 获取用户信息
 	user, err := model.GetUserById(userId, false)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "获取用户信息失败",
-		})
+		common.ApiErrorI18n(c, i18n.MsgUserNotExists)
 		return
 	}
 
 	// 检查用户是否属于组织
 	if user.OrgId == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "您不属于任何组织",
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgNotFound)
 		return
 	}
 
@@ -265,7 +207,7 @@ func GetOrganizationBilling(c *gin.Context) {
 	if userRole != common.RoleAdminUser && userRole != common.RoleRootUser {
 		c.JSON(http.StatusForbidden, gin.H{
 			"success": false,
-			"message": "无权访问组织计费信息",
+			"message": i18n.Get(c, i18n.MsgForbidden),
 		})
 		return
 	}
@@ -273,20 +215,14 @@ func GetOrganizationBilling(c *gin.Context) {
 	// 获取组织信息
 	org, err := model.GetOrganizationById(user.OrgId)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "获取组织信息失败",
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgNotFound)
 		return
 	}
 
 	// 获取组织内所有用户的使用情况
 	users, err := model.GetUsersByOrgId(user.OrgId)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "获取用户列表失败",
-		})
+		common.ApiErrorI18n(c, i18n.MsgOrgGetListFailed)
 		return
 	}
 
