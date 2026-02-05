@@ -67,6 +67,7 @@ func geminiRelayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.NewA
 func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	requestId := c.GetString(common.RequestIdKey)
+	originalContentType := c.Request.Header.Get("Content-Type")
 	//group := common.GetContextKeyString(c, constant.ContextKeyUsingGroup)
 	//originalModel := common.GetContextKeyString(c, constant.ContextKeyOriginalModel)
 
@@ -176,6 +177,10 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			service.ChargeViolationFeeIfNeeded(c, relayInfo, newAPIError)
 		}
 	}()
+
+	if relayFormat == types.RelayFormatOpenAIAudio && strings.Contains(originalContentType, "multipart/form-data") {
+		c.Request.Header.Set("Content-Type", originalContentType)
+	}
 
 	retryParam := &service.RetryParam{
 		Ctx:        c,
