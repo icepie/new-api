@@ -532,36 +532,6 @@ func (user *User) TransferAffQuotaToQuota(quota int) error {
 	return tx.Commit().Error
 }
 
-// createDefaultTokenForUser 为新用户创建默认令牌
-func createDefaultTokenForUser(userId int, username string, userUnlimitedQuota bool) error {
-	key, err := common.GenerateKey()
-	if err != nil {
-		return fmt.Errorf("生成令牌密钥失败: %w", err)
-	}
-
-	token := Token{
-		UserId:             userId,
-		Name:               username + "的初始令牌",
-		Key:                key,
-		CreatedTime:        common.GetTimestamp(),
-		AccessedTime:       common.GetTimestamp(),
-		ExpiredTime:        -1,     // 永不过期
-		RemainQuota:        500000, // 默认额度
-		UnlimitedQuota:     userUnlimitedQuota, // 继承用户的无限额度状态
-		ModelLimitsEnabled: false,
-	}
-
-	if setting.DefaultUseAutoGroup {
-		token.Group = "auto"
-	}
-
-	if err := token.Insert(); err != nil {
-		return fmt.Errorf("插入令牌失败: %w", err)
-	}
-
-	return nil
-}
-
 func (user *User) Insert(inviterId int) error {
 	var err error
 
@@ -642,12 +612,6 @@ func (user *User) Insert(inviterId int) error {
 		}
 		// 即使没有邀请奖励额度，也要更新邀请人数统计（aff_count）
 		_ = inviteUser(inviterId)
-	}
-
-	// 为新用户创建默认令牌
-	if err := createDefaultTokenForUser(user.Id, user.Username, user.UnlimitedQuota); err != nil {
-		common.SysLog(fmt.Sprintf("为新用户 %s (ID: %d) 创建默认令牌失败: %v", user.Username, user.Id, err))
-		// 不返回错误,因为令牌创建失败不应该影响用户注册
 	}
 
 	return nil
