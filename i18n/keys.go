@@ -264,9 +264,20 @@ const (
 
 // OAuth related messages
 const (
-	MsgOAuthInvalidCode = "oauth.invalid_code"
-	MsgOAuthGetUserErr  = "oauth.get_user_error"
-	MsgOAuthAccountUsed = "oauth.account_used"
+	MsgOAuthInvalidCode          = "oauth.invalid_code"
+	MsgOAuthGetUserErr           = "oauth.get_user_error"
+	MsgOAuthAccountUsed          = "oauth.account_used"
+	MsgOAuthUnknownProvider      = "oauth.unknown_provider"
+	MsgOAuthStateInvalid         = "oauth.state_invalid"
+	MsgOAuthNotEnabled           = "oauth.not_enabled"
+	MsgOAuthUserDeleted          = "oauth.user_deleted"
+	MsgOAuthUserBanned           = "oauth.user_banned"
+	MsgOAuthBindSuccess          = "oauth.bind_success"
+	MsgOAuthAlreadyBound         = "oauth.already_bound"
+	MsgOAuthConnectFailed        = "oauth.connect_failed"
+	MsgOAuthTokenFailed          = "oauth.token_failed"
+	MsgOAuthUserInfoEmpty        = "oauth.user_info_empty"
+	MsgOAuthTrustLevelLow        = "oauth.trust_level_low"
 )
 
 // Model layer error messages (for translation in controller)
@@ -295,4 +306,15 @@ const (
 	MsgOrgUsernameExists      = "organization.username_exists"
 	MsgOrgGetListFailed       = "organization.get_list_failed"
 	MsgOrgSyncQuotaFailed     = "organization.sync_quota_failed"
+)
+
+// Custom OAuth provider related messages
+const (
+	MsgCustomOAuthNotFound           = "custom_oauth.not_found"
+	MsgCustomOAuthSlugEmpty          = "custom_oauth.slug_empty"
+	MsgCustomOAuthSlugExists         = "custom_oauth.slug_exists"
+	MsgCustomOAuthNameEmpty          = "custom_oauth.name_empty"
+	MsgCustomOAuthHasBindings        = "custom_oauth.has_bindings"
+	MsgCustomOAuthBindingNotFound    = "custom_oauth.binding_not_found"
+	MsgCustomOAuthProviderIdInvalid  = "custom_oauth.provider_id_field_invalid"
 )
