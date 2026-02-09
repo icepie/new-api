@@ -2687,7 +2687,6 @@
     "hero.features.developer.title": "Удобный опыт для разработчиков",
     "hero.features.developer.desc": "Совместим с протоколом API OpenAI, предоставляет SDK, примеры и Web Playground для легкой итерации и развертывания.",
     "hero.footer.copyright": "© 2025. NiceRouter Все права защищены.",
->>>>>>> upstream/main
     "Stripe/Creem 需在第三方平台创建商品并填入 ID": "Товары Stripe/Creem нужно создать на сторонней платформе и указать их ID",
     "暂无订阅套餐": "Нет тарифных планов",
     "订阅管理": "Управление подписками",
