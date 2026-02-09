@@ -355,6 +355,12 @@ func UpdateModelPriceByJSONString(jsonStr string) error {
 
 // GetModelPrice 返回模型的价格，如果模型不存在则返回-1，false
 func GetModelPrice(name string, printErr bool) (float64, bool) {
+	// 先精确匹配，支持为具体模型单独配置价格
+	if price, ok := modelPriceMap.Get(name); ok {
+		return price, true
+	}
+
+	// 再按规范化名称匹配
 	name = FormatMatchingModelName(name)
 
 	if strings.HasSuffix(name, CompactModelSuffix) {
@@ -391,19 +397,24 @@ func handleThinkingBudgetModel(name, prefix, wildcard string) string {
 }
 
 func GetModelRatio(name string) (float64, bool, string) {
-	name = FormatMatchingModelName(name)
-
-	ratio, ok := modelRatioMap.Get(name)
-	if !ok {
-		if strings.HasSuffix(name, CompactModelSuffix) {
-			if wildcardRatio, ok := modelRatioMap.Get(CompactWildcardModelKey); ok {
-				return wildcardRatio, true, name
-			}
-			//return 0, true, name
-		}
-		return 37.5, operation_setting.SelfUseModeEnabled, name
+	// 先精确匹配，支持 Option 里为具体模型（如 gemini-2.5-pro-thinking-128）单独配置倍率
+	if ratio, ok := modelRatioMap.Get(name); ok {
+		return ratio, true, name
 	}
-	return ratio, true, name
+
+	// 再按规范化名称匹配（如 thinking-128 -> thinking-*），方便通配符统一定价
+	normalized := FormatMatchingModelName(name)
+	ratio, ok := modelRatioMap.Get(normalized)
+	if !ok {
+		if strings.HasSuffix(normalized, CompactModelSuffix) {
+			if wildcardRatio, ok := modelRatioMap.Get(CompactWildcardModelKey); ok {
+				return wildcardRatio, true, normalized
+			}
+			//return 0, true, normalized
+		}
+		return 37.5, operation_setting.SelfUseModeEnabled, normalized
+	}
+	return ratio, true, normalized
 }
 
 func DefaultModelRatio2JSONString() string {
