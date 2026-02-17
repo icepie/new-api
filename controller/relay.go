@@ -203,6 +203,11 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			}
 			break
 		}
+		// Reset body storage position for retry
+		if _, seekErr := bodyStorage.Seek(0, io.SeekStart); seekErr != nil {
+			newAPIError = types.NewErrorWithStatusCode(seekErr, types.ErrorCodeReadRequestBodyFailed, http.StatusInternalServerError, types.ErrOptionWithSkipRetry())
+			break
+		}
 		if relayFormat == types.RelayFormatOpenAIAudio && strings.Contains(originalContentType, "multipart/form-data") {
 			c.Request.Header.Set("Content-Type", originalContentType)
 		}
