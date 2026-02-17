@@ -20,15 +20,9 @@ For commercial licensing, please contact support@quantumnous.com
 import React, { useState } from 'react';
 import { Button, Dropdown } from '@douyinfe/semi-ui';
 import { Languages } from 'lucide-react';
-import { CN, GB, FR, RU, JP, VN } from 'country-flag-icons/react/3x2';
 
 const LanguageSelector = ({ currentLang, onLanguageChange, t }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
-
-  const handleLanguageChange = (lang) => {
-    setDropdownVisible(false);
-    onLanguageChange(lang);
-  };
 
   return (
     <Dropdown
@@ -38,49 +32,47 @@ const LanguageSelector = ({ currentLang, onLanguageChange, t }) => {
       onVisibleChange={(visible) => setDropdownVisible(visible)}
       render={
         <Dropdown.Menu className='!bg-semi-color-bg-overlay !border-semi-color-border !shadow-lg !rounded-lg dark:!bg-gray-700 dark:!border-gray-600'>
-          {/* Language sorting: Order by English name (Chinese, English, French, Japanese, Russian) */}
           <Dropdown.Item
-            onClick={() => handleLanguageChange('zh')}
-            className={`!flex !items-center !gap-2 !px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 transition-colors ${currentLang === 'zh' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+            onClick={() => onLanguageChange('zh-CN')}
+            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${currentLang === 'zh-CN' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
           >
-            <CN title='中文' className='!w-5 !h-auto' />
-            <span>中文</span>
+            简体中文
           </Dropdown.Item>
           <Dropdown.Item
-            onClick={() => handleLanguageChange('en')}
-            className={`!flex !items-center !gap-2 !px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 transition-colors ${currentLang === 'en' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+            onClick={() => onLanguageChange('zh-TW')}
+            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${currentLang === 'zh-TW' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
           >
-            <GB title='English' className='!w-5 !h-auto' />
-            <span>English</span>
+            繁體中文
           </Dropdown.Item>
           <Dropdown.Item
-            onClick={() => handleLanguageChange('fr')}
-            className={`!flex !items-center !gap-2 !px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 transition-colors ${currentLang === 'fr' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+            onClick={() => onLanguageChange('en')}
+            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${currentLang === 'en' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
           >
-            <FR title='Français' className='!w-5 !h-auto' />
-            <span>Français</span>
+            English
           </Dropdown.Item>
           <Dropdown.Item
-            onClick={() => handleLanguageChange('ja')}
-            className={`!flex !items-center !gap-2 !px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 transition-colors ${currentLang === 'ja' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+            onClick={() => onLanguageChange('fr')}
+            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${currentLang === 'fr' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
           >
-            {/* Japanese flag using emoji as country-flag-icons/react/3x2 does not export JP */}
-            <JP title='日本語' className='!w-5 !h-auto' />
-            <span>日本語</span>
+            Français
           </Dropdown.Item>
           <Dropdown.Item
-            onClick={() => handleLanguageChange('ru')}
-            className={`!flex !items-center !gap-2 !px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 transition-colors ${currentLang === 'ru' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+            onClick={() => onLanguageChange('ja')}
+            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${currentLang === 'ja' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
           >
-            <RU title='Русский' className='!w-5 !h-auto' />
-            <span>Русский</span>
+            日本語
           </Dropdown.Item>
           <Dropdown.Item
-            onClick={() => handleLanguageChange('vi')}
-            className={`!flex !items-center !gap-2 !px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 transition-colors ${currentLang === 'vi' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+            onClick={() => onLanguageChange('ru')}
+            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${currentLang === 'ru' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
           >
-            <VN title='Tiếng Việt' className='!w-5 !h-auto' />
-            <span>Tiếng Việt</span>
+            Русский
+          </Dropdown.Item>
+          <Dropdown.Item
+            onClick={() => onLanguageChange('vi')}
+            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${currentLang === 'vi' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+          >
+            Tiếng Việt
           </Dropdown.Item>
         </Dropdown.Menu>
       }
