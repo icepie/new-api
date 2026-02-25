@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -121,4 +122,84 @@ func QRStatusRateLimit() func(c *gin.Context) {
 	// 每分钟 60 次请求，足够支持 2 秒轮询（每分钟 30 次）
 	// 设置为 60 次是为了留有余量，避免边界情况
 	return rateLimitFactory(60, 60, "QR")
+}
+
+// userRedisRateLimiter implements rate limiting using Redis for user-based limits
+func userRedisRateLimiter(c *gin.Context, maxRequestNum int, duration int64, key string) {
+	ctx := context.Background()
+	rdb := common.RDB
+	listLength, err := rdb.LLen(ctx, key).Result()
+	if err != nil {
+		fmt.Println(err.Error())
+		c.Status(http.StatusInternalServerError)
+		c.Abort()
+		return
+	}
+	if listLength < int64(maxRequestNum) {
+		rdb.RPush(ctx, key, time.Now().Unix())
+		rdb.Expire(ctx, key, time.Duration(duration)*time.Second)
+	} else {
+		oldTimeStr, err := rdb.LIndex(ctx, key, 0).Result()
+		if err != nil {
+			fmt.Println(err.Error())
+			c.Status(http.StatusInternalServerError)
+			c.Abort()
+			return
+		}
+		oldTime, err := strconv.ParseInt(oldTimeStr, 10, 64)
+		if err != nil {
+			fmt.Println(err.Error())
+			c.Status(http.StatusInternalServerError)
+			c.Abort()
+			return
+		}
+		nowTime := time.Now().Unix()
+		if nowTime-oldTime < duration {
+			c.Status(http.StatusTooManyRequests)
+			c.Abort()
+			return
+		} else {
+			rdb.LPop(ctx, key)
+			rdb.RPush(ctx, key, time.Now().Unix())
+		}
+	}
+}
+
+// userRateLimitFactory creates a rate limiter keyed by authenticated user ID
+// instead of client IP, making it resistant to proxy rotation attacks.
+// Must be used AFTER authentication middleware (UserAuth).
+func userRateLimitFactory(maxRequestNum int, duration int64, mark string) func(c *gin.Context) {
+	if common.RedisEnabled {
+		return func(c *gin.Context) {
+			userId := c.GetInt("id")
+			if userId == 0 {
+				c.Status(http.StatusUnauthorized)
+				c.Abort()
+				return
+			}
+			key := fmt.Sprintf("rateLimit:%s:user:%d", mark, userId)
+			userRedisRateLimiter(c, maxRequestNum, duration, key)
+		}
+	}
+	// It's safe to call multi times.
+	inMemoryRateLimiter.Init(common.RateLimitKeyExpirationDuration)
+	return func(c *gin.Context) {
+		userId := c.GetInt("id")
+		if userId == 0 {
+			c.Status(http.StatusUnauthorized)
+			c.Abort()
+			return
+		}
+		key := fmt.Sprintf("%s:user:%d", mark, userId)
+		if !inMemoryRateLimiter.Request(key, maxRequestNum, duration) {
+			c.Status(http.StatusTooManyRequests)
+			c.Abort()
+			return
+		}
+	}
+}
+
+// SearchRateLimit applies rate limiting to search endpoints
+func SearchRateLimit() func(c *gin.Context) {
+	return userRateLimitFactory(common.SearchRateLimitNum, common.SearchRateLimitDuration, "SR")
 }

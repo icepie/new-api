@@ -352,10 +352,9 @@ func InitRatioSettings() {
 	CompletionRatio = defaultCompletionRatio
 	CompletionRatioMutex.Unlock()
 
-	// Initialize cacheRatioMap
-	cacheRatioMapMutex.Lock()
-	cacheRatioMap = defaultCacheRatio
-	cacheRatioMapMutex.Unlock()
+	// Initialize cacheRatioMap (defined in cache_ratio.go)
+	cacheRatioMap.AddAll(defaultCacheRatio)
+	createCacheRatioMap.AddAll(defaultCreateCacheRatio)
 
 	// initialize imageRatioMap
 	imageRatioMapMutex.Lock()
