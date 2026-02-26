@@ -72,6 +72,8 @@ func UpdateProxySite(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	// Also invalidate new domain and new admin user ID
+	service.InvalidateSiteCache(existing.Domain, existing.AdminUserId)
 	c.JSON(200, gin.H{"success": true, "data": existing})
 }
 
@@ -98,8 +100,8 @@ func DeleteProxySite(c *gin.Context) {
 
 // GetMySite 站点管理员获取自己管理的站点信息 (UserAuth + SiteAdminAuth)
 func GetMySite(c *gin.Context) {
-	userId := c.GetInt("id")
-	site, err := model.GetProxySiteByAdminUserId(userId)
+	siteId := c.GetInt("managed_site_id")
+	site, err := model.GetProxySiteById(siteId)
 	if err != nil {
 		common.ApiErrorMsg(c, "未找到管理站点")
 		return

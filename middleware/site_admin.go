@@ -13,7 +13,7 @@ func SiteAdminAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userId := c.GetInt("id")
 		if userId == 0 {
-			c.JSON(http.StatusOK, gin.H{
+			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"message": "未登录",
 			})
@@ -22,7 +22,7 @@ func SiteAdminAuth() gin.HandlerFunc {
 		}
 		siteId := service.GetManagedSiteIdByUserId(userId)
 		if siteId == 0 {
-			c.JSON(http.StatusOK, gin.H{
+			c.JSON(http.StatusForbidden, gin.H{
 				"success": false,
 				"message": "权限不足，非站点管理员",
 			})
