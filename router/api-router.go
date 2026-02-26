@@ -178,6 +178,19 @@ func SetApiRouter(router *gin.Engine) {
 			optionRoute.POST("/migrate_console_setting", controller.MigrateConsoleSetting) // 用于迁移检测的旧键，下个版本会删除
 		}
 
+		// 站点管理员获取自己的站点（specific route must come before group to avoid conflicts）
+		apiRouter.GET("/proxy_site/mine", middleware.UserAuth(), middleware.SiteAdminAuth(), controller.GetMySite)
+
+		// 代理站点管理 (Root 权限)
+		proxySiteRoute := apiRouter.Group("/proxy_site")
+		proxySiteRoute.Use(middleware.RootAuth())
+		{
+			proxySiteRoute.GET("/", controller.GetAllProxySites)
+			proxySiteRoute.POST("/", controller.CreateProxySite)
+			proxySiteRoute.PUT("/:id", controller.UpdateProxySite)
+			proxySiteRoute.DELETE("/:id", controller.DeleteProxySite)
+		}
+
 		// Custom OAuth provider management (root only)
 		customOAuthRoute := apiRouter.Group("/custom-oauth-provider")
 		customOAuthRoute.Use(middleware.RootAuth())
