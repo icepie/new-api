@@ -108,3 +108,35 @@ func GetMySite(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{"success": true, "data": site})
 }
+
+// GetSiteUsers 站点管理员查看本站用户 (SiteAdminAuth)
+func GetSiteUsers(c *gin.Context) {
+	siteId := c.GetInt("managed_site_id")
+	pageInfo := common.GetPageQuery(c)
+	users, total, err := model.GetUsersBySiteId(siteId, pageInfo)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	c.JSON(200, gin.H{
+		"success": true,
+		"data":    users,
+		"total":   total,
+	})
+}
+
+// GetSiteTopUps 站点管理员查看本站充值记录 (SiteAdminAuth)
+func GetSiteTopUps(c *gin.Context) {
+	siteId := c.GetInt("managed_site_id")
+	pageInfo := common.GetPageQuery(c)
+	topups, total, err := model.GetTopUpsBySiteId(siteId, pageInfo)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	c.JSON(200, gin.H{
+		"success": true,
+		"data":    topups,
+		"total":   total,
+	})
+}

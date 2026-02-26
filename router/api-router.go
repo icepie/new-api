@@ -191,6 +191,14 @@ func SetApiRouter(router *gin.Engine) {
 			proxySiteRoute.DELETE("/:id", controller.DeleteProxySite)
 		}
 
+		// 站点管理员专属路由组
+		siteAdminRoute := apiRouter.Group("/site_admin")
+		siteAdminRoute.Use(middleware.UserAuth(), middleware.SiteAdminAuth())
+		{
+			siteAdminRoute.GET("/users", controller.GetSiteUsers)
+			siteAdminRoute.GET("/topups", controller.GetSiteTopUps)
+		}
+
 		// Custom OAuth provider management (root only)
 		customOAuthRoute := apiRouter.Group("/custom-oauth-provider")
 		customOAuthRoute.Use(middleware.RootAuth())

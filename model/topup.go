@@ -307,6 +307,19 @@ func ManualCompleteTopUp(tradeNo string) error {
 	RecordLog(userId, LogTypeTopup, fmt.Sprintf("管理员补单成功，充值金额: %v，支付金额：%f", logger.FormatQuota(quotaToAdd), payMoney))
 	return nil
 }
+func GetTopUpsBySiteId(siteId int, pageInfo *common.PageInfo) (topups []*TopUp, total int64, err error) {
+	err = DB.Model(&TopUp{}).Where("site_id = ?", siteId).Count(&total).Error
+	if err != nil {
+		return
+	}
+	err = DB.Where("site_id = ?", siteId).
+		Order("id desc").
+		Offset(pageInfo.GetStartIdx()).
+		Limit(pageInfo.GetPageSize()).
+		Find(&topups).Error
+	return
+}
+
 func RechargeCreem(referenceId string, customerEmail string, customerName string) (err error) {
 	if referenceId == "" {
 		return errors.New("未提供支付单号")

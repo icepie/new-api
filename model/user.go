@@ -1081,3 +1081,17 @@ func RootUserExists() bool {
 	}
 	return true
 }
+
+func GetUsersBySiteId(siteId int, pageInfo *common.PageInfo) (users []*User, total int64, err error) {
+	err = DB.Model(&User{}).Where("site_id = ?", siteId).Count(&total).Error
+	if err != nil {
+		return
+	}
+	err = DB.Where("site_id = ?", siteId).
+		Order("id desc").
+		Offset(pageInfo.GetStartIdx()).
+		Limit(pageInfo.GetPageSize()).
+		Omit("password").
+		Find(&users).Error
+	return
+}
