@@ -114,6 +114,7 @@ func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
 		TradeNo:    referenceId,
 		CreateTime: time.Now().Unix(),
 		Status:     common.TopUpStatusPending,
+		SiteId:     user.SiteId,
 	}
 	err = topUp.Insert()
 	if err != nil {

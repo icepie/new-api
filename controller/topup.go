@@ -183,6 +183,10 @@ func RequestEpay(c *gin.Context) {
 		dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
 		amount = dAmount.Div(dQuotaPerUnit).IntPart()
 	}
+	userSiteId := 0
+	if u, err := model.GetUserById(id, false); err == nil && u != nil {
+		userSiteId = u.SiteId
+	}
 	topUp := &model.TopUp{
 		UserId:        id,
 		Amount:        amount,
@@ -191,6 +195,7 @@ func RequestEpay(c *gin.Context) {
 		PaymentMethod: req.PaymentMethod,
 		CreateTime:    time.Now().Unix(),
 		Status:        "pending",
+		SiteId:        userSiteId,
 	}
 	err = topUp.Insert()
 	if err != nil {
