@@ -20,6 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { history } from './history';
+import { isSiteAdmin } from './utils.jsx';
 
 export function authHeader() {
   // return authorization header with jwt token
@@ -63,6 +64,17 @@ export function AdminRoute({ children }) {
     // ignore
   }
   return <Navigate to='/forbidden' replace />;
+}
+
+export function SiteAdminRoute({ children }) {
+  const raw = localStorage.getItem('user');
+  if (!raw) {
+    return <Navigate to='/login' state={{ from: history.location }} />;
+  }
+  if (!isSiteAdmin()) {
+    return <Navigate to='/forbidden' replace />;
+  }
+  return children;
 }
 
 export { PrivateRoute };

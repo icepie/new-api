@@ -21,7 +21,7 @@ import React, { lazy, Suspense, useContext, useMemo, useEffect } from 'react';
 import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Loading from './components/common/ui/Loading';
 import User from './pages/User';
-import { AuthRedirect, PrivateRoute, AdminRoute } from './helpers';
+import { AuthRedirect, PrivateRoute, AdminRoute, SiteAdminRoute } from './helpers';
 import RegisterForm from './components/auth/RegisterForm';
 import LoginForm from './components/auth/LoginForm';
 import StarLoginForm from './components/auth/StarLoginForm';
@@ -205,17 +205,17 @@ function App() {
         <Route
           path='/console/site_admin/users'
           element={
-            <PrivateRoute>
+            <SiteAdminRoute>
               <SiteAdminUsers />
-            </PrivateRoute>
+            </SiteAdminRoute>
           }
         />
         <Route
           path='/console/site_admin/topups'
           element={
-            <PrivateRoute>
+            <SiteAdminRoute>
               <SiteAdminTopUps />
-            </PrivateRoute>
+            </SiteAdminRoute>
           }
         />
         <Route

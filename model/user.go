@@ -1091,7 +1091,7 @@ func GetUsersBySiteId(siteId int, pageInfo *common.PageInfo) (users []*User, tot
 		Order("id desc").
 		Offset(pageInfo.GetStartIdx()).
 		Limit(pageInfo.GetPageSize()).
-		Omit("password").
+		Omit("password", "access_token").
 		Find(&users).Error
 	return
 }
