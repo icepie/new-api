@@ -25,6 +25,7 @@ import {
   InputNumber,
   Modal,
   Popconfirm,
+  Select,
   Switch,
   Table,
   Tag,
@@ -54,6 +55,8 @@ const ProxySitePage = () => {
   const [editingId, setEditingId] = useState(null);
   const [formValues, setFormValues] = useState({ ...defaultForm });
   const [submitting, setSubmitting] = useState(false);
+  const [userOptions, setUserOptions] = useState([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
 
   const loadSites = async () => {
     setLoading(true);
@@ -75,13 +78,35 @@ const ProxySitePage = () => {
     loadSites();
   }, []);
 
+  const searchUsers = async (keyword) => {
+    if (!keyword) return;
+    setUserSearchLoading(true);
+    try {
+      const res = await API.get(`/api/user/search?keyword=${encodeURIComponent(keyword)}&p=1&page_size=20`);
+      if (res.data.success) {
+        const items = res.data.data?.items || [];
+        setUserOptions(
+          items.map((u) => ({
+            value: u.id,
+            label: `#${u.id} ${u.username}${u.display_name ? ` (${u.display_name})` : ''}`,
+          })),
+        );
+      }
+    } catch (_) {
+      // ignore search errors
+    } finally {
+      setUserSearchLoading(false);
+    }
+  };
+
   const openCreate = () => {
     setEditingId(null);
     setFormValues({ ...defaultForm });
+    setUserOptions([]);
     setModalVisible(true);
   };
 
-  const openEdit = (record) => {
+  const openEdit = async (record) => {
     setEditingId(record.id);
     setFormValues({
       domain: record.domain || '',
@@ -93,6 +118,26 @@ const ProxySitePage = () => {
       remark: record.remark || '',
       status: record.status ?? 1,
     });
+    // Pre-load admin user info so the selector shows a label
+    if (record.admin_user_id) {
+      try {
+        const res = await API.get(`/api/user/search?keyword=${record.admin_user_id}&p=1&page_size=10`);
+        if (res.data.success) {
+          const items = res.data.data?.items || [];
+          const user = items.find((u) => u.id === record.admin_user_id);
+          if (user) {
+            setUserOptions([{
+              value: user.id,
+              label: `#${user.id} ${user.username}${user.display_name ? ` (${user.display_name})` : ''}`,
+            }]);
+          }
+        }
+      } catch (_) {
+        setUserOptions([]);
+      }
+    } else {
+      setUserOptions([]);
+    }
     setModalVisible(true);
   };
 
@@ -303,11 +348,17 @@ const ProxySitePage = () => {
               style={{ width: '100%' }}
             />
           </Form.Slot>
-          <Form.Slot label='管理员用户ID'>
-            <InputNumber
-              value={formValues.admin_user_id}
+          <Form.Slot label='管理员用户'>
+            <Select
+              value={formValues.admin_user_id || undefined}
+              placeholder='搜索用户名或 ID'
+              filter
+              remote
+              onSearch={searchUsers}
+              loading={userSearchLoading}
+              optionList={userOptions}
               onChange={(val) => handleFieldChange('admin_user_id', val ?? 0)}
-              min={0}
+              showClear
               style={{ width: '100%' }}
             />
           </Form.Slot>
