@@ -48,6 +48,7 @@ const PricingNew = React.lazy(() => import('./pages/Pricing/PricingNew'));
 import Task from './pages/Task';
 import ModelPage from './pages/Model';
 import ModelDeploymentPage from './pages/ModelDeployment';
+import ProxySitePage from './pages/ProxySite/index.jsx';
 import Playground from './pages/Playground';
 import Subscription from './pages/Subscription';
 import OAuth2Callback from './components/auth/OAuth2Callback';
@@ -188,6 +189,14 @@ function App() {
           element={
             <AdminRoute>
               <User />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path='/console/proxy_site'
+          element={
+            <AdminRoute>
+              <ProxySitePage />
             </AdminRoute>
           }
         />

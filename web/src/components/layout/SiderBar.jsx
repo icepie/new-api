@@ -49,6 +49,7 @@ const routerMap = {
   deployment: '/console/deployment',
   playground: '/console/playground',
   personal: '/console/personal',
+  proxy_site: '/console/proxy_site',
 };
 
 const SiderBar = ({ onNavigate = () => {} }) => {
@@ -187,6 +188,12 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         text: t('系统设置'),
         itemKey: 'setting',
         to: '/setting',
+        className: isRoot() ? '' : 'tableHiddle',
+      },
+      {
+        text: t('代理站点'),
+        itemKey: 'proxy_site',
+        to: '/console/proxy_site',
         className: isRoot() ? '' : 'tableHiddle',
       },
     ];
