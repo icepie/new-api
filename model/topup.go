@@ -21,6 +21,7 @@ type TopUp struct {
 	CreateTime    int64   `json:"create_time"`
 	CompleteTime  int64   `json:"complete_time"`
 	Status        string  `json:"status"`
+	SiteId        int     `json:"site_id" gorm:"index;default:0"` // 归属站点ID
 }
 
 func (topUp *TopUp) Insert() error {
