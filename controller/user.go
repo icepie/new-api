@@ -2255,12 +2255,20 @@ func Register(c *gin.Context) {
 	}
 	affCode := user.AffCode // this code is the inviter's code, not the user's own code
 	inviterId, _ := model.GetUserIdByAffCode(affCode)
+	// Detect proxy site from Host header
+	host := c.Request.Host
+	// Strip port (e.g. "localhost:3000" -> "localhost")
+	if colonIdx := strings.LastIndex(host, ":"); colonIdx != -1 {
+		host = host[:colonIdx]
+	}
+	siteId := service.GetSiteIdByDomain(host)
 	cleanUser := model.User{
 		Username:    user.Username,
 		Password:    user.Password,
 		DisplayName: user.Username,
 		InviterId:   inviterId,
 		Role:        common.RoleCommonUser, // 明确设置角色为普通用户
+		SiteId:      siteId,
 	}
 	if common.EmailVerificationEnabled {
 		cleanUser.Email = user.Email
