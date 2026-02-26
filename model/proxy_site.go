@@ -1,12 +1,14 @@
 package model
 
 import (
+	"errors"
+
 	"github.com/QuantumNous/new-api/common"
 )
 
 type ProxySite struct {
-	Id           int     `json:"id" gorm:"primarykey"`
-	Domain       string  `json:"domain" gorm:"type:varchar(256);uniqueIndex"`
+	Id           int     `json:"id" gorm:"primaryKey"`
+	Domain       string  `json:"domain" gorm:"type:varchar(256);uniqueIndex;not null"`
 	Name         string  `json:"name" gorm:"type:varchar(128)"`
 	Logo         string  `json:"logo" gorm:"type:text"`
 	Announcement string  `json:"announcement" gorm:"type:text"`
@@ -14,7 +16,7 @@ type ProxySite struct {
 	AdminUserId  int     `json:"admin_user_id" gorm:"index"`
 	Remark       string  `json:"remark" gorm:"type:text"`
 	Status       int     `json:"status" gorm:"default:1"` // 1=启用 0=禁用
-	CreatedTime  int64   `json:"created_time"`
+	CreatedTime  int64   `json:"created_time" gorm:"bigint"`
 }
 
 func GetAllProxySites() ([]*ProxySite, error) {
@@ -24,9 +26,15 @@ func GetAllProxySites() ([]*ProxySite, error) {
 }
 
 func GetProxySiteById(id int) (*ProxySite, error) {
+	if id == 0 {
+		return nil, errors.New("id 为空！")
+	}
 	var site ProxySite
 	err := DB.Where("id = ?", id).First(&site).Error
-	return &site, err
+	if err != nil {
+		return nil, err
+	}
+	return &site, nil
 }
 
 func GetProxySiteByDomain(domain string) (*ProxySite, error) {
