@@ -50,6 +50,7 @@ import ModelPage from './pages/Model';
 import ModelDeploymentPage from './pages/ModelDeployment';
 import ProxySitePage from './pages/ProxySite/index.jsx';
 import SiteAdminUsers from './pages/SiteAdmin/Users.jsx';
+import SiteAdminTopUps from './pages/SiteAdmin/TopUps.jsx';
 import Playground from './pages/Playground';
 import Subscription from './pages/Subscription';
 import OAuth2Callback from './components/auth/OAuth2Callback';
@@ -206,6 +207,14 @@ function App() {
           element={
             <PrivateRoute>
               <SiteAdminUsers />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path='/console/site_admin/topups'
+          element={
+            <PrivateRoute>
+              <SiteAdminTopUps />
             </PrivateRoute>
           }
         />
