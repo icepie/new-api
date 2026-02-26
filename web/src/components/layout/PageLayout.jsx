@@ -78,11 +78,29 @@ const PageLayout = () => {
     }
   }, [isMobile, drawerOpen, collapsed, setCollapsed]);
 
+  const checkAndStoreSiteAdmin = async (user) => {
+    if (!user || user.role >= 10) {
+      localStorage.removeItem('managed_site');
+      return;
+    }
+    try {
+      const res = await API.get('/api/proxy_site/mine');
+      if (res.data.success && res.data.data) {
+        localStorage.setItem('managed_site', JSON.stringify(res.data.data));
+      } else {
+        localStorage.removeItem('managed_site');
+      }
+    } catch {
+      localStorage.removeItem('managed_site');
+    }
+  };
+
   const loadUser = () => {
     let user = localStorage.getItem('user');
     if (user) {
       let data = JSON.parse(user);
       userDispatch({ type: 'login', payload: data });
+      checkAndStoreSiteAdmin(data);
     }
   };
 

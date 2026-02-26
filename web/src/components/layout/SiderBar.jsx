@@ -25,7 +25,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useSidebarCollapsed } from '../../hooks/common/useSidebarCollapsed';
 import { useSidebar } from '../../hooks/common/useSidebar';
 import { useMinimumLoadingTime } from '../../hooks/common/useMinimumLoadingTime';
-import { isAdmin, isRoot, showError } from '../../helpers';
+import { isAdmin, isRoot, isSiteAdmin, showError } from '../../helpers';
 import SkeletonWrapper from './components/SkeletonWrapper';
 
 import { Nav, Divider, Button } from '@douyinfe/semi-ui';
@@ -50,6 +50,8 @@ const routerMap = {
   playground: '/console/playground',
   personal: '/console/personal',
   proxy_site: '/console/proxy_site',
+  site_users: '/console/site_admin/users',
+  site_topups: '/console/site_admin/topups',
 };
 
 const SiderBar = ({ onNavigate = () => {} }) => {
@@ -491,6 +493,20 @@ const SiderBar = ({ onNavigate = () => {} }) => {
                   <div className='sidebar-group-label'>{t('管理员')}</div>
                 )}
                 {adminItems.map((item) => renderNavItem(item))}
+              </div>
+            </>
+          )}
+
+          {/* 站点管理区域 - 只在站点管理员时显示 */}
+          {!isAdmin() && isSiteAdmin() && (
+            <>
+              <Divider className='sidebar-divider' />
+              <div>
+                {!collapsed && (
+                  <div className='sidebar-group-label'>{t('站点管理')}</div>
+                )}
+                {renderNavItem({ text: t('站点用户'), itemKey: 'site_users' })}
+                {renderNavItem({ text: t('站点充值'), itemKey: 'site_topups' })}
               </div>
             </>
           )}

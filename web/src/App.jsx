@@ -49,6 +49,7 @@ import Task from './pages/Task';
 import ModelPage from './pages/Model';
 import ModelDeploymentPage from './pages/ModelDeployment';
 import ProxySitePage from './pages/ProxySite/index.jsx';
+import SiteAdminUsers from './pages/SiteAdmin/Users.jsx';
 import Playground from './pages/Playground';
 import Subscription from './pages/Subscription';
 import OAuth2Callback from './components/auth/OAuth2Callback';
@@ -198,6 +199,14 @@ function App() {
             <AdminRoute>
               <ProxySitePage />
             </AdminRoute>
+          }
+        />
+        <Route
+          path='/console/site_admin/users'
+          element={
+            <PrivateRoute>
+              <SiteAdminUsers />
+            </PrivateRoute>
           }
         />
         <Route

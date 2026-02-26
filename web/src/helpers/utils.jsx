@@ -46,6 +46,25 @@ export function isRoot() {
   return user.role >= 100;
 }
 
+export function isSiteAdmin() {
+  const siteInfo = localStorage.getItem('managed_site');
+  if (!siteInfo) return false;
+  try {
+    const site = JSON.parse(siteInfo);
+    return site && site.id > 0;
+  } catch {
+    return false;
+  }
+}
+
+export function getManagedSite() {
+  try {
+    return JSON.parse(localStorage.getItem('managed_site') || 'null');
+  } catch {
+    return null;
+  }
+}
+
 export function getSystemName() {
   let system_name = localStorage.getItem('system_name');
   if (!system_name) return 'NiceRouter';
