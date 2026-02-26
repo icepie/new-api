@@ -264,35 +264,35 @@ const ProxySitePage = () => {
         width={560}
       >
         <Form labelPosition='left' labelWidth={110}>
-          <Form.Item label='域名' required>
+          <Form.Slot label={{ text: '域名', required: true }}>
             <Input
               value={formValues.domain}
               onChange={(val) => handleFieldChange('domain', val)}
               placeholder='例如：example.com'
             />
-          </Form.Item>
-          <Form.Item label='名称'>
+          </Form.Slot>
+          <Form.Slot label='名称'>
             <Input
               value={formValues.name}
               onChange={(val) => handleFieldChange('name', val)}
               placeholder='站点显示名称'
             />
-          </Form.Item>
-          <Form.Item label='Logo URL'>
+          </Form.Slot>
+          <Form.Slot label='Logo URL'>
             <Input
               value={formValues.logo}
               onChange={(val) => handleFieldChange('logo', val)}
               placeholder='https://...'
             />
-          </Form.Item>
-          <Form.Item label='公告'>
+          </Form.Slot>
+          <Form.Slot label='公告'>
             <Input
               value={formValues.announcement}
               onChange={(val) => handleFieldChange('announcement', val)}
               placeholder='站点公告内容'
             />
-          </Form.Item>
-          <Form.Item label='返利比例'>
+          </Form.Slot>
+          <Form.Slot label='返利比例'>
             <InputNumber
               value={formValues.rebate_ratio}
               onChange={(val) => handleFieldChange('rebate_ratio', val ?? 0)}
@@ -302,30 +302,30 @@ const ProxySitePage = () => {
               precision={4}
               style={{ width: '100%' }}
             />
-          </Form.Item>
-          <Form.Item label='管理员用户ID'>
+          </Form.Slot>
+          <Form.Slot label='管理员用户ID'>
             <InputNumber
               value={formValues.admin_user_id}
               onChange={(val) => handleFieldChange('admin_user_id', val ?? 0)}
               min={0}
               style={{ width: '100%' }}
             />
-          </Form.Item>
-          <Form.Item label='备注'>
+          </Form.Slot>
+          <Form.Slot label='备注'>
             <Input
               value={formValues.remark}
               onChange={(val) => handleFieldChange('remark', val)}
               placeholder='内部备注'
             />
-          </Form.Item>
-          <Form.Item label='状态'>
+          </Form.Slot>
+          <Form.Slot label='状态'>
             <Switch
               checked={formValues.status === 1}
               onChange={(checked) => handleFieldChange('status', checked ? 1 : 2)}
               checkedText='启用'
               uncheckedText='禁用'
             />
-          </Form.Item>
+          </Form.Slot>
         </Form>
       </Modal>
     </div>
