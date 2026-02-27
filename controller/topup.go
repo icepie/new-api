@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +22,27 @@ import (
 	"github.com/samber/lo"
 	"github.com/shopspring/decimal"
 )
+
+// getRequestBaseURL returns the base URL for payment redirects.
+// If the request originates from a registered proxy site domain, that site's
+// base URL is returned; otherwise the configured ServerAddress is used.
+func getRequestBaseURL(c *gin.Context) string {
+	host := c.Request.Host
+	lookupHost := host
+	if idx := strings.LastIndex(lookupHost, ":"); idx != -1 {
+		lookupHost = lookupHost[:idx]
+	}
+	if service.GetSiteIdByDomain(lookupHost) == 0 {
+		return system_setting.ServerAddress
+	}
+	scheme := "https"
+	if proto := c.Request.Header.Get("X-Forwarded-Proto"); proto == "http" {
+		scheme = "http"
+	} else if c.Request.TLS == nil && proto == "" {
+		scheme = "http"
+	}
+	return scheme + "://" + host
+}
 
 func GetTopUpInfo(c *gin.Context) {
 	// 获取支付方式
@@ -155,7 +177,7 @@ func RequestEpay(c *gin.Context) {
 	}
 
 	callBackAddress := service.GetCallbackAddress()
-	returnUrl, _ := url.Parse(system_setting.ServerAddress + "/console/log")
+	returnUrl, _ := url.Parse(getRequestBaseURL(c) + "/console/log")
 	notifyUrl, _ := url.Parse(callBackAddress + "/api/user/epay/notify")
 	tradeNo := fmt.Sprintf("%s%d", common.GetRandomString(6), time.Now().Unix())
 	tradeNo = fmt.Sprintf("USR%dNO%s", id, tradeNo)

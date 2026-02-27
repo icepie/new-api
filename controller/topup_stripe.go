@@ -89,6 +89,15 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 		return
 	}
 
+	// Apply proxy-site-aware defaults for redirect URLs
+	baseURL := getRequestBaseURL(c)
+	if req.SuccessURL == "" {
+		req.SuccessURL = baseURL + "/console/log"
+	}
+	if req.CancelURL == "" {
+		req.CancelURL = baseURL + "/console/topup"
+	}
+
 	id := c.GetInt("id")
 	user, _ := model.GetUserById(id, false)
 	chargedMoney := GetChargedAmount(float64(req.Amount), *user)
