@@ -188,7 +188,7 @@ func RelaySwapFace(c *gin.Context, info *relaycommon.RelayInfo) *dto.MidjourneyR
 
 	priceData := helper.ModelPriceHelperPerCall(c, info)
 
-	userQuota, err := model.GetUserQuota(info.UserId, false)
+	userCache, err := model.GetUserCache(info.UserId)
 	if err != nil {
 		return &dto.MidjourneyResponse{
 			Code:        4,
@@ -196,7 +196,7 @@ func RelaySwapFace(c *gin.Context, info *relaycommon.RelayInfo) *dto.MidjourneyR
 		}
 	}
 
-	if userQuota-priceData.Quota < 0 {
+	if !userCache.UnlimitedQuota && userCache.Quota-priceData.Quota < 0 {
 		return &dto.MidjourneyResponse{
 			Code:        4,
 			Description: "quota_not_enough",
@@ -489,7 +489,7 @@ func RelayMidjourneySubmit(c *gin.Context, relayInfo *relaycommon.RelayInfo) *dt
 
 	priceData := helper.ModelPriceHelperPerCall(c, relayInfo)
 
-	userQuota, err := model.GetUserQuota(relayInfo.UserId, false)
+	userCache, err := model.GetUserCache(relayInfo.UserId)
 	if err != nil {
 		return &dto.MidjourneyResponse{
 			Code:        4,
@@ -497,7 +497,7 @@ func RelayMidjourneySubmit(c *gin.Context, relayInfo *relaycommon.RelayInfo) *dt
 		}
 	}
 
-	if consumeQuota && userQuota-priceData.Quota < 0 {
+	if consumeQuota && !userCache.UnlimitedQuota && userCache.Quota-priceData.Quota < 0 {
 		return &dto.MidjourneyResponse{
 			Code:        4,
 			Description: "quota_not_enough",

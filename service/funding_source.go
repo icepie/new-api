@@ -27,14 +27,15 @@ type FundingSource interface {
 // ---------------------------------------------------------------------------
 
 type WalletFunding struct {
-	userId   int
-	consumed int // 实际预扣的用户额度
+	userId         int
+	consumed       int  // 实际预扣的用户额度
+	unlimitedQuota bool // 无限额度用户不操作配额
 }
 
 func (w *WalletFunding) Source() string { return BillingSourceWallet }
 
 func (w *WalletFunding) PreConsume(amount int) error {
-	if amount <= 0 {
+	if amount <= 0 || w.unlimitedQuota {
 		return nil
 	}
 	if err := model.DecreaseUserQuota(w.userId, amount); err != nil {
@@ -45,7 +46,7 @@ func (w *WalletFunding) PreConsume(amount int) error {
 }
 
 func (w *WalletFunding) Settle(delta int) error {
-	if delta == 0 {
+	if delta == 0 || w.unlimitedQuota {
 		return nil
 	}
 	if delta > 0 {
@@ -55,7 +56,7 @@ func (w *WalletFunding) Settle(delta int) error {
 }
 
 func (w *WalletFunding) Refund() error {
-	if w.consumed <= 0 {
+	if w.consumed <= 0 || w.unlimitedQuota {
 		return nil
 	}
 	// IncreaseUserQuota 是 quota += N 的非幂等操作，不能重试，否则会多退额度。

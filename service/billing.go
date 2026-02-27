@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/types"
 	"github.com/gin-gonic/gin"
@@ -56,6 +57,13 @@ func SettleBilling(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, actualQuo
 
 		if err := relayInfo.Billing.Settle(actualQuota); err != nil {
 			return err
+		}
+
+		// 组织额度扣除：即使用户是无限额度，组织额度仍然消耗
+		if relayInfo.OrgId > 0 && actualQuota > 0 {
+			if err := model.DeductOrgQuota(relayInfo.OrgId, actualQuota); err != nil {
+				logger.LogError(ctx, fmt.Sprintf("error deducting org quota (orgId=%d, quota=%d): %s", relayInfo.OrgId, actualQuota, err.Error()))
+			}
 		}
 
 		// 发送额度通知（订阅计费使用订阅剩余额度）
