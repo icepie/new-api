@@ -209,6 +209,23 @@ const SiderBar = ({ onNavigate = () => {} }) => {
     return filteredItems;
   }, [isAdmin(), isRoot(), t, isModuleVisible]);
 
+  const siteAdminItems = useMemo(() => {
+    const items = [
+      {
+        text: t('站点用户'),
+        itemKey: 'site_users',
+      },
+      {
+        text: t('站点充值'),
+        itemKey: 'site_topups',
+      },
+    ];
+
+    return items.filter((item) =>
+      isModuleVisible('site_admin', item.itemKey),
+    );
+  }, [t, isModuleVisible]);
+
   const chatMenuItems = useMemo(() => {
     const items = [
       {
@@ -498,15 +515,14 @@ const SiderBar = ({ onNavigate = () => {} }) => {
           )}
 
           {/* 站点管理区域 - 只在站点管理员时显示 */}
-          {!isAdmin() && isSiteAdmin() && (
+          {!isAdmin() && isSiteAdmin() && hasSectionVisibleModules('site_admin') && (
             <>
               <Divider className='sidebar-divider' />
               <div>
                 {!collapsed && (
                   <div className='sidebar-group-label'>{t('站点管理')}</div>
                 )}
-                {renderNavItem({ text: t('站点用户'), itemKey: 'site_users' })}
-                {renderNavItem({ text: t('站点充值'), itemKey: 'site_topups' })}
+                {siteAdminItems.map((item) => renderNavItem(item))}
               </div>
             </>
           )}

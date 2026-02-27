@@ -55,6 +55,11 @@ export const DEFAULT_ADMIN_CONFIG = {
     setting: true,
     proxy_site: true,
   },
+  site_admin: {
+    enabled: true,
+    site_users: true,
+    site_topups: true,
+  },
 };
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
