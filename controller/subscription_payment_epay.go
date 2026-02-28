@@ -164,11 +164,6 @@ func SubscriptionEpayReturn(c *gin.Context) {
 		return
 	}
 
-	if len(params) == 0 {
-		c.Redirect(http.StatusFound, redirectBaseURL+"/console/topup?pay=fail")
-		return
-	}
-
 	client := GetEpayClient()
 	if client == nil {
 		c.Redirect(http.StatusFound, redirectBaseURL+"/console/topup?pay=fail")
