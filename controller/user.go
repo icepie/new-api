@@ -491,12 +491,22 @@ func StarLogin(c *gin.Context) {
 		inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
 		common.SysLog(fmt.Sprintf("注册流程: affCode=%s, inviterId=%d", affCode, inviterId))
 
+		// 检测代理站点（参考原版 Register 逻辑）
+		host := c.Request.Host
+		// 去掉端口
+		if colonIdx := strings.LastIndex(host, ":"); colonIdx != -1 {
+			host = host[:colonIdx]
+		}
+		siteId := service.GetSiteIdByDomain(host)
+		common.SysLog(fmt.Sprintf("Star 注册流程: host=%s, siteId=%d", host, siteId))
+
 		// 创建新用户，优先使用从 Star 获取的信息（参考原版 Register 逻辑）
 		newUser := model.User{
 			Password:  userPassword,
 			Role:      common.RoleCommonUser,
 			Status:    common.UserStatusEnabled,
 			InviterId: inviterId, // 参考原版：直接设置 InviterId
+			SiteId:    siteId,    // 设置站点ID
 		}
 		common.SysLog(fmt.Sprintf("准备创建新用户: InviterId=%d, 初始Role=%d, 状态=%d", newUser.InviterId, newUser.Role, newUser.Status))
 
@@ -1401,6 +1411,15 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 			inviterId, _ := model.GetUserIdByAffCode(affCode) // 参考原版：affCode 是邀请人的码，不是用户自己的码
 			common.SysLog(fmt.Sprintf("微信扫码登录自动注册流程: affCode=%s, inviterId=%d, starUserId=%s", affCode, inviterId, starUserId))
 
+			// 检测代理站点（参考原版 Register 逻辑）
+			host := c.Request.Host
+			// 去掉端口
+			if colonIdx := strings.LastIndex(host, ":"); colonIdx != -1 {
+				host = host[:colonIdx]
+			}
+			siteId := service.GetSiteIdByDomain(host)
+			common.SysLog(fmt.Sprintf("微信扫码登录注册流程: host=%s, siteId=%d", host, siteId))
+
 			defaultPassword, err := common.GenerateRandomCharsKey(32)
 			if err != nil {
 				common.SysLog(fmt.Sprintf("生成默认密码失败: %v", err))
@@ -1417,6 +1436,7 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 				Status:     common.UserStatusEnabled,
 				StarUserId: starUserId,
 				InviterId:  inviterId, // 参考原版：直接设置 InviterId
+				SiteId:     siteId,    // 设置站点ID
 			}
 			common.SysLog(fmt.Sprintf("微信扫码登录准备创建新用户: InviterId=%d, starUserId=%s", newUser.InviterId, newUser.StarUserId))
 
