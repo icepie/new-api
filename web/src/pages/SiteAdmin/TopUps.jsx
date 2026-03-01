@@ -22,7 +22,6 @@ import {
   Badge,
   Empty,
   Input,
-  Table,
   Tag,
   Typography,
 } from '@douyinfe/semi-ui';
@@ -34,6 +33,10 @@ import { IconSearch } from '@douyinfe/semi-icons';
 import { Coins } from 'lucide-react';
 import { API, timestamp2string } from '../../helpers/index.js';
 import { showError } from '../../helpers/utils.jsx';
+import { createCardProPagination } from '../../helpers/utils.jsx';
+import CardPro from '../../components/common/ui/CardPro';
+import CardTable from '../../components/common/ui/CardTable';
+import { useIsMobile } from '../../hooks/common/useIsMobile';
 
 const { Text, Title } = Typography;
 
@@ -121,9 +124,10 @@ const SiteAdminTopUps = () => {
   const [topups, setTopups] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
+  const isMobile = useIsMobile();
 
   const loadTopUps = async (p = 1, ps = pageSize, kw = keyword) => {
     setLoading(true);
@@ -149,6 +153,9 @@ const SiteAdminTopUps = () => {
     loadTopUps(1, pageSize, keyword);
   }, []);
 
+  const handlePageChange     = (p)  => { setPage(p);       loadTopUps(p, pageSize, keyword); };
+  const handlePageSizeChange = (ps) => { setPageSize(ps); setPage(1); loadTopUps(1, ps, keyword); };
+
   const handleKeywordChange = (value) => {
     setKeyword(value);
     setPage(1);
@@ -157,55 +164,48 @@ const SiteAdminTopUps = () => {
 
   return (
     <div className='mt-[60px] px-2'>
-      <Title heading={5} style={{ marginBottom: 16 }}>
-        站点充值记录
-      </Title>
-
-      <div className='mb-3'>
-        <Input
-          prefix={<IconSearch />}
-          placeholder='订单号'
-          value={keyword}
-          onChange={handleKeywordChange}
-          showClear
-          style={{ maxWidth: 320 }}
-        />
-      </div>
-
-      <Table
-        columns={columns}
-        dataSource={topups}
-        loading={loading}
-        rowKey='id'
-        scroll={{ x: 'max-content' }}
-        size='small'
-        pagination={{
-          total,
-          pageSize,
-          currentPage: page,
-          showSizeChanger: true,
-          pageSizeOpts: [10, 20, 50, 100],
-          onPageChange: (p) => {
-            setPage(p);
-            loadTopUps(p, pageSize, keyword);
-          },
-          onPageSizeChange: (ps) => {
-            setPageSize(ps);
-            setPage(1);
-            loadTopUps(1, ps, keyword);
-          },
-        }}
-        empty={
-          <Empty
-            image={<IllustrationNoResult style={{ width: 150, height: 150 }} />}
-            darkModeImage={
-              <IllustrationNoResultDark style={{ width: 150, height: 150 }} />
-            }
-            description='暂无充值记录'
-            style={{ padding: 30 }}
+      <CardPro
+        type='type1'
+        descriptionArea={<Title heading={5} style={{ margin: 0 }}>站点充值记录</Title>}
+        actionsArea={
+          <Input
+            prefix={<IconSearch />}
+            placeholder='订单号'
+            value={keyword}
+            onChange={handleKeywordChange}
+            showClear
+            style={{ maxWidth: 320 }}
           />
         }
-      />
+        paginationArea={createCardProPagination({
+          currentPage: page,
+          pageSize,
+          total,
+          onPageChange: handlePageChange,
+          onPageSizeChange: handlePageSizeChange,
+          isMobile,
+        })}
+      >
+        <CardTable
+          columns={columns}
+          dataSource={topups}
+          loading={loading}
+          rowKey='id'
+          scroll={{ x: 'max-content' }}
+          hidePagination
+          size='small'
+          empty={
+            <Empty
+              image={<IllustrationNoResult style={{ width: 150, height: 150 }} />}
+              darkModeImage={
+                <IllustrationNoResultDark style={{ width: 150, height: 150 }} />
+              }
+              description='暂无充值记录'
+              style={{ padding: 30 }}
+            />
+          }
+        />
+      </CardPro>
     </div>
   );
 };
