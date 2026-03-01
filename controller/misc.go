@@ -11,6 +11,7 @@ import (
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/oauth"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/console_setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
@@ -46,6 +47,18 @@ func GetStatus(c *gin.Context) {
 
 	passkeySetting := system_setting.GetPasskeySettings()
 	legalSetting := system_setting.GetLegalSettings()
+
+	// 检测代理站点
+	host := c.Request.Host
+	// 去掉端口
+	if colonIdx := strings.LastIndex(host, ":"); colonIdx != -1 {
+		host = host[:colonIdx]
+	}
+	siteId := service.GetSiteIdByDomain(host)
+	var proxySite *model.ProxySite
+	if siteId != 0 {
+		proxySite, _ = model.GetProxySiteById(siteId)
+	}
 
 	data := gin.H{
 		"version":                     common.Version,
@@ -167,6 +180,36 @@ func GetStatus(c *gin.Context) {
 			})
 		}
 		data["custom_oauth_providers"] = providersInfo
+	}
+
+	// 代理站点信息覆盖
+	if proxySite != nil {
+		// 获取请求协议
+		scheme := "https"
+		if proto := c.Request.Header.Get("X-Forwarded-Proto"); proto == "http" {
+			scheme = "http"
+		} else if c.Request.TLS == nil && proto == "" {
+			scheme = "http"
+		}
+		siteBaseURL := scheme + "://" + proxySite.Domain
+
+		// 覆盖站点名称
+		if proxySite.Name != "" {
+			data["system_name"] = proxySite.Name
+		}
+		// 覆盖 Logo
+		if proxySite.Logo != "" {
+			data["logo"] = proxySite.Logo
+		}
+		// 覆盖公告
+		if proxySite.Announcement != "" {
+			data["footer_html"] = proxySite.Announcement
+		}
+		// 覆盖服务器地址为代理站点地址
+		data["server_address"] = siteBaseURL
+		// 添加代理站点标识
+		data["proxy_site_id"] = proxySite.Id
+		data["proxy_site_domain"] = proxySite.Domain
 	}
 
 	c.JSON(http.StatusOK, gin.H{
