@@ -814,6 +814,14 @@ func StarRegister(c *gin.Context) {
 					}
 				}
 
+				// 检测代理站点
+				host := c.Request.Host
+				if colonIdx := strings.LastIndex(host, ":"); colonIdx != -1 {
+					host = host[:colonIdx]
+				}
+				siteId := service.GetSiteIdByDomain(host)
+				common.SysLog(fmt.Sprintf("StarRegister 注册流程: host=%s, siteId=%d", host, siteId))
+
 				// 创建新用户（参考原版 Register 逻辑）
 				newUser := model.User{
 					Password:   "", // 使用空密码，因为使用 Star 系统认证
@@ -821,6 +829,7 @@ func StarRegister(c *gin.Context) {
 					Status:     common.UserStatusEnabled,
 					StarUserId: xuserid,
 					InviterId:  inviterId, // 参考原版：直接设置 InviterId
+					SiteId:     siteId,
 				}
 
 				// 使用 Star 用户信息（如果可用）
