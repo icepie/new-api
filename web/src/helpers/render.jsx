@@ -76,6 +76,9 @@ import {
   Server,
   CalendarClock,
   Globe,
+  Users,
+  Wallet,
+  Bell,
 } from 'lucide-react';
 import {
   SiAtlassian,
@@ -150,6 +153,12 @@ export function getLucideIcon(key, selected = false) {
       return <Settings {...commonProps} color={iconColor} />;
     case 'proxy_site':
       return <Globe {...commonProps} color={iconColor} />;
+    case 'site_users':
+      return <Users {...commonProps} color={iconColor} />;
+    case 'site_topups':
+      return <Wallet {...commonProps} color={iconColor} />;
+    case 'site_announcements':
+      return <Bell {...commonProps} color={iconColor} />;
     default:
       return <CircleUser {...commonProps} color={iconColor} />;
   }
