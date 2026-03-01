@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getLucideIcon } from '../../helpers/render';
@@ -27,6 +27,7 @@ import { useSidebar } from '../../hooks/common/useSidebar';
 import { useMinimumLoadingTime } from '../../hooks/common/useMinimumLoadingTime';
 import { isAdmin, isRoot, isSiteAdmin, showError } from '../../helpers';
 import SkeletonWrapper from './components/SkeletonWrapper';
+import { UserContext } from '../../context/User';
 
 import { Nav, Divider, Button } from '@douyinfe/semi-ui';
 
@@ -68,29 +69,21 @@ const SiderBar = ({ onNavigate = () => {} }) => {
   const [selectedKeys, setSelectedKeys] = useState(['home']);
   const [chatItems, setChatItems] = useState([]);
   const [openedKeys, setOpenedKeys] = useState([]);
+  const [userState] = useContext(UserContext);
   const [siteAdminStatus, setSiteAdminStatus] = useState(isSiteAdmin());
   const location = useLocation();
   const [routerMapState, setRouterMapState] = useState(routerMap);
 
-  // 监听 localStorage 变化，更新站点管理员状态
+  // 监听用户状态变化来更新站点管理员状态（与 isAdmin() 原版逻辑一致）
+  // PageLayout 在 userState.user 变化时调用 checkAndStoreSiteAdmin，
+  // 异步完成后会 dispatch managedSiteUpdated 事件，此时再更新 siteAdminStatus
   useEffect(() => {
-    const checkSiteAdmin = () => {
-      setSiteAdminStatus(isSiteAdmin());
-    };
-
-    // 初始检查
-    checkSiteAdmin();
-
-    // 监听自定义事件（同标签页内的变化）
-    window.addEventListener('managedSiteUpdated', checkSiteAdmin);
-    // 监听 storage 事件（跨标签页）
-    window.addEventListener('storage', checkSiteAdmin);
-
-    return () => {
-      window.removeEventListener('managedSiteUpdated', checkSiteAdmin);
-      window.removeEventListener('storage', checkSiteAdmin);
-    };
-  }, []);
+    const onSiteUpdated = () => setSiteAdminStatus(isSiteAdmin());
+    window.addEventListener('managedSiteUpdated', onSiteUpdated);
+    // 用户登出时立即清除
+    if (!userState.user) setSiteAdminStatus(false);
+    return () => window.removeEventListener('managedSiteUpdated', onSiteUpdated);
+  }, [userState.user]);
 
   const workspaceItems = useMemo(() => {
     const items = [

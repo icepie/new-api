@@ -42,7 +42,7 @@ import ScrollIndicator from '../homepage/ScrollIndicator';
 const { Sider, Content, Header } = Layout;
 
 const PageLayout = () => {
-  const [, userDispatch] = useContext(UserContext);
+  const [userState, userDispatch] = useContext(UserContext);
   const [, statusDispatch] = useContext(StatusContext);
   const isMobile = useIsMobile();
   const [collapsed, , setCollapsed] = useSidebarCollapsed();
@@ -104,7 +104,6 @@ const PageLayout = () => {
     if (user) {
       let data = JSON.parse(user);
       userDispatch({ type: 'login', payload: data });
-      checkAndStoreSiteAdmin(data);
     }
   };
 
@@ -143,6 +142,11 @@ const PageLayout = () => {
       i18n.changeLanguage(savedLang);
     }
   }, [i18n]);
+
+  // 监听用户状态变化，及时更新站点管理员信息
+  useEffect(() => {
+    checkAndStoreSiteAdmin(userState.user);
+  }, [userState.user]);
 
   return (
     <Layout
