@@ -53,6 +53,7 @@ const routerMap = {
   proxy_site: '/console/proxy_site',
   site_users: '/console/site_admin/users',
   site_topups: '/console/site_admin/topups',
+  site_announcements: '/console/site_admin/announcements',
 };
 
 const SiderBar = ({ onNavigate = () => {} }) => {
@@ -232,6 +233,10 @@ const SiderBar = ({ onNavigate = () => {} }) => {
       {
         text: t('站点充值'),
         itemKey: 'site_topups',
+      },
+      {
+        text: t('站点公告'),
+        itemKey: 'site_announcements',
       },
     ];
 

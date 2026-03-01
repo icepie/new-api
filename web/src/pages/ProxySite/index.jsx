@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Button,
   Form,
@@ -26,14 +26,23 @@ import {
   Modal,
   Popconfirm,
   Select,
+  Space,
   Switch,
   Table,
   Tag,
+  TextArea,
   Toast,
+  Tooltip,
   Typography,
 } from '@douyinfe/semi-ui';
+import { Edit, Maximize2, Plus, Save, Trash2 } from 'lucide-react';
 import { API } from '../../helpers/api.js';
 import { showError, showSuccess, timestamp2string } from '../../helpers/utils.jsx';
+import {
+  IllustrationNoResult,
+  IllustrationNoResultDark,
+} from '@douyinfe/semi-illustrations';
+import { Empty } from '@douyinfe/semi-ui';
 
 const { Text } = Typography;
 
@@ -48,6 +57,25 @@ const defaultForm = {
   status: 1,
 };
 
+const typeOptions = [
+  { value: 'default', label: '默认' },
+  { value: 'ongoing', label: '进行中' },
+  { value: 'success', label: '成功' },
+  { value: 'warning', label: '警告' },
+  { value: 'error', label: '错误' },
+];
+
+const getTypeColor = (type) => {
+  const colorMap = {
+    default: 'grey',
+    ongoing: 'blue',
+    success: 'green',
+    warning: 'orange',
+    error: 'red',
+  };
+  return colorMap[type] || 'grey';
+};
+
 const ProxySitePage = () => {
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -57,6 +85,27 @@ const ProxySitePage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [userOptions, setUserOptions] = useState([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
+
+  // Announcement modal state
+  const [annModalVisible, setAnnModalVisible] = useState(false);
+  const [annModalSite, setAnnModalSite] = useState(null);
+  const [annList, setAnnList] = useState([]);
+  const [annLoading, setAnnLoading] = useState(false);
+  const [annSaving, setAnnSaving] = useState(false);
+  const [annHasChanges, setAnnHasChanges] = useState(false);
+  const [showAnnEditModal, setShowAnnEditModal] = useState(false);
+  const [showAnnDeleteModal, setShowAnnDeleteModal] = useState(false);
+  const [showContentModal, setShowContentModal] = useState(false);
+  const [editingAnn, setEditingAnn] = useState(null);
+  const [deletingAnn, setDeletingAnn] = useState(null);
+  const [annForm, setAnnForm] = useState({
+    content: '',
+    publishDate: new Date(),
+    type: 'default',
+    extra: '',
+  });
+  const [annEditLoading, setAnnEditLoading] = useState(false);
+  const annFormApiRef = useRef(null);
 
   const loadSites = async () => {
     setLoading(true);
@@ -186,6 +235,163 @@ const ProxySitePage = () => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
   };
 
+  // ---- Announcement modal handlers ----
+
+  const openAnnModal = async (record) => {
+    setAnnModalSite(record);
+    setAnnHasChanges(false);
+    setAnnLoading(true);
+    setAnnModalVisible(true);
+    try {
+      const res = await API.get(`/api/proxy_site/${record.id}/announcements`);
+      if (res.data.success) {
+        const list = Array.isArray(res.data.data) ? res.data.data : [];
+        const listWithIds = list.map((item, index) => ({
+          ...item,
+          id: item.id || index + 1,
+        }));
+        setAnnList(listWithIds);
+      } else {
+        showError(res.data.message || '加载公告失败');
+        setAnnList([]);
+      }
+    } catch (err) {
+      showError(err);
+      setAnnList([]);
+    } finally {
+      setAnnLoading(false);
+    }
+  };
+
+  const saveAnnouncements = async () => {
+    if (!annModalSite) return;
+    setAnnSaving(true);
+    try {
+      const res = await API.put(`/api/proxy_site/${annModalSite.id}/announcements`, {
+        announcements: JSON.stringify(annList),
+      });
+      if (res.data.success) {
+        showSuccess('公告已保存');
+        setAnnHasChanges(false);
+      } else {
+        showError(res.data.message || '保存失败');
+      }
+    } catch (err) {
+      showError(err);
+    } finally {
+      setAnnSaving(false);
+    }
+  };
+
+  const handleAddAnn = () => {
+    setEditingAnn(null);
+    setAnnForm({ content: '', publishDate: new Date(), type: 'default', extra: '' });
+    setShowAnnEditModal(true);
+  };
+
+  const handleEditAnn = (record) => {
+    setEditingAnn(record);
+    setAnnForm({
+      content: record.content || '',
+      publishDate: record.publishDate ? new Date(record.publishDate) : new Date(),
+      type: record.type || 'default',
+      extra: record.extra || '',
+    });
+    setShowAnnEditModal(true);
+  };
+
+  const handleDeleteAnn = (record) => {
+    setDeletingAnn(record);
+    setShowAnnDeleteModal(true);
+  };
+
+  const confirmDeleteAnn = () => {
+    if (deletingAnn) {
+      setAnnList((prev) => prev.filter((item) => item.id !== deletingAnn.id));
+      setAnnHasChanges(true);
+      showSuccess('公告已删除，请点击"保存"提交');
+    }
+    setShowAnnDeleteModal(false);
+    setDeletingAnn(null);
+  };
+
+  const handleSaveAnn = async () => {
+    if (!annForm.content || !annForm.publishDate) {
+      showError('请填写完整的公告信息');
+      return;
+    }
+    setAnnEditLoading(true);
+    try {
+      const formData = {
+        ...annForm,
+        publishDate: annForm.publishDate instanceof Date
+          ? annForm.publishDate.toISOString()
+          : annForm.publishDate,
+      };
+      let newList;
+      if (editingAnn) {
+        newList = annList.map((item) =>
+          item.id === editingAnn.id ? { ...item, ...formData } : item,
+        );
+      } else {
+        const newId = Math.max(...annList.map((item) => item.id || 0), 0) + 1;
+        newList = [...annList, { id: newId, ...formData }];
+      }
+      setAnnList(newList);
+      setAnnHasChanges(true);
+      setShowAnnEditModal(false);
+      showSuccess(editingAnn ? '公告已更新，请点击"保存"提交' : '公告已添加，请点击"保存"提交');
+    } finally {
+      setAnnEditLoading(false);
+    }
+  };
+
+  const annColumns = [
+    {
+      title: '内容',
+      dataIndex: 'content',
+      render: (text) => (
+        <Tooltip content={text} position='topLeft' showArrow>
+          <div style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {text}
+          </div>
+        </Tooltip>
+      ),
+    },
+    {
+      title: '发布时间',
+      dataIndex: 'publishDate',
+      width: 160,
+      render: (val) => val ? new Date(val).toLocaleString() : '-',
+    },
+    {
+      title: '类型',
+      dataIndex: 'type',
+      width: 90,
+      render: (type) => (
+        <Tag color={getTypeColor(type)} shape='circle' size='small'>
+          {typeOptions.find((o) => o.value === type)?.label || type}
+        </Tag>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      fixed: 'right',
+      width: 130,
+      render: (_, record) => (
+        <Space>
+          <Button icon={<Edit size={13} />} theme='light' type='tertiary' size='small' onClick={() => handleEditAnn(record)}>
+            编辑
+          </Button>
+          <Button icon={<Trash2 size={13} />} type='danger' theme='light' size='small' onClick={() => handleDeleteAnn(record)}>
+            删除
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
   const columns = [
     {
       title: 'ID',
@@ -245,7 +451,7 @@ const ProxySitePage = () => {
       title: '操作',
       dataIndex: 'operate',
       fixed: 'right',
-      width: 140,
+      width: 180,
       render: (_, record) => (
         <div style={{ display: 'flex', gap: 8 }}>
           <Button
@@ -255,6 +461,14 @@ const ProxySitePage = () => {
             onClick={() => openEdit(record)}
           >
             编辑
+          </Button>
+          <Button
+            size='small'
+            theme='light'
+            type='secondary'
+            onClick={() => openAnnModal(record)}
+          >
+            公告
           </Button>
           <Popconfirm
             title='确认删除该站点？'
@@ -298,6 +512,7 @@ const ProxySitePage = () => {
         pagination={{ pageSize: 20, showSizeChanger: true }}
       />
 
+      {/* Site edit modal */}
       <Modal
         title={editingId ? '编辑站点' : '新增站点'}
         visible={modalVisible}
@@ -378,6 +593,155 @@ const ProxySitePage = () => {
             />
           </Form.Slot>
         </Form>
+      </Modal>
+
+      {/* Announcement management modal */}
+      <Modal
+        title={`管理公告${annModalSite ? ` - ${annModalSite.domain}` : ''}`}
+        visible={annModalVisible}
+        onCancel={() => { setAnnModalVisible(false); setAnnModalSite(null); setAnnList([]); }}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Button
+              icon={<Plus size={14} />}
+              theme='light'
+              type='primary'
+              onClick={handleAddAnn}
+            >
+              添加公告
+            </Button>
+            <Space>
+              <Button onClick={() => { setAnnModalVisible(false); setAnnModalSite(null); setAnnList([]); }}>
+                关闭
+              </Button>
+              <Button
+                icon={<Save size={14} />}
+                theme='solid'
+                type='primary'
+                loading={annSaving}
+                disabled={!annHasChanges}
+                onClick={saveAnnouncements}
+              >
+                保存
+              </Button>
+            </Space>
+          </div>
+        }
+        width={720}
+      >
+        <Table
+          columns={annColumns}
+          dataSource={annList}
+          rowKey='id'
+          loading={annLoading}
+          scroll={{ x: 'max-content' }}
+          pagination={{ pageSize: 10, showSizeChanger: false }}
+          size='middle'
+          empty={
+            <Empty
+              image={<IllustrationNoResult style={{ width: 100, height: 100 }} />}
+              darkModeImage={<IllustrationNoResultDark style={{ width: 100, height: 100 }} />}
+              description='暂无公告'
+              style={{ padding: 20 }}
+            />
+          }
+        />
+      </Modal>
+
+      {/* Add/Edit announcement modal */}
+      <Modal
+        title={editingAnn ? '编辑公告' : '添加公告'}
+        visible={showAnnEditModal}
+        onOk={handleSaveAnn}
+        onCancel={() => setShowAnnEditModal(false)}
+        okText='保存'
+        cancelText='取消'
+        confirmLoading={annEditLoading}
+      >
+        <Form
+          layout='vertical'
+          initValues={annForm}
+          key={editingAnn ? editingAnn.id : 'new-ann'}
+          getFormApi={(api) => (annFormApiRef.current = api)}
+        >
+          <Form.TextArea
+            field='content'
+            label='公告内容'
+            placeholder='请输入公告内容（支持 Markdown/HTML）'
+            maxCount={500}
+            rows={3}
+            rules={[{ required: true, message: '请输入公告内容' }]}
+            onChange={(value) => setAnnForm({ ...annForm, content: value })}
+          />
+          <Button
+            theme='light'
+            type='tertiary'
+            size='small'
+            icon={<Maximize2 size={14} />}
+            style={{ marginBottom: 16 }}
+            onClick={() => setShowContentModal(true)}
+          >
+            放大编辑
+          </Button>
+          <Form.DatePicker
+            field='publishDate'
+            label='发布日期'
+            type='dateTime'
+            rules={[{ required: true, message: '请选择发布日期' }]}
+            onChange={(value) => setAnnForm({ ...annForm, publishDate: value })}
+          />
+          <Form.Select
+            field='type'
+            label='公告类型'
+            optionList={typeOptions}
+            onChange={(value) => setAnnForm({ ...annForm, type: value })}
+          />
+          <Form.Input
+            field='extra'
+            label='说明信息'
+            placeholder='可选，公告的补充说明'
+            onChange={(value) => setAnnForm({ ...annForm, extra: value })}
+          />
+        </Form>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        title='确认删除'
+        visible={showAnnDeleteModal}
+        onOk={confirmDeleteAnn}
+        onCancel={() => { setShowAnnDeleteModal(false); setDeletingAnn(null); }}
+        okText='确认删除'
+        cancelText='取消'
+        type='warning'
+        okButtonProps={{ type: 'danger', theme: 'solid' }}
+      >
+        <Text>确定要删除此公告吗？</Text>
+      </Modal>
+
+      {/* Content expand edit modal */}
+      <Modal
+        title='编辑公告内容'
+        visible={showContentModal}
+        onOk={() => {
+          if (annFormApiRef.current) {
+            annFormApiRef.current.setValue('content', annForm.content);
+          }
+          setShowContentModal(false);
+        }}
+        onCancel={() => setShowContentModal(false)}
+        okText='确定'
+        cancelText='取消'
+        width={800}
+      >
+        <TextArea
+          value={annForm.content}
+          placeholder='请输入公告内容（支持 Markdown/HTML）'
+          maxCount={500}
+          rows={15}
+          style={{ width: '100%' }}
+          onChange={(value) => setAnnForm({ ...annForm, content: value })}
+        />
       </Modal>
     </div>
   );

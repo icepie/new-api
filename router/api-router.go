@@ -189,6 +189,8 @@ func SetApiRouter(router *gin.Engine) {
 			proxySiteRoute.POST("/", controller.CreateProxySite)
 			proxySiteRoute.PUT("/:id", controller.UpdateProxySite)
 			proxySiteRoute.DELETE("/:id", controller.DeleteProxySite)
+			proxySiteRoute.GET("/:id/announcements", controller.GetProxySiteAnnouncements)
+			proxySiteRoute.PUT("/:id/announcements", controller.UpdateProxySiteAnnouncements)
 		}
 
 		// 站点管理员专属路由组
@@ -197,6 +199,8 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			siteAdminRoute.GET("/users", controller.GetSiteUsers)
 			siteAdminRoute.GET("/topups", controller.GetSiteTopUps)
+			siteAdminRoute.GET("/announcements", controller.GetSiteAnnouncements)
+			siteAdminRoute.PUT("/announcements", controller.UpdateSiteAnnouncements)
 		}
 
 		// Custom OAuth provider management (root only)

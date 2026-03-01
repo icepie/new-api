@@ -1,11 +1,13 @@
 package controller
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/console_setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -144,4 +146,126 @@ func GetSiteTopUps(c *gin.Context) {
 		"data":    topups,
 		"total":   total,
 	})
+}
+
+// validateSiteAnnouncements validates a JSON string of announcements array
+func validateSiteAnnouncements(jsonStr string) error {
+	if jsonStr == "" {
+		return nil
+	}
+	if err := console_setting.ValidateConsoleSettings(jsonStr, "Announcements"); err != nil {
+		return fmt.Errorf("公告数据验证失败：%s", err.Error())
+	}
+	return nil
+}
+
+// GetProxySiteAnnouncements 获取代理站点公告列表 (RootAuth)
+func GetProxySiteAnnouncements(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiErrorMsg(c, "参数错误")
+		return
+	}
+	existing, err := model.GetProxySiteById(id)
+	if err != nil {
+		common.ApiErrorMsg(c, "站点不存在")
+		return
+	}
+	// Return parsed array or empty array
+	if existing.Announcements == "" {
+		c.JSON(200, gin.H{"success": true, "data": []interface{}{}})
+		return
+	}
+	var announcements []interface{}
+	if err := common.Unmarshal([]byte(existing.Announcements), &announcements); err != nil {
+		c.JSON(200, gin.H{"success": true, "data": []interface{}{}})
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "data": announcements})
+}
+
+// UpdateProxySiteAnnouncements 更新代理站点公告列表 (RootAuth)
+func UpdateProxySiteAnnouncements(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiErrorMsg(c, "参数错误")
+		return
+	}
+	existing, err := model.GetProxySiteById(id)
+	if err != nil {
+		common.ApiErrorMsg(c, "站点不存在")
+		return
+	}
+
+	var body struct {
+		Announcements string `json:"announcements"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &body); err != nil {
+		common.ApiErrorMsg(c, "参数错误")
+		return
+	}
+
+	if err := validateSiteAnnouncements(body.Announcements); err != nil {
+		common.ApiErrorMsg(c, err.Error())
+		return
+	}
+
+	existing.Announcements = body.Announcements
+	if err := existing.Update(); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	service.InvalidateSiteCache(existing.Domain, existing.AdminUserId)
+	c.JSON(200, gin.H{"success": true})
+}
+
+// GetSiteAnnouncements 站点管理员获取本站公告 (SiteAdminAuth)
+func GetSiteAnnouncements(c *gin.Context) {
+	siteId := c.GetInt("managed_site_id")
+	site, err := model.GetProxySiteById(siteId)
+	if err != nil {
+		common.ApiErrorMsg(c, "站点不存在")
+		return
+	}
+	if site.Announcements == "" {
+		c.JSON(200, gin.H{"success": true, "data": []interface{}{}})
+		return
+	}
+	var announcements []interface{}
+	if err := common.Unmarshal([]byte(site.Announcements), &announcements); err != nil {
+		c.JSON(200, gin.H{"success": true, "data": []interface{}{}})
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "data": announcements})
+}
+
+// UpdateSiteAnnouncements 站点管理员更新本站公告 (SiteAdminAuth)
+func UpdateSiteAnnouncements(c *gin.Context) {
+	siteId := c.GetInt("managed_site_id")
+	site, err := model.GetProxySiteById(siteId)
+	if err != nil {
+		common.ApiErrorMsg(c, "站点不存在")
+		return
+	}
+
+	var body struct {
+		Announcements string `json:"announcements"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &body); err != nil {
+		common.ApiErrorMsg(c, "参数错误")
+		return
+	}
+
+	if err := validateSiteAnnouncements(body.Announcements); err != nil {
+		common.ApiErrorMsg(c, err.Error())
+		return
+	}
+
+	site.Announcements = body.Announcements
+	if err := site.Update(); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	service.InvalidateSiteCache(site.Domain, site.AdminUserId)
+	c.JSON(200, gin.H{"success": true})
 }

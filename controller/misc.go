@@ -205,6 +205,14 @@ func GetStatus(c *gin.Context) {
 		if proxySite.Announcement != "" {
 			data["footer_html"] = proxySite.Announcement
 		}
+		// 覆盖结构化公告
+		if proxySite.Announcements != "" {
+			var announcements []interface{}
+			if err := common.Unmarshal([]byte(proxySite.Announcements), &announcements); err == nil {
+				data["announcements_enabled"] = true
+				data["announcements"] = announcements
+			}
+		}
 		// 覆盖服务器地址为代理站点地址
 		data["server_address"] = siteBaseURL
 		// 添加代理站点标识
