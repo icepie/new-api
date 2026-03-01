@@ -68,8 +68,29 @@ const SiderBar = ({ onNavigate = () => {} }) => {
   const [selectedKeys, setSelectedKeys] = useState(['home']);
   const [chatItems, setChatItems] = useState([]);
   const [openedKeys, setOpenedKeys] = useState([]);
+  const [siteAdminStatus, setSiteAdminStatus] = useState(isSiteAdmin());
   const location = useLocation();
   const [routerMapState, setRouterMapState] = useState(routerMap);
+
+  // 监听 localStorage 变化，更新站点管理员状态
+  useEffect(() => {
+    const checkSiteAdmin = () => {
+      setSiteAdminStatus(isSiteAdmin());
+    };
+
+    // 初始检查
+    checkSiteAdmin();
+
+    // 监听自定义事件（同标签页内的变化）
+    window.addEventListener('managedSiteUpdated', checkSiteAdmin);
+    // 监听 storage 事件（跨标签页）
+    window.addEventListener('storage', checkSiteAdmin);
+
+    return () => {
+      window.removeEventListener('managedSiteUpdated', checkSiteAdmin);
+      window.removeEventListener('storage', checkSiteAdmin);
+    };
+  }, []);
 
   const workspaceItems = useMemo(() => {
     const items = [
@@ -515,7 +536,7 @@ const SiderBar = ({ onNavigate = () => {} }) => {
           )}
 
           {/* 站点管理区域 - 只在站点管理员时显示 */}
-          {!isAdmin() && isSiteAdmin() && hasSectionVisibleModules('site_admin') && (
+          {!isAdmin() && siteAdminStatus && hasSectionVisibleModules('site_admin') && (
             <>
               <Divider className='sidebar-divider' />
               <div>

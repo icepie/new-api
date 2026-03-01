@@ -81,17 +81,21 @@ const PageLayout = () => {
   const checkAndStoreSiteAdmin = async (user) => {
     if (!user || user.role >= 10) {
       localStorage.removeItem('managed_site');
+      window.dispatchEvent(new Event('managedSiteUpdated'));
       return;
     }
     try {
       const res = await API.get('/api/proxy_site/mine');
       if (res.data.success && res.data.data) {
         localStorage.setItem('managed_site', JSON.stringify(res.data.data));
+        window.dispatchEvent(new Event('managedSiteUpdated'));
       } else {
         localStorage.removeItem('managed_site');
+        window.dispatchEvent(new Event('managedSiteUpdated'));
       }
     } catch {
       localStorage.removeItem('managed_site');
+      window.dispatchEvent(new Event('managedSiteUpdated'));
     }
   };
 

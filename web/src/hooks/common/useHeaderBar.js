@@ -157,6 +157,7 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
     userDispatch({ type: 'logout' });
     localStorage.removeItem('user');
     localStorage.removeItem('managed_site');
+    window.dispatchEvent(new Event('managedSiteUpdated'));
     navigate('/login');
   }, [navigate, t, userDispatch]);
 
