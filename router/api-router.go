@@ -179,7 +179,7 @@ func SetApiRouter(router *gin.Engine) {
 		}
 
 		// 站点管理员获取自己的站点（specific route must come before group to avoid conflicts）
-		apiRouter.GET("/proxy_site/mine", middleware.UserAuth(), middleware.SiteAdminAuth(), controller.GetMySite)
+		apiRouter.GET("/proxy_site/mine", middleware.UserAuth(), controller.GetMySite)
 
 		// 代理站点管理 (Root 权限)
 		proxySiteRoute := apiRouter.Group("/proxy_site")

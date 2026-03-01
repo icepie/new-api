@@ -98,12 +98,17 @@ func DeleteProxySite(c *gin.Context) {
 	c.JSON(200, gin.H{"success": true})
 }
 
-// GetMySite 站点管理员获取自己管理的站点信息 (UserAuth + SiteAdminAuth)
+// GetMySite 获取当前用户管理的站点信息，非站点管理员返回 null（不报错）
 func GetMySite(c *gin.Context) {
-	siteId := c.GetInt("managed_site_id")
+	userId := c.GetInt("id")
+	siteId := service.GetManagedSiteIdByUserId(userId)
+	if siteId == 0 {
+		c.JSON(200, gin.H{"success": true, "data": nil})
+		return
+	}
 	site, err := model.GetProxySiteById(siteId)
 	if err != nil {
-		common.ApiErrorMsg(c, "未找到管理站点")
+		c.JSON(200, gin.H{"success": true, "data": nil})
 		return
 	}
 	c.JSON(200, gin.H{"success": true, "data": site})
