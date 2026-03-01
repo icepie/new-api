@@ -22,6 +22,7 @@ import {
   Badge,
   Empty,
   Input,
+  Table,
   Tag,
   Typography,
 } from '@douyinfe/semi-ui';
@@ -33,39 +34,20 @@ import { IconSearch } from '@douyinfe/semi-icons';
 import { Coins } from 'lucide-react';
 import { API, timestamp2string } from '../../helpers/index.js';
 import { showError } from '../../helpers/utils.jsx';
-import { createCardProPagination } from '../../helpers/utils.jsx';
-import CardPro from '../../components/common/ui/CardPro';
-import CardTable from '../../components/common/ui/CardTable';
-import { useIsMobile } from '../../hooks/common/useIsMobile';
 
 const { Text, Title } = Typography;
 
 const STATUS_CONFIG = {
   success: { type: 'success', label: '成功' },
   pending: { type: 'warning', label: '待支付' },
-  expired: { type: 'danger', label: '已过期' },
+  expired: { type: 'danger',  label: '已过期' },
 };
 
 const PAYMENT_METHOD_MAP = {
   stripe: 'Stripe',
-  creem: 'Creem',
+  creem:  'Creem',
   alipay: '支付宝',
-  wxpay: '微信',
-};
-
-const renderStatusBadge = (status) => {
-  const config = STATUS_CONFIG[status] || { type: 'primary', label: status };
-  return (
-    <span className='flex items-center gap-2'>
-      <Badge dot type={config.type} />
-      <span>{config.label}</span>
-    </span>
-  );
-};
-
-const renderPaymentMethod = (pm) => {
-  const name = PAYMENT_METHOD_MAP[pm];
-  return <Text>{name || pm || '-'}</Text>;
+  wxpay:  '微信',
 };
 
 const isSubscriptionTopup = (record) => {
@@ -82,18 +64,14 @@ const columns = [
   {
     title: '支付方式',
     dataIndex: 'payment_method',
-    render: renderPaymentMethod,
+    render: (pm) => <Text>{PAYMENT_METHOD_MAP[pm] || pm || '-'}</Text>,
   },
   {
     title: '充值额度',
     dataIndex: 'amount',
     render: (amount, record) => {
       if (isSubscriptionTopup(record)) {
-        return (
-          <Tag color='purple' shape='circle' size='small'>
-            订阅套餐
-          </Tag>
-        );
+        return <Tag color='purple' shape='circle' size='small'>订阅套餐</Tag>;
       }
       return (
         <span className='flex items-center gap-1'>
@@ -111,7 +89,15 @@ const columns = [
   {
     title: '状态',
     dataIndex: 'status',
-    render: renderStatusBadge,
+    render: (status) => {
+      const config = STATUS_CONFIG[status] || { type: 'primary', label: status };
+      return (
+        <span className='flex items-center gap-2'>
+          <Badge dot type={config.type} />
+          <span>{config.label}</span>
+        </span>
+      );
+    },
   },
   {
     title: '创建时间',
@@ -121,20 +107,17 @@ const columns = [
 ];
 
 const SiteAdminTopUps = () => {
-  const [topups, setTopups] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [topups, setTopups]     = useState([]);
+  const [total, setTotal]       = useState(0);
+  const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [loading, setLoading] = useState(false);
-  const [keyword, setKeyword] = useState('');
-  const isMobile = useIsMobile();
+  const [loading, setLoading]   = useState(false);
+  const [keyword, setKeyword]   = useState('');
 
   const loadTopUps = async (p = 1, ps = pageSize, kw = keyword) => {
     setLoading(true);
     try {
-      const qs =
-        `p=${p}&page_size=${ps}` +
-        (kw ? `&keyword=${encodeURIComponent(kw)}` : '');
+      const qs = `p=${p}&page_size=${ps}` + (kw ? `&keyword=${encodeURIComponent(kw)}` : '');
       const res = await API.get(`/api/site_admin/topups?${qs}`);
       if (res.data.success) {
         setTopups(res.data.data?.items || res.data.data || []);
@@ -142,19 +125,14 @@ const SiteAdminTopUps = () => {
       } else {
         showError(res.data.message || '加载失败');
       }
-    } catch (e) {
+    } catch {
       showError('加载失败');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadTopUps(1, pageSize, keyword);
-  }, []);
-
-  const handlePageChange     = (p)  => { setPage(p);       loadTopUps(p, pageSize, keyword); };
-  const handlePageSizeChange = (ps) => { setPageSize(ps); setPage(1); loadTopUps(1, ps, keyword); };
+  useEffect(() => { loadTopUps(1, pageSize, ''); }, []);
 
   const handleKeywordChange = (value) => {
     setKeyword(value);
@@ -164,48 +142,41 @@ const SiteAdminTopUps = () => {
 
   return (
     <div className='mt-[60px] px-2'>
-      <CardPro
-        type='type1'
-        descriptionArea={<Title heading={5} style={{ margin: 0 }}>站点充值记录</Title>}
-        actionsArea={
-          <Input
-            prefix={<IconSearch />}
-            placeholder='订单号'
-            value={keyword}
-            onChange={handleKeywordChange}
-            showClear
-            style={{ maxWidth: 320 }}
+      <div className='flex items-center justify-between mb-4'>
+        <Title heading={5} style={{ margin: 0 }}>站点充值记录</Title>
+        <Input
+          prefix={<IconSearch />}
+          placeholder='订单号'
+          value={keyword}
+          onChange={handleKeywordChange}
+          showClear
+          style={{ width: 240 }}
+        />
+      </div>
+      <Table
+        columns={columns}
+        dataSource={topups}
+        loading={loading}
+        rowKey='id'
+        size='small'
+        pagination={{
+          total,
+          pageSize,
+          currentPage: page,
+          showSizeChanger: true,
+          pageSizeOpts: [10, 20, 50, 100],
+          onPageChange: (p) => { setPage(p); loadTopUps(p, pageSize, keyword); },
+          onPageSizeChange: (ps) => { setPageSize(ps); setPage(1); loadTopUps(1, ps, keyword); },
+        }}
+        empty={
+          <Empty
+            image={<IllustrationNoResult style={{ width: 150, height: 150 }} />}
+            darkModeImage={<IllustrationNoResultDark style={{ width: 150, height: 150 }} />}
+            description='暂无充值记录'
+            style={{ padding: 30 }}
           />
         }
-        paginationArea={createCardProPagination({
-          currentPage: page,
-          pageSize,
-          total,
-          onPageChange: handlePageChange,
-          onPageSizeChange: handlePageSizeChange,
-          isMobile,
-        })}
-      >
-        <CardTable
-          columns={columns}
-          dataSource={topups}
-          loading={loading}
-          rowKey='id'
-          scroll={{ x: 'max-content' }}
-          hidePagination
-          size='small'
-          empty={
-            <Empty
-              image={<IllustrationNoResult style={{ width: 150, height: 150 }} />}
-              darkModeImage={
-                <IllustrationNoResultDark style={{ width: 150, height: 150 }} />
-              }
-              description='暂无充值记录'
-              style={{ padding: 30 }}
-            />
-          }
-        />
-      </CardPro>
+      />
     </div>
   );
 };

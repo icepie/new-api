@@ -23,6 +23,7 @@ import {
   Popover,
   Progress,
   Space,
+  Table,
   Tag,
   Tooltip,
   Typography,
@@ -31,12 +32,9 @@ import {
   IllustrationNoResult,
   IllustrationNoResultDark,
 } from '@douyinfe/semi-illustrations';
-import CardPro from '../../components/common/ui/CardPro';
-import CardTable from '../../components/common/ui/CardTable';
 import { API } from '../../helpers/api.js';
-import { createCardProPagination, showError } from '../../helpers/utils.jsx';
+import { showError } from '../../helpers/utils.jsx';
 import { renderGroup, renderNumber, renderQuota } from '../../helpers/render.jsx';
-import { useIsMobile } from '../../hooks/common/useIsMobile';
 
 const { Title, Paragraph } = Typography;
 
@@ -135,7 +133,6 @@ const SiteAdminUsers = () => {
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading]   = useState(false);
-  const isMobile                = useIsMobile();
 
   const loadUsers = async (p = 1, ps = pageSize) => {
     setLoading(true);
@@ -156,41 +153,33 @@ const SiteAdminUsers = () => {
 
   useEffect(() => { loadUsers(1, pageSize); }, []);
 
-  const handlePageChange     = (p)  => { setPage(p);       loadUsers(p, pageSize); };
-  const handlePageSizeChange = (ps) => { setPageSize(ps); setPage(1); loadUsers(1, ps); };
-
   return (
     <div className='mt-[60px] px-2'>
-      <CardPro
-        type='type1'
-        descriptionArea={<Title heading={5} style={{ margin: 0 }}>站点用户管理</Title>}
-        paginationArea={createCardProPagination({
-          currentPage: page,
-          pageSize,
+      <Title heading={5} style={{ marginBottom: 16 }}>站点用户管理</Title>
+      <Table
+        columns={columns}
+        dataSource={users}
+        loading={loading}
+        rowKey='id'
+        size='middle'
+        pagination={{
           total,
-          onPageChange: handlePageChange,
-          onPageSizeChange: handlePageSizeChange,
-          isMobile,
-        })}
-      >
-        <CardTable
-          columns={columns}
-          dataSource={users}
-          loading={loading}
-          rowKey='id'
-          scroll={{ x: 'max-content' }}
-          hidePagination
-          size='middle'
-          empty={
-            <Empty
-              image={<IllustrationNoResult style={{ width: 150, height: 150 }} />}
-              darkModeImage={<IllustrationNoResultDark style={{ width: 150, height: 150 }} />}
-              description='暂无用户'
-              style={{ padding: 30 }}
-            />
-          }
-        />
-      </CardPro>
+          pageSize,
+          currentPage: page,
+          showSizeChanger: true,
+          pageSizeOpts: [10, 20, 50, 100],
+          onPageChange: (p) => { setPage(p); loadUsers(p, pageSize); },
+          onPageSizeChange: (ps) => { setPageSize(ps); setPage(1); loadUsers(1, ps); },
+        }}
+        empty={
+          <Empty
+            image={<IllustrationNoResult style={{ width: 150, height: 150 }} />}
+            darkModeImage={<IllustrationNoResultDark style={{ width: 150, height: 150 }} />}
+            description='暂无用户'
+            style={{ padding: 30 }}
+          />
+        }
+      />
     </div>
   );
 };
