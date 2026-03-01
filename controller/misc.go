@@ -205,10 +205,12 @@ func GetStatus(c *gin.Context) {
 		if proxySite.Announcement != "" {
 			data["footer_html"] = proxySite.Announcement
 		}
-		// 覆盖结构化公告
+		// 代理站点始终屏蔽主站公告，仅显示本站已发布的公告
+		data["announcements_enabled"] = false
+		delete(data, "announcements")
 		if proxySite.Announcements != "" {
 			var announcements []interface{}
-			if err := common.Unmarshal([]byte(proxySite.Announcements), &announcements); err == nil {
+			if err := common.Unmarshal([]byte(proxySite.Announcements), &announcements); err == nil && len(announcements) > 0 {
 				data["announcements_enabled"] = true
 				data["announcements"] = announcements
 			}

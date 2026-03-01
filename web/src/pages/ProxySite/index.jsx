@@ -35,7 +35,7 @@ import {
   Tooltip,
   Typography,
 } from '@douyinfe/semi-ui';
-import { Edit, Maximize2, Plus, Save, Trash2 } from 'lucide-react';
+import { Edit, Maximize2, Plus, Trash2 } from 'lucide-react';
 import { API } from '../../helpers/api.js';
 import { showError, showSuccess, timestamp2string } from '../../helpers/utils.jsx';
 import {
@@ -263,12 +263,13 @@ const ProxySitePage = () => {
     }
   };
 
-  const saveAnnouncements = async () => {
+  const saveAnnouncements = async (listToSave) => {
     if (!annModalSite) return;
+    const list = listToSave !== undefined ? listToSave : annList;
     setAnnSaving(true);
     try {
       const res = await API.put(`/api/proxy_site/${annModalSite.id}/announcements`, {
-        announcements: JSON.stringify(annList),
+        announcements: JSON.stringify(list),
       });
       if (res.data.success) {
         showSuccess('公告已保存');
@@ -305,14 +306,17 @@ const ProxySitePage = () => {
     setShowAnnDeleteModal(true);
   };
 
-  const confirmDeleteAnn = () => {
+  const confirmDeleteAnn = async () => {
     if (deletingAnn) {
-      setAnnList((prev) => prev.filter((item) => item.id !== deletingAnn.id));
-      setAnnHasChanges(true);
-      showSuccess('公告已删除，请点击"保存"提交');
+      const newList = annList.filter((item) => item.id !== deletingAnn.id);
+      setAnnList(newList);
+      setShowAnnDeleteModal(false);
+      setDeletingAnn(null);
+      await saveAnnouncements(newList);
+    } else {
+      setShowAnnDeleteModal(false);
+      setDeletingAnn(null);
     }
-    setShowAnnDeleteModal(false);
-    setDeletingAnn(null);
   };
 
   const handleSaveAnn = async () => {
@@ -338,9 +342,8 @@ const ProxySitePage = () => {
         newList = [...annList, { id: newId, ...formData }];
       }
       setAnnList(newList);
-      setAnnHasChanges(true);
       setShowAnnEditModal(false);
-      showSuccess(editingAnn ? '公告已更新，请点击"保存"提交' : '公告已添加，请点击"保存"提交');
+      await saveAnnouncements(newList);
     } finally {
       setAnnEditLoading(false);
     }
@@ -607,24 +610,13 @@ const ProxySitePage = () => {
               theme='light'
               type='primary'
               onClick={handleAddAnn}
+              disabled={annSaving}
             >
               添加公告
             </Button>
-            <Space>
-              <Button onClick={() => { setAnnModalVisible(false); setAnnModalSite(null); setAnnList([]); }}>
-                关闭
-              </Button>
-              <Button
-                icon={<Save size={14} />}
-                theme='solid'
-                type='primary'
-                loading={annSaving}
-                disabled={!annHasChanges}
-                onClick={saveAnnouncements}
-              >
-                保存
-              </Button>
-            </Space>
+            <Button onClick={() => { setAnnModalVisible(false); setAnnModalSite(null); setAnnList([]); }}>
+              关闭
+            </Button>
           </div>
         }
         width={720}

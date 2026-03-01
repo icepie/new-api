@@ -35,7 +35,7 @@ import {
   IllustrationNoResult,
   IllustrationNoResultDark,
 } from '@douyinfe/semi-illustrations';
-import { Bell, Edit, Maximize2, Plus, Save, Trash2 } from 'lucide-react';
+import { Bell, Edit, Maximize2, Plus, Trash2 } from 'lucide-react';
 import { API } from '../../helpers/api.js';
 import { showError, showSuccess } from '../../helpers/utils.jsx';
 
@@ -105,11 +105,12 @@ const SiteAdminAnnouncements = () => {
     loadAnnouncements();
   }, []);
 
-  const saveAnnouncements = async () => {
+  const saveAnnouncements = async (listToSave) => {
+    const list = listToSave !== undefined ? listToSave : annList;
     setSaving(true);
     try {
       const res = await API.put('/api/site_admin/announcements', {
-        announcements: JSON.stringify(annList),
+        announcements: JSON.stringify(list),
       });
       if (res.data.success) {
         showSuccess('公告已保存');
@@ -146,14 +147,17 @@ const SiteAdminAnnouncements = () => {
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteAnn = () => {
+  const confirmDeleteAnn = async () => {
     if (deletingAnn) {
-      setAnnList((prev) => prev.filter((item) => item.id !== deletingAnn.id));
-      setHasChanges(true);
-      showSuccess('公告已删除，请点击"保存"提交');
+      const newList = annList.filter((item) => item.id !== deletingAnn.id);
+      setAnnList(newList);
+      setShowDeleteModal(false);
+      setDeletingAnn(null);
+      await saveAnnouncements(newList);
+    } else {
+      setShowDeleteModal(false);
+      setDeletingAnn(null);
     }
-    setShowDeleteModal(false);
-    setDeletingAnn(null);
   };
 
   const handleSaveAnn = async () => {
@@ -179,9 +183,8 @@ const SiteAdminAnnouncements = () => {
         newList = [...annList, { id: newId, ...formData }];
       }
       setAnnList(newList);
-      setHasChanges(true);
       setShowEditModal(false);
-      showSuccess(editingAnn ? '公告已更新，请点击"保存"提交' : '公告已添加，请点击"保存"提交');
+      await saveAnnouncements(newList);
     } finally {
       setEditLoading(false);
     }
@@ -317,17 +320,9 @@ const SiteAdminAnnouncements = () => {
           type='primary'
           icon={<Plus size={14} />}
           onClick={handleAddAnn}
+          disabled={saving}
         >
           添加公告
-        </Button>
-        <Button
-          icon={<Save size={14} />}
-          onClick={saveAnnouncements}
-          loading={saving}
-          disabled={!hasChanges}
-          type='secondary'
-        >
-          保存设置
         </Button>
       </div>
 
