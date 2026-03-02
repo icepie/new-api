@@ -79,6 +79,7 @@ import {
   Users,
   Wallet,
   Bell,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   SiAtlassian,
@@ -159,6 +160,8 @@ export function getLucideIcon(key, selected = false) {
       return <Wallet {...commonProps} color={iconColor} />;
     case 'site_announcements':
       return <Bell {...commonProps} color={iconColor} />;
+    case 'site_settings':
+      return <SlidersHorizontal {...commonProps} color={iconColor} />;
     default:
       return <CircleUser {...commonProps} color={iconColor} />;
   }

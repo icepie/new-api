@@ -52,6 +52,7 @@ import ProxySitePage from './pages/ProxySite/index.jsx';
 import SiteAdminUsers from './pages/SiteAdmin/Users.jsx';
 import SiteAdminTopUps from './pages/SiteAdmin/TopUps.jsx';
 import SiteAdminAnnouncements from './pages/SiteAdmin/Announcements.jsx';
+import SiteAdminSettings from './pages/SiteAdmin/Settings.jsx';
 import Playground from './pages/Playground';
 import Subscription from './pages/Subscription';
 import OAuth2Callback from './components/auth/OAuth2Callback';
@@ -224,6 +225,14 @@ function App() {
           element={
             <SiteAdminRoute>
               <SiteAdminAnnouncements />
+            </SiteAdminRoute>
+          }
+        />
+        <Route
+          path='/console/site_admin/settings'
+          element={
+            <SiteAdminRoute>
+              <SiteAdminSettings />
             </SiteAdminRoute>
           }
         />

@@ -54,6 +54,7 @@ const routerMap = {
   site_users: '/console/site_admin/users',
   site_topups: '/console/site_admin/topups',
   site_announcements: '/console/site_admin/announcements',
+  site_settings: '/console/site_admin/settings',
 };
 
 const SiderBar = ({ onNavigate = () => {} }) => {
@@ -237,6 +238,10 @@ const SiderBar = ({ onNavigate = () => {} }) => {
       {
         text: t('站点公告'),
         itemKey: 'site_announcements',
+      },
+      {
+        text: t('站点设置'),
+        itemKey: 'site_settings',
       },
     ];
 

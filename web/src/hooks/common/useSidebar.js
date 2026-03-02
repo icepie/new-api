@@ -60,6 +60,7 @@ export const DEFAULT_ADMIN_CONFIG = {
     site_users: true,
     site_topups: true,
     site_announcements: true,
+    site_settings: true,
   },
 };
 

@@ -219,6 +219,54 @@ func UpdateProxySiteAnnouncements(c *gin.Context) {
 	c.JSON(200, gin.H{"success": true})
 }
 
+// GetSiteSettings 站点管理员获取本站基本设置 (SiteAdminAuth)
+func GetSiteSettings(c *gin.Context) {
+	siteId := c.GetInt("managed_site_id")
+	site, err := model.GetProxySiteById(siteId)
+	if err != nil {
+		common.ApiErrorMsg(c, "站点不存在")
+		return
+	}
+	c.JSON(200, gin.H{
+		"success": true,
+		"data": gin.H{
+			"name":   site.Name,
+			"logo":   site.Logo,
+			"remark": site.Remark,
+		},
+	})
+}
+
+// UpdateSiteSettings 站点管理员更新本站基本设置 (SiteAdminAuth)
+func UpdateSiteSettings(c *gin.Context) {
+	siteId := c.GetInt("managed_site_id")
+	site, err := model.GetProxySiteById(siteId)
+	if err != nil {
+		common.ApiErrorMsg(c, "站点不存在")
+		return
+	}
+
+	var body struct {
+		Name   string `json:"name"`
+		Logo   string `json:"logo"`
+		Remark string `json:"remark"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &body); err != nil {
+		common.ApiErrorMsg(c, "参数错误")
+		return
+	}
+
+	site.Name = body.Name
+	site.Logo = body.Logo
+	site.Remark = body.Remark
+	if err := site.Update(); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	service.InvalidateSiteCache(site.Domain, site.AdminUserId)
+	c.JSON(200, gin.H{"success": true})
+}
+
 // GetSiteAnnouncements 站点管理员获取本站公告 (SiteAdminAuth)
 func GetSiteAnnouncements(c *gin.Context) {
 	siteId := c.GetInt("managed_site_id")

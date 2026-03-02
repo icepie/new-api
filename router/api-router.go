@@ -201,6 +201,8 @@ func SetApiRouter(router *gin.Engine) {
 			siteAdminRoute.GET("/topups", controller.GetSiteTopUps)
 			siteAdminRoute.GET("/announcements", controller.GetSiteAnnouncements)
 			siteAdminRoute.PUT("/announcements", controller.UpdateSiteAnnouncements)
+			siteAdminRoute.GET("/settings", controller.GetSiteSettings)
+			siteAdminRoute.PUT("/settings", controller.UpdateSiteSettings)
 		}
 
 		// Custom OAuth provider management (root only)
