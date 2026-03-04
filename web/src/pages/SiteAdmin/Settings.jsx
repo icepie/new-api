@@ -18,9 +18,17 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React, { useEffect, useState } from 'react';
-import { Button, Form, Spin, Typography } from '@douyinfe/semi-ui';
+import {
+  Button,
+  Descriptions,
+  Divider,
+  Form,
+  Spin,
+  Tag,
+  Typography,
+} from '@douyinfe/semi-ui';
 import { API } from '../../helpers/api.js';
-import { showError, showSuccess } from '../../helpers/utils.jsx';
+import { showError, showSuccess, timestamp2string } from '../../helpers/utils.jsx';
 
 const { Title } = Typography;
 
@@ -28,13 +36,20 @@ const SiteAdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [formApi, setFormApi] = useState(null);
+  const [siteInfo, setSiteInfo] = useState(null);
 
   useEffect(() => {
     const load = async () => {
       try {
         const res = await API.get('/api/site_admin/settings');
         if (res.data.success) {
-          formApi?.setValues(res.data.data);
+          const data = res.data.data;
+          setSiteInfo(data);
+          formApi?.setValues({
+            name:   data.name,
+            logo:   data.logo,
+            remark: data.remark,
+          });
         } else {
           showError(res.data.message || '加载失败');
         }
@@ -63,14 +78,41 @@ const SiteAdminSettings = () => {
     }
   };
 
+  const readonlyData = siteInfo
+    ? [
+        { key: '域名',     value: siteInfo.domain || '—' },
+        { key: '返利比例', value: siteInfo.rebate_ratio != null ? siteInfo.rebate_ratio : '—' },
+        {
+          key: '状态',
+          value: siteInfo.status === 1
+            ? <Tag color='green' size='small'>启用</Tag>
+            : <Tag color='red' size='small'>禁用</Tag>,
+        },
+        { key: '创建时间', value: siteInfo.created_time ? timestamp2string(siteInfo.created_time) : '—' },
+      ]
+    : [];
+
   return (
-    <div className='mt-[60px] px-2'>
-      <Title heading={5} style={{ marginBottom: 24 }}>站点设置</Title>
+    <div className='mt-[60px] px-2' style={{ maxWidth: 600 }}>
+      <Title heading={5} style={{ marginBottom: 20 }}>站点设置</Title>
       <Spin spinning={loading}>
+        {/* 只读站点信息 */}
+        {siteInfo && (
+          <>
+            <Descriptions
+              data={readonlyData}
+              row
+              size='medium'
+              style={{ marginBottom: 8 }}
+            />
+            <Divider style={{ margin: '16px 0' }} />
+          </>
+        )}
+
+        {/* 可编辑字段 */}
         <Form
           getFormApi={setFormApi}
           onSubmit={handleSubmit}
-          style={{ maxWidth: 520 }}
           labelPosition='left'
           labelWidth={80}
         >

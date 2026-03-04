@@ -124,7 +124,6 @@ const columns = [
   { title: '剩余额度/总额度', key: 'quota_usage', render: (_, record) => renderQuotaUsage(record) },
   { title: '分组', dataIndex: 'group', render: (text) => <div>{renderGroup(text)}</div> },
   { title: '角色', dataIndex: 'role', render: (text) => renderRole(text) },
-  { title: '邀请信息', dataIndex: 'invite', render: (_, record) => renderInviteInfo(record) },
 ];
 
 const SiteAdminUsers = () => {

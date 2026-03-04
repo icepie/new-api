@@ -262,9 +262,15 @@ func GetSiteSettings(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"success": true,
 		"data": gin.H{
+			// 可编辑字段
 			"name":   site.Name,
 			"logo":   site.Logo,
 			"remark": site.Remark,
+			// 只读展示字段
+			"domain":       site.Domain,
+			"rebate_ratio": site.RebateRatio,
+			"status":       site.Status,
+			"created_time": site.CreatedTime,
 		},
 	})
 }
