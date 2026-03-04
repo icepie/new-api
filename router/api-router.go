@@ -191,6 +191,8 @@ func SetApiRouter(router *gin.Engine) {
 			proxySiteRoute.DELETE("/:id", controller.DeleteProxySite)
 			proxySiteRoute.GET("/:id/announcements", controller.GetProxySiteAnnouncements)
 			proxySiteRoute.PUT("/:id/announcements", controller.UpdateProxySiteAnnouncements)
+			proxySiteRoute.GET("/:id/users", controller.GetProxySiteUsers)
+			proxySiteRoute.GET("/:id/topups", controller.GetProxySiteTopUps)
 		}
 
 		// 站点管理员专属路由组

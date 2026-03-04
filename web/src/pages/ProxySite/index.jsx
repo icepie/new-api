@@ -19,12 +19,16 @@ For commercial licensing, please contact support@quantumnous.com
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Badge,
   Button,
+  Dropdown,
+  Empty,
   Form,
   Input,
   InputNumber,
   Modal,
-  Popconfirm,
+  Popover,
+  Progress,
   Select,
   Space,
   Switch,
@@ -35,16 +39,16 @@ import {
   Tooltip,
   Typography,
 } from '@douyinfe/semi-ui';
-import { Edit, Maximize2, Plus, Trash2 } from 'lucide-react';
+import { Coins, Edit, Maximize2, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
 import { API } from '../../helpers/api.js';
 import { showError, showSuccess, timestamp2string } from '../../helpers/utils.jsx';
 import {
   IllustrationNoResult,
   IllustrationNoResultDark,
 } from '@douyinfe/semi-illustrations';
-import { Empty } from '@douyinfe/semi-ui';
+import { renderGroup, renderNumber, renderQuota } from '../../helpers/render.jsx';
 
-const { Text } = Typography;
+const { Text, Paragraph } = Typography;
 
 const defaultForm = {
   domain: '',
@@ -76,6 +80,128 @@ const getTypeColor = (type) => {
   return colorMap[type] || 'grey';
 };
 
+// ---- Users modal column defs ----
+const renderUserRole = (role) => {
+  switch (role) {
+    case 1:   return <Tag color='blue'   shape='circle'>普通用户</Tag>;
+    case 10:  return <Tag color='yellow' shape='circle'>管理员</Tag>;
+    case 100: return <Tag color='orange' shape='circle'>超级管理员</Tag>;
+    default:  return <Tag color='red'    shape='circle'>未知身份</Tag>;
+  }
+};
+
+const renderUserUsername = (text, record) => {
+  const remark = record.remark;
+  if (!remark) return <span>{text}</span>;
+  const displayRemark = remark.length > 10 ? remark.slice(0, 10) + '…' : remark;
+  return (
+    <Space spacing={2}>
+      <span>{text}</span>
+      <Tooltip content={remark} position='top'>
+        <Tag color='white' shape='circle' className='!text-xs'>
+          <div className='flex items-center gap-1'>
+            <div className='w-2 h-2 flex-shrink-0 rounded-full' style={{ backgroundColor: '#10b981' }} />
+            {displayRemark}
+          </div>
+        </Tag>
+      </Tooltip>
+    </Space>
+  );
+};
+
+const renderUserStatus = (_, record) => {
+  const isDeleted = record.DeletedAt !== null;
+  let tagColor = 'grey', tagText = '未知状态';
+  if (isDeleted)                { tagColor = 'red';   tagText = '已注销'; }
+  else if (record.status === 1) { tagColor = 'green'; tagText = '已启用'; }
+  else if (record.status === 2) { tagColor = 'red';   tagText = '已禁用'; }
+  return (
+    <Tooltip content={<div className='text-xs'>调用次数: {renderNumber(record.request_count)}</div>} position='top'>
+      <Tag color={tagColor} shape='circle' size='small'>{tagText}</Tag>
+    </Tooltip>
+  );
+};
+
+const renderUserQuota = (_, record) => {
+  const used    = parseInt(record.used_quota) || 0;
+  const remain  = parseInt(record.quota) || 0;
+  const total   = used + remain;
+  const percent = total > 0 ? (remain / total) * 100 : 0;
+  return (
+    <Popover
+      content={
+        <div className='text-xs p-2'>
+          <Paragraph copyable={{ content: renderQuota(used) }}>已用: {renderQuota(used)}</Paragraph>
+          <Paragraph copyable={{ content: renderQuota(remain) }}>剩余: {renderQuota(remain)} ({percent.toFixed(0)}%)</Paragraph>
+          <Paragraph copyable={{ content: renderQuota(total) }}>总计: {renderQuota(total)}</Paragraph>
+        </div>
+      }
+      position='top'
+    >
+      <Tag color='white' shape='circle'>
+        <div className='flex flex-col items-end'>
+          <span className='text-xs leading-none'>{`${renderQuota(remain)} / ${renderQuota(total)}`}</span>
+          <Progress percent={percent} aria-label='quota' format={() => `${percent.toFixed(0)}%`}
+            style={{ width: '100%', marginTop: 1, marginBottom: 0 }} />
+        </div>
+      </Tag>
+    </Popover>
+  );
+};
+
+const siteUsersColumns = [
+  { title: 'ID', dataIndex: 'id', width: 60 },
+  { title: '用户名', dataIndex: 'username', render: renderUserUsername },
+  { title: '状态', dataIndex: 'status', render: renderUserStatus },
+  { title: '剩余额度/总额度', key: 'quota', render: renderUserQuota },
+  { title: '分组', dataIndex: 'group', render: (text) => renderGroup(text) },
+  { title: '角色', dataIndex: 'role', render: renderUserRole },
+];
+
+// ---- TopUps modal column defs ----
+const PAYMENT_METHOD_MAP = { stripe: 'Stripe', creem: 'Creem', alipay: '支付宝', wxpay: '微信' };
+const TOPUP_STATUS_CONFIG = {
+  success: { type: 'success', label: '成功' },
+  pending: { type: 'warning', label: '待支付' },
+  expired: { type: 'danger',  label: '已过期' },
+};
+
+const siteTopupsColumns = [
+  {
+    title: '订单号', dataIndex: 'trade_no',
+    render: (text) => <Text copyable>{text}</Text>,
+  },
+  {
+    title: '支付方式', dataIndex: 'payment_method',
+    render: (pm) => <Text>{PAYMENT_METHOD_MAP[pm] || pm || '-'}</Text>,
+  },
+  {
+    title: '充值额度', dataIndex: 'amount',
+    render: (amount, record) => {
+      const tradeNo = (record?.trade_no || '').toLowerCase();
+      if (Number(amount || 0) === 0 && tradeNo.startsWith('sub')) {
+        return <Tag color='purple' shape='circle' size='small'>订阅套餐</Tag>;
+      }
+      return <span className='flex items-center gap-1'><Coins size={16} /><Text>{amount}</Text></span>;
+    },
+  },
+  {
+    title: '支付金额', dataIndex: 'money',
+    render: (money) => <Text type='danger'>¥{Number(money).toFixed(2)}</Text>,
+  },
+  {
+    title: '状态', dataIndex: 'status',
+    render: (status) => {
+      const cfg = TOPUP_STATUS_CONFIG[status] || { type: 'primary', label: status };
+      return <span className='flex items-center gap-2'><Badge dot type={cfg.type} /><span>{cfg.label}</span></span>;
+    },
+  },
+  {
+    title: '创建时间', dataIndex: 'create_time',
+    render: (t) => timestamp2string(t),
+  },
+];
+
 const ProxySitePage = () => {
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -94,6 +220,22 @@ const ProxySitePage = () => {
   const [annSaving, setAnnSaving] = useState(false);
   const [annHasChanges, setAnnHasChanges] = useState(false);
   const [showAnnEditModal, setShowAnnEditModal] = useState(false);
+
+  // Site users modal state
+  const [usersModalVisible, setUsersModalVisible] = useState(false);
+  const [usersModalSite, setUsersModalSite] = useState(null);
+  const [siteUsers, setSiteUsers] = useState([]);
+  const [siteUsersTotal, setSiteUsersTotal] = useState(0);
+  const [siteUsersPage, setSiteUsersPage] = useState(1);
+  const [siteUsersLoading, setSiteUsersLoading] = useState(false);
+
+  // Site topups modal state
+  const [topupsModalVisible, setTopupsModalVisible] = useState(false);
+  const [topupsModalSite, setTopupsModalSite] = useState(null);
+  const [siteTopups, setSiteTopups] = useState([]);
+  const [siteTopupsTotal, setSiteTopupsTotal] = useState(0);
+  const [siteTopupsPage, setSiteTopupsPage] = useState(1);
+  const [siteTopupsLoading, setSiteTopupsLoading] = useState(false);
   const [showAnnDeleteModal, setShowAnnDeleteModal] = useState(false);
   const [showContentModal, setShowContentModal] = useState(false);
   const [editingAnn, setEditingAnn] = useState(null);
@@ -233,6 +375,50 @@ const ProxySitePage = () => {
 
   const handleFieldChange = (field, value) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // ---- Site users modal handlers ----
+
+  const openUsersModal = async (record, page = 1) => {
+    setUsersModalSite(record);
+    setSiteUsersPage(page);
+    setSiteUsersLoading(true);
+    setUsersModalVisible(true);
+    try {
+      const res = await API.get(`/api/proxy_site/${record.id}/users?p=${page}&page_size=20`);
+      if (res.data.success) {
+        setSiteUsers(res.data.data || []);
+        setSiteUsersTotal(res.data.total || 0);
+      } else {
+        showError(res.data.message || '加载失败');
+      }
+    } catch {
+      showError('加载失败');
+    } finally {
+      setSiteUsersLoading(false);
+    }
+  };
+
+  // ---- Site topups modal handlers ----
+
+  const openTopupsModal = async (record, page = 1) => {
+    setTopupsModalSite(record);
+    setSiteTopupsPage(page);
+    setSiteTopupsLoading(true);
+    setTopupsModalVisible(true);
+    try {
+      const res = await API.get(`/api/proxy_site/${record.id}/topups?p=${page}&page_size=20`);
+      if (res.data.success) {
+        setSiteTopups(res.data.data || []);
+        setSiteTopupsTotal(res.data.total || 0);
+      } else {
+        showError(res.data.message || '加载失败');
+      }
+    } catch {
+      showError('加载失败');
+    } finally {
+      setSiteTopupsLoading(false);
+    }
   };
 
   // ---- Announcement modal handlers ----
@@ -454,35 +640,40 @@ const ProxySitePage = () => {
       title: '操作',
       dataIndex: 'operate',
       fixed: 'right',
-      width: 180,
+      width: 130,
       render: (_, record) => (
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button
-            size='small'
-            theme='light'
-            type='primary'
-            onClick={() => openEdit(record)}
-          >
+          <Button size='small' theme='light' type='primary' onClick={() => openEdit(record)}>
             编辑
           </Button>
-          <Button
-            size='small'
-            theme='light'
-            type='secondary'
-            onClick={() => openAnnModal(record)}
+          <Dropdown
+            trigger='click'
+            position='bottomRight'
+            render={
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={() => openAnnModal(record)}>公告</Dropdown.Item>
+                <Dropdown.Item onClick={() => openUsersModal(record)}>查看用户</Dropdown.Item>
+                <Dropdown.Item onClick={() => openTopupsModal(record)}>查看充值</Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item
+                  type='danger'
+                  onClick={() =>
+                    Modal.confirm({
+                      title: '确认删除该站点？',
+                      okText: '删除',
+                      cancelText: '取消',
+                      okButtonProps: { type: 'danger', theme: 'solid' },
+                      onOk: () => handleDelete(record.id),
+                    })
+                  }
+                >
+                  删除
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            }
           >
-            公告
-          </Button>
-          <Popconfirm
-            title='确认删除该站点？'
-            onConfirm={() => handleDelete(record.id)}
-            okText='删除'
-            cancelText='取消'
-          >
-            <Button size='small' theme='light' type='danger'>
-              删除
-            </Button>
-          </Popconfirm>
+            <Button size='small' theme='light' icon={<MoreHorizontal size={14} />} />
+          </Dropdown>
         </div>
       ),
     },
@@ -733,6 +924,76 @@ const ProxySitePage = () => {
           rows={15}
           style={{ width: '100%' }}
           onChange={(value) => setAnnForm({ ...annForm, content: value })}
+        />
+      </Modal>
+
+      {/* Site users modal */}
+      <Modal
+        title={`站点用户 - ${usersModalSite?.domain || ''}`}
+        visible={usersModalVisible}
+        onCancel={() => { setUsersModalVisible(false); setUsersModalSite(null); setSiteUsers([]); }}
+        footer={null}
+        width={860}
+      >
+        <Table
+          columns={siteUsersColumns}
+          dataSource={siteUsers}
+          loading={siteUsersLoading}
+          rowKey='id'
+          scroll={{ x: 'max-content' }}
+          size='small'
+          pagination={{
+            total: siteUsersTotal,
+            pageSize: 20,
+            currentPage: siteUsersPage,
+            onPageChange: (p) => {
+              setSiteUsersPage(p);
+              openUsersModal(usersModalSite, p);
+            },
+          }}
+          empty={
+            <Empty
+              image={<IllustrationNoResult style={{ width: 100, height: 100 }} />}
+              darkModeImage={<IllustrationNoResultDark style={{ width: 100, height: 100 }} />}
+              description='暂无用户'
+              style={{ padding: 20 }}
+            />
+          }
+        />
+      </Modal>
+
+      {/* Site topups modal */}
+      <Modal
+        title={`充值记录 - ${topupsModalSite?.domain || ''}`}
+        visible={topupsModalVisible}
+        onCancel={() => { setTopupsModalVisible(false); setTopupsModalSite(null); setSiteTopups([]); }}
+        footer={null}
+        width={860}
+      >
+        <Table
+          columns={siteTopupsColumns}
+          dataSource={siteTopups}
+          loading={siteTopupsLoading}
+          rowKey='id'
+          scroll={{ x: 'max-content' }}
+          size='small'
+          pagination={{
+            total: siteTopupsTotal,
+            pageSize: 20,
+            currentPage: siteTopupsPage,
+            onPageChange: (p) => {
+              setSiteTopupsPage(p);
+              openTopupsModal(topupsModalSite, p);
+            },
+          }}
+          empty={
+            <Empty
+              image={<IllustrationNoResult style={{ width: 100, height: 100 }} />}
+              darkModeImage={<IllustrationNoResultDark style={{ width: 100, height: 100 }} />}
+              description='暂无充值记录'
+              style={{ padding: 20 }}
+            />
+          }
         />
       </Modal>
     </div>
