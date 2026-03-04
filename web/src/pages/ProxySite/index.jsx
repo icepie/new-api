@@ -931,7 +931,6 @@ const ProxySitePage = () => {
           dataSource={siteUsers}
           loading={siteUsersLoading}
           rowKey='id'
-          scroll={{ x: 'max-content' }}
           size='small'
           pagination={{
             total: siteUsersTotal,
@@ -966,7 +965,6 @@ const ProxySitePage = () => {
           dataSource={siteTopups}
           loading={siteTopupsLoading}
           rowKey='id'
-          scroll={{ x: 'max-content' }}
           size='small'
           pagination={{
             total: siteTopupsTotal,
