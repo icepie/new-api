@@ -46,9 +46,11 @@ const SiteAdminSettings = () => {
           const data = res.data.data;
           setSiteInfo(data);
           formApi?.setValues({
-            name:   data.name,
-            logo:   data.logo,
-            remark: data.remark,
+            name:         data.name,
+            logo:         data.logo,
+            remark:       data.remark,
+            docs_link:    data.docs_link,
+            api_docs_link: data.api_docs_link,
           });
         } else {
           showError(res.data.message || '加载失败');
@@ -114,7 +116,7 @@ const SiteAdminSettings = () => {
           getFormApi={setFormApi}
           onSubmit={handleSubmit}
           labelPosition='left'
-          labelWidth={80}
+          labelWidth={90}
         >
           <Form.Input
             field='name'
@@ -132,7 +134,17 @@ const SiteAdminSettings = () => {
             placeholder='站点备注（仅超级管理员可见）'
             rows={3}
           />
-          <div style={{ marginLeft: 80 }}>
+          <Form.Input
+            field='docs_link'
+            label='使用教程'
+            placeholder='使用教程链接（留空则使用全局设置）'
+          />
+          <Form.Input
+            field='api_docs_link'
+            label='接口文档'
+            placeholder='接口文档链接（留空则使用全局设置）'
+          />
+          <div style={{ marginLeft: 90 }}>
             <Button htmlType='submit' type='primary' loading={saving}>
               保存
             </Button>

@@ -54,7 +54,6 @@ const defaultForm = {
   domain: '',
   name: '',
   logo: '',
-  announcement: '',
   rebate_ratio: 0,
   admin_user_id: 0,
   remark: '',
@@ -303,7 +302,6 @@ const ProxySitePage = () => {
       domain: record.domain || '',
       name: record.name || '',
       logo: record.logo || '',
-      announcement: record.announcement || '',
       rebate_ratio: record.rebate_ratio ?? 0,
       admin_user_id: record.admin_user_id ?? 0,
       remark: record.remark || '',
@@ -737,13 +735,6 @@ const ProxySitePage = () => {
               value={formValues.logo}
               onChange={(val) => handleFieldChange('logo', val)}
               placeholder='https://...'
-            />
-          </Form.Slot>
-          <Form.Slot label='公告'>
-            <Input
-              value={formValues.announcement}
-              onChange={(val) => handleFieldChange('announcement', val)}
-              placeholder='站点公告内容'
             />
           </Form.Slot>
           <Form.Slot label='返利比例'>

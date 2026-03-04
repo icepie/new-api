@@ -13,6 +13,8 @@ type ProxySite struct {
 	Logo         string  `json:"logo" gorm:"type:text"`
 	Announcement  string  `json:"announcement" gorm:"type:text"`
 	Announcements string  `json:"announcements" gorm:"type:text"`
+	DocsLink      string  `json:"docs_link" gorm:"type:varchar(512)"`
+	ApiDocsLink   string  `json:"api_docs_link" gorm:"type:varchar(512)"`
 	RebateRatio  float64 `json:"rebate_ratio" gorm:"default:1.0"`
 	AdminUserId  int     `json:"admin_user_id" gorm:"index"`
 	Remark       string  `json:"remark" gorm:"type:text"`

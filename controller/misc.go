@@ -222,6 +222,13 @@ func GetStatus(c *gin.Context) {
 		}
 		// 覆盖服务器地址为代理站点地址
 		data["server_address"] = siteBaseURL
+		// 覆盖链接配置
+		if proxySite.DocsLink != "" {
+			data["docs_link"] = proxySite.DocsLink
+		}
+		if proxySite.ApiDocsLink != "" {
+			data["api_docs_link"] = proxySite.ApiDocsLink
+		}
 		// 添加代理站点标识
 		data["proxy_site_id"] = proxySite.Id
 		data["proxy_site_domain"] = proxySite.Domain

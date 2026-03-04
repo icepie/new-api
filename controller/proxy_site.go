@@ -263,9 +263,11 @@ func GetSiteSettings(c *gin.Context) {
 		"success": true,
 		"data": gin.H{
 			// 可编辑字段
-			"name":   site.Name,
-			"logo":   site.Logo,
-			"remark": site.Remark,
+			"name":         site.Name,
+			"logo":         site.Logo,
+			"remark":       site.Remark,
+			"docs_link":    site.DocsLink,
+			"api_docs_link": site.ApiDocsLink,
 			// 只读展示字段
 			"domain":       site.Domain,
 			"rebate_ratio": site.RebateRatio,
@@ -285,9 +287,11 @@ func UpdateSiteSettings(c *gin.Context) {
 	}
 
 	var body struct {
-		Name   string `json:"name"`
-		Logo   string `json:"logo"`
-		Remark string `json:"remark"`
+		Name        string `json:"name"`
+		Logo        string `json:"logo"`
+		Remark      string `json:"remark"`
+		DocsLink    string `json:"docs_link"`
+		ApiDocsLink string `json:"api_docs_link"`
 	}
 	if err := common.DecodeJson(c.Request.Body, &body); err != nil {
 		common.ApiErrorMsg(c, "参数错误")
@@ -297,6 +301,8 @@ func UpdateSiteSettings(c *gin.Context) {
 	site.Name = body.Name
 	site.Logo = body.Logo
 	site.Remark = body.Remark
+	site.DocsLink = body.DocsLink
+	site.ApiDocsLink = body.ApiDocsLink
 	if err := site.Update(); err != nil {
 		common.ApiError(c, err)
 		return

@@ -27,6 +27,7 @@ import QuickStart from '../../components/homepage/QuickStart';
 import ApiUrlDisplay from '../../components/homepage/ApiUrlDisplay';
 import Typewriter from '../../components/homepage/Typewriter';
 import ShuffleText from '../../components/homepage/ShuffleText';
+import { getSystemName } from '../../helpers';
 import '../../styles/homepage.css';
 
 const HomeNew = () => {
@@ -575,7 +576,7 @@ const HomeNew = () => {
         <div className="homepage-footer-content">
           <div className="homepage-footer-copyright">
             <span className="homepage-footer-copyright-text">
-              © 2025 <span className="italic">NiceRouter</span>
+              © {new Date().getFullYear()} <span className={getSystemName() === 'NiceRouter' ? 'italic' : ''}>{getSystemName()}</span>
             </span>
           </div>
         </div>
