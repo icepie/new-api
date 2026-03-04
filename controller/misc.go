@@ -55,6 +55,11 @@ func GetStatus(c *gin.Context) {
 		host = host[:colonIdx]
 	}
 	siteId := service.GetSiteIdByDomain(host)
+	// -1 表示域名存在但站点已被禁用
+	if siteId == -1 {
+		c.JSON(200, gin.H{"success": false, "message": "站点已停用"})
+		return
+	}
 	var proxySite *model.ProxySite
 	if siteId != 0 {
 		proxySite, _ = model.GetProxySiteById(siteId)

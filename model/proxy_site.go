@@ -47,6 +47,16 @@ func GetProxySiteByDomain(domain string) (*ProxySite, error) {
 	return &site, nil
 }
 
+// GetProxySiteByDomainAny 按域名查找站点（含禁用状态），用于状态检测
+func GetProxySiteByDomainAny(domain string) (*ProxySite, error) {
+	var site ProxySite
+	err := DB.Where("domain = ?", domain).First(&site).Error
+	if err != nil {
+		return nil, err
+	}
+	return &site, nil
+}
+
 func GetProxySiteByAdminUserId(userId int) (*ProxySite, error) {
 	var site ProxySite
 	err := DB.Where("admin_user_id = ?", userId).First(&site).Error

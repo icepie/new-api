@@ -32,11 +32,15 @@ func GetSiteIdByDomain(domain string) int {
 	}
 	siteCache.mu.RUnlock()
 
-	// 2. 查数据库
-	site, err := model.GetProxySiteByDomain(domain)
+	// 2. 查数据库（含禁用站点，以便区分"不存在"和"已禁用"）
+	site, err := model.GetProxySiteByDomainAny(domain)
 	siteId := 0
 	if err == nil && site != nil {
-		siteId = site.Id
+		if site.Status == 1 {
+			siteId = site.Id // 正常启用
+		} else {
+			siteId = -1 // 域名存在但已禁用
+		}
 	}
 
 	// 3. 写缓存
