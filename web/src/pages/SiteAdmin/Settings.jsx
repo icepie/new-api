@@ -83,7 +83,6 @@ const SiteAdminSettings = () => {
   const readonlyData = siteInfo
     ? [
         { key: '域名',     value: siteInfo.domain || '—' },
-        { key: '返利比例', value: siteInfo.rebate_ratio != null ? siteInfo.rebate_ratio : '—' },
         {
           key: '状态',
           value: siteInfo.status === 1

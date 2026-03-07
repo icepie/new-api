@@ -218,7 +218,7 @@ export const useModelPricingData = () => {
       }
     });
 
-    setModels(models);
+    setModels(models.filter((m) => m.is_listed !== false));
   };
 
   const loadPricing = async () => {

@@ -25,7 +25,6 @@ import {
   Empty,
   Form,
   Input,
-  InputNumber,
   Modal,
   Popover,
   Progress,
@@ -54,7 +53,6 @@ const defaultForm = {
   domain: '',
   name: '',
   logo: '',
-  rebate_ratio: 0,
   admin_user_id: 0,
   remark: '',
   status: 1,
@@ -302,7 +300,6 @@ const ProxySitePage = () => {
       domain: record.domain || '',
       name: record.name || '',
       logo: record.logo || '',
-      rebate_ratio: record.rebate_ratio ?? 0,
       admin_user_id: record.admin_user_id ?? 0,
       remark: record.remark || '',
       status: record.status ?? 1,
@@ -605,11 +602,6 @@ const ProxySitePage = () => {
         ),
     },
     {
-      title: '返利比例',
-      dataIndex: 'rebate_ratio',
-      render: (val) => (val != null ? val : '—'),
-    },
-    {
       title: '管理员用户ID',
       dataIndex: 'admin_user_id',
       render: (val) => (val ? val : <Text type='tertiary'>—</Text>),
@@ -735,17 +727,6 @@ const ProxySitePage = () => {
               value={formValues.logo}
               onChange={(val) => handleFieldChange('logo', val)}
               placeholder='https://...'
-            />
-          </Form.Slot>
-          <Form.Slot label='返利比例'>
-            <InputNumber
-              value={formValues.rebate_ratio}
-              onChange={(val) => handleFieldChange('rebate_ratio', val ?? 0)}
-              min={0}
-              max={1}
-              step={0.01}
-              precision={4}
-              style={{ width: '100%' }}
             />
           </Form.Slot>
           <Form.Slot label='管理员用户'>

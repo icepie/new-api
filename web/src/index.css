@@ -1,4 +1,7 @@
 /* ==================== Tailwind CSS 配置 ==================== */
+@import url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/css/harmonyos_sans_sc.css');
+@import url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/css/harmonyos_sans.css');
+
 @layer tailwind-base, tailwind-components, tailwind-utils;
 
 @layer tailwind-base {
@@ -25,8 +28,7 @@ body.sidebar-collapsed {
 }
 
 body {
-  font-family: Lato, 'Helvetica Neue', Arial, Helvetica, 'Microsoft YaHei',
-    sans-serif;
+  font-family: 'HarmonyOS Sans SC', 'HarmonyOS Sans', Lato, 'Helvetica Neue', Arial, Helvetica, sans-serif;
   color: var(--semi-color-text-0);
   background-color: var(--semi-color-bg-0);
 }
@@ -44,6 +46,12 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+.price-italic {
+  display: inline-block;
+  transform: skewX(-8deg);
+  font-style: normal;
 }
 
 /* ==================== 布局相关样式 ==================== */

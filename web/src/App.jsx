@@ -401,12 +401,12 @@ function App() {
                   fallback={<Loading></Loading>}
                   key={location.pathname}
                 >
-                  <PricingNew />
+                  <Pricing />
                 </Suspense>
               </PrivateRoute>
             ) : (
               <Suspense fallback={<Loading></Loading>} key={location.pathname}>
-                <PricingNew />
+                <Pricing />
               </Suspense>
             )
           }
@@ -420,12 +420,12 @@ function App() {
                   fallback={<Loading></Loading>}
                   key={location.pathname}
                 >
-                  <Pricing />
+                  <PricingNew />
                 </Suspense>
               </PrivateRoute>
             ) : (
               <Suspense fallback={<Loading></Loading>} key={location.pathname}>
-                <Pricing />
+                <PricingNew />
               </Suspense>
             )
           }

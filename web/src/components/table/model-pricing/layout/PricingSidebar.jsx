@@ -123,31 +123,31 @@ const PricingSidebar = ({
         t={t}
       />
 
-      <PricingQuotaTypes
+      {/* <PricingQuotaTypes
         filterQuotaType={filterQuotaType}
         setFilterQuotaType={setFilterQuotaType}
         models={quotaTypeModels}
         loading={loading}
         t={t}
-      />
+      /> */}
 
-      <PricingTags
+      {/* <PricingTags
         filterTag={filterTag}
         setFilterTag={setFilterTag}
         models={tagModels}
         allModels={categoryProps.models}
         loading={loading}
         t={t}
-      />
+      /> */}
 
-      <PricingEndpointTypes
+      {/* <PricingEndpointTypes
         filterEndpointType={filterEndpointType}
         setFilterEndpointType={setFilterEndpointType}
         models={endpointTypeModels}
         allModels={categoryProps.models}
         loading={loading}
         t={t}
-      />
+      /> */}
     </div>
   );
 };

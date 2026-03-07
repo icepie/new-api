@@ -744,11 +744,11 @@ export const formatPriceInfo = (priceData, t) => {
   if (priceData.isPerToken) {
     return (
       <>
-        <span style={{ color: 'var(--semi-color-text-1)' }}>
-          {t('输入')} {priceData.inputPrice}/{priceData.unitLabel}
+        <span style={{ color: 'var(--semi-color-text-0)', fontSize: '13px' }}>
+          {t('输入')} <span className='price-italic'>{priceData.inputPrice}/{priceData.unitLabel}</span>
         </span>
-        <span style={{ color: 'var(--semi-color-text-1)' }}>
-          {t('输出')} {priceData.completionPrice}/{priceData.unitLabel}
+        <span style={{ color: 'var(--semi-color-text-0)', fontSize: '13px' }}>
+          {t('输出')} <span className='price-italic'>{priceData.completionPrice}/{priceData.unitLabel}</span>
         </span>
       </>
     );
@@ -756,8 +756,8 @@ export const formatPriceInfo = (priceData, t) => {
 
   return (
     <>
-      <span style={{ color: 'var(--semi-color-text-1)' }}>
-        {t('模型价格')} {priceData.price}
+      <span style={{ color: 'var(--semi-color-text-0)', fontSize: '13px' }}>
+        {t('模型价格')} <span className='price-italic'>{priceData.price}</span>
       </span>
     </>
   );
