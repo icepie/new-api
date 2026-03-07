@@ -129,6 +129,7 @@ const PricingCardView = ({
   setModalImageUrl,
   setIsModalOpenurl,
   currency,
+  siteDisplayType,
   tokenUnit,
   displayPrice,
   showRatio,
@@ -308,6 +309,7 @@ const PricingCardView = ({
             tokenUnit,
             displayPrice,
             currency,
+            quotaDisplayType: siteDisplayType,
           });
 
           return (
@@ -331,7 +333,7 @@ const PricingCardView = ({
                         return (
                           <div className='flex flex-col gap-0.5 text-xs mt-1'>
                             <div className='flex items-center gap-2'>
-                              {formatPriceInfo(priceData, t)}
+                              {formatPriceInfo(priceData, t, siteDisplayType)}
                               {discount && discount.badge}
                             </div>
                             {discount && discount.strikethrough}
