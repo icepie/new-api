@@ -130,11 +130,8 @@ const ModelPricingTable = ({
       render: (items, record) => (
         <div className='space-y-1'>
           {items.map((item) => (
-            <div key={item.key}>
-              <div className='font-semibold text-orange-600'>
-                {item.label} {item.value}
-              </div>
-              <div className='text-xs text-gray-500'>{item.suffix}</div>
+            <div key={item.key} className='font-semibold text-orange-600'>
+              {item.label} {item.value}{item.suffix}
             </div>
           ))}
           {record.discount && (
