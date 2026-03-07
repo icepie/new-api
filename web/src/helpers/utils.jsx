@@ -846,47 +846,47 @@ export const getModelPriceItems = (
       );
     }
 
-    const unitSuffix = ` / 1${priceData.unitLabel} Tokens`;
+    const unitSuffix = `/1${priceData.unitLabel}`;
     return [
       {
         key: 'input',
-        label: t('输入价格'),
+        label: t('输入'),
         value: priceData.inputPrice,
         suffix: unitSuffix,
       },
       {
         key: 'completion',
-        label: t('补全价格'),
+        label: t('输出'),
         value: priceData.completionPrice,
         suffix: unitSuffix,
       },
       {
         key: 'cache',
-        label: t('缓存读取价格'),
+        label: t('缓存读'),
         value: priceData.cachePrice,
         suffix: unitSuffix,
       },
       {
         key: 'create-cache',
-        label: t('缓存创建价格'),
+        label: t('缓存写'),
         value: priceData.createCachePrice,
         suffix: unitSuffix,
       },
       {
         key: 'image',
-        label: t('图片输入价格'),
+        label: t('图片'),
         value: priceData.imagePrice,
         suffix: unitSuffix,
       },
       {
         key: 'audio-input',
-        label: t('音频输入价格'),
+        label: t('音频输入'),
         value: priceData.audioInputPrice,
         suffix: unitSuffix,
       },
       {
         key: 'audio-output',
-        label: t('音频补全价格'),
+        label: t('音频输出'),
         value: priceData.audioOutputPrice,
         suffix: unitSuffix,
       },
