@@ -918,6 +918,67 @@ export const formatPriceInfo = (priceData, t, quotaDisplayType = 'USD') => {
   );
 };
 
+// 计算官方折扣信息，返回 { badge, strikethrough } 或 null
+export const getOfficialDiscount = (model, priceData, displayPrice, tokenUnit, t) => {
+  const unit = model.official_price_unit;
+  const inputPrice = model.official_input_price;
+  const outputPrice = model.official_output_price;
+  const hasUnit = typeof unit === 'number' && !isNaN(unit) && unit > 0;
+  const hasInput = typeof inputPrice === 'number' && !isNaN(inputPrice);
+  const hasOutput = typeof outputPrice === 'number' && !isNaN(outputPrice);
+
+  let officialPrice = null;
+  if (model.quota_type === 1) {
+    if (!hasUnit) return null;
+    officialPrice = { input: unit, output: unit };
+  } else {
+    if (!hasInput && !hasOutput) return null;
+    officialPrice = { input: hasInput ? inputPrice : 0, output: hasOutput ? outputPrice : 0 };
+  }
+
+  let savingsPercent = null;
+  if (priceData.isPerToken) {
+    const currentInputUSD = priceData.inputPriceUSD ?? 0;
+    if (officialPrice.input > 0) {
+      savingsPercent = ((officialPrice.input - currentInputUSD) / officialPrice.input) * 100;
+    }
+  } else {
+    const currentPriceUSD = parseFloat(model.model_price || 0) * (priceData.usedGroupRatio ?? 1);
+    if (officialPrice.input > 0) {
+      savingsPercent = ((officialPrice.input - currentPriceUSD) / officialPrice.input) * 100;
+    }
+  }
+
+  if (savingsPercent == null || savingsPercent <= 0) return null;
+
+  const rawDiscount = (1 - savingsPercent / 100) * 10;
+  const rounded = Math.round(rawDiscount * 100) / 100;
+  const discount = rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(2).replace(/\.?0+$/, '');
+  const discountNum = parseFloat(discount);
+  const tier = discountNum <= 3 ? 'best' : discountNum <= 5 ? 'good' : discountNum <= 7 ? 'medium' : discountNum <= 9 ? 'slight' : 'minimal';
+
+  const fmt = (p) => displayPrice ? displayPrice(p) : `$${p.toFixed(3)}`;
+  const unitLabel = tokenUnit === 'K' ? 'K' : 'M';
+
+  const badge = (
+    <span className={`pricing-model-card-official-badge pricing-model-card-official-badge--${tier}`}>
+      ≈{t('官方')} {discount} {t('折')}
+    </span>
+  );
+
+  const strikethrough = priceData.isPerToken ? (
+    <span style={{ color: 'var(--semi-color-text-2)' }} className='pricing-detail-price-strikethrough'>
+      {t('原价')}: <span className='price-italic'>{fmt(officialPrice.input)}&nbsp;&nbsp;{fmt(officialPrice.output ?? officialPrice.input)}/{unitLabel}</span>
+    </span>
+  ) : (
+    <span style={{ color: 'var(--semi-color-text-2)' }} className='pricing-detail-price-strikethrough'>
+      {t('原价')}: <span className='price-italic'>{fmt(officialPrice.input)}</span>
+    </span>
+  );
+
+  return { badge, strikethrough };
+};
+
 // -------------------------------
 // CardPro 分页配置函数
 // 用于创建 CardPro 的 paginationArea 配置

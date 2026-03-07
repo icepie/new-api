@@ -20,7 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React from 'react';
 import { Card, Avatar, Typography, Table, Tag } from '@douyinfe/semi-ui';
 import { IconCoinMoneyStroked } from '@douyinfe/semi-icons';
-import { calculateModelPrice, getModelPriceItems } from '../../../../../helpers';
+import { calculateModelPrice, getModelPriceItems, getOfficialDiscount } from '../../../../../helpers';
 
 const { Text } = Typography;
 
@@ -77,6 +77,7 @@ const ModelPricingTable = ({
               ? t('按次计费')
               : '-',
         priceItems: getModelPriceItems(priceData, t, siteDisplayType),
+        discount: getOfficialDiscount(modelData, priceData, displayPrice, tokenUnit, t),
       };
     });
 
@@ -126,7 +127,7 @@ const ModelPricingTable = ({
     columns.push({
       title: siteDisplayType === 'TOKENS' ? t('计费摘要') : t('价格摘要'),
       dataIndex: 'priceItems',
-      render: (items) => (
+      render: (items, record) => (
         <div className='space-y-1'>
           {items.map((item) => (
             <div key={item.key}>
@@ -136,6 +137,12 @@ const ModelPricingTable = ({
               <div className='text-xs text-gray-500'>{item.suffix}</div>
             </div>
           ))}
+          {record.discount && (
+            <div className='flex flex-col gap-0.5 mt-1'>
+              <div>{record.discount.badge}</div>
+              <div>{record.discount.strikethrough}</div>
+            </div>
+          )}
         </div>
       ),
     });
