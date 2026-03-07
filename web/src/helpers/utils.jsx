@@ -762,7 +762,7 @@ export const calculateModelPrice = ({
       usedGroupRatio,
       // 折扣计算用：始终为 USD/百万 token，避免与官方价单位或币种不一致
       inputPriceUSD: inputRatioPriceUSD,
-      completionPriceUSD: completionRatioPriceUSD,
+      completionPriceUSD: inputRatioPriceUSD * Number(record.completion_ratio),
     };
   }
 
