@@ -7,6 +7,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/types"
 )
 
 // from songquanpeng/one-api
@@ -328,8 +329,7 @@ var (
 )
 
 var (
-	CompletionRatio      map[string]float64 = nil
-	CompletionRatioMutex                    = sync.RWMutex{}
+	completionRatioMap = types.NewRWMap[string, float64]()
 )
 
 var defaultCompletionRatio = map[string]float64{
@@ -351,10 +351,8 @@ func InitRatioSettings() {
 	modelRatioMap = defaultModelRatio
 	modelRatioMapMutex.Unlock()
 
-	// Initialize CompletionRatio
-	CompletionRatioMutex.Lock()
-	CompletionRatio = defaultCompletionRatio
-	CompletionRatioMutex.Unlock()
+	// Initialize completionRatioMap
+	completionRatioMap.AddAll(defaultCompletionRatio)
 
 	// Initialize cacheRatioMap (defined in cache_ratio.go)
 	cacheRatioMap.AddAll(defaultCacheRatio)
@@ -507,41 +505,22 @@ func GetDefaultAudioCompletionRatioMap() map[string]float64 {
 }
 
 func GetCompletionRatioMap() map[string]float64 {
-	CompletionRatioMutex.RLock()
-	defer CompletionRatioMutex.RUnlock()
-	return CompletionRatio
+	return completionRatioMap.ReadAll()
 }
 
 func CompletionRatio2JSONString() string {
-	CompletionRatioMutex.RLock()
-	defer CompletionRatioMutex.RUnlock()
-
-	jsonBytes, err := json.Marshal(CompletionRatio)
-	if err != nil {
-		common.SysError("error marshalling completion ratio: " + err.Error())
-	}
-	return string(jsonBytes)
+	return completionRatioMap.MarshalJSONString()
 }
 
 func UpdateCompletionRatioByJSONString(jsonStr string) error {
-	CompletionRatioMutex.Lock()
-	defer CompletionRatioMutex.Unlock()
-	CompletionRatio = make(map[string]float64)
-	err := common.Unmarshal([]byte(jsonStr), &CompletionRatio)
-	if err == nil {
-		InvalidateExposedDataCache()
-	}
-	return err
+	return types.LoadFromJsonStringWithCallback(completionRatioMap, jsonStr, InvalidateExposedDataCache)
 }
 
 func GetCompletionRatio(name string) float64 {
-	CompletionRatioMutex.RLock()
-	defer CompletionRatioMutex.RUnlock()
-
 	name = FormatMatchingModelName(name)
 
 	if strings.Contains(name, "/") {
-		if ratio, ok := CompletionRatio[name]; ok {
+		if ratio, ok := completionRatioMap.Get(name); ok {
 			return ratio
 		}
 	}
@@ -549,7 +528,7 @@ func GetCompletionRatio(name string) float64 {
 	if contain {
 		return hardCodedRatio
 	}
-	if ratio, ok := CompletionRatio[name]; ok {
+	if ratio, ok := completionRatioMap.Get(name); ok {
 		return ratio
 	}
 	return hardCodedRatio
@@ -564,39 +543,21 @@ func GetCompletionRatioInfo(name string) CompletionRatioInfo {
 	name = FormatMatchingModelName(name)
 
 	if strings.Contains(name, "/") {
-		CompletionRatioMutex.RLock()
-		ratio, ok := CompletionRatio[name]
-		CompletionRatioMutex.RUnlock()
-		if ok {
-			return CompletionRatioInfo{
-				Ratio:  ratio,
-				Locked: false,
-			}
+		if ratio, ok := completionRatioMap.Get(name); ok {
+			return CompletionRatioInfo{Ratio: ratio, Locked: false}
 		}
 	}
 
 	hardCodedRatio, locked := getHardcodedCompletionModelRatio(name)
 	if locked {
-		return CompletionRatioInfo{
-			Ratio:  hardCodedRatio,
-			Locked: true,
-		}
+		return CompletionRatioInfo{Ratio: hardCodedRatio, Locked: true}
 	}
 
-	CompletionRatioMutex.RLock()
-	ratio, ok := CompletionRatio[name]
-	CompletionRatioMutex.RUnlock()
-	if ok {
-		return CompletionRatioInfo{
-			Ratio:  ratio,
-			Locked: false,
-		}
+	if ratio, ok := completionRatioMap.Get(name); ok {
+		return CompletionRatioInfo{Ratio: ratio, Locked: false}
 	}
 
-	return CompletionRatioInfo{
-		Ratio:  hardCodedRatio,
-		Locked: false,
-	}
+	return CompletionRatioInfo{Ratio: hardCodedRatio, Locked: false}
 }
 
 func getHardcodedCompletionModelRatio(name string) (float64, bool) {
@@ -878,13 +839,7 @@ func GetModelPriceCopy() map[string]float64 {
 }
 
 func GetCompletionRatioCopy() map[string]float64 {
-	CompletionRatioMutex.RLock()
-	defer CompletionRatioMutex.RUnlock()
-	copyMap := make(map[string]float64, len(CompletionRatio))
-	for k, v := range CompletionRatio {
-		copyMap[k] = v
-	}
-	return copyMap
+	return completionRatioMap.ReadAll()
 }
 
 // 转换模型名，减少渠道必须配置各种带参数模型
