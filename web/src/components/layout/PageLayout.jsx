@@ -39,10 +39,11 @@ import { StatusContext } from '../../context/Status';
 import { useLocation } from 'react-router-dom';
 import HeroBackground from '../homepage/HeroBackground';
 import ScrollIndicator from '../homepage/ScrollIndicator';
+import { normalizeLanguage } from '../../i18n/language';
 const { Sider, Content, Header } = Layout;
 
 const PageLayout = () => {
-  const [, userDispatch] = useContext(UserContext);
+  const [userState, userDispatch] = useContext(UserContext);
   const [, statusDispatch] = useContext(StatusContext);
   const isMobile = useIsMobile();
   const [collapsed, , setCollapsed] = useSidebarCollapsed();
@@ -116,11 +117,34 @@ const PageLayout = () => {
         linkElement.href = logo === 'default' ? '/logo.svg' : logo;
       }
     }
-    const savedLang = localStorage.getItem('i18nextLng');
-    if (savedLang) {
-      i18n.changeLanguage(savedLang);
+  }, []);
+
+  useEffect(() => {
+    let preferredLang;
+
+    if (userState?.user?.setting) {
+      try {
+        const settings = JSON.parse(userState.user.setting);
+        preferredLang = normalizeLanguage(settings.language);
+      } catch (e) {
+        // Ignore parse errors
+      }
     }
-  }, [i18n]);
+
+    if (!preferredLang) {
+      const savedLang = localStorage.getItem('i18nextLng');
+      if (savedLang) {
+        preferredLang = normalizeLanguage(savedLang);
+      }
+    }
+
+    if (preferredLang) {
+      localStorage.setItem('i18nextLng', preferredLang);
+      if (preferredLang !== i18n.language) {
+        i18n.changeLanguage(preferredLang);
+      }
+    }
+  }, [i18n, userState?.user?.setting]);
 
   return (
     <Layout

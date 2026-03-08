@@ -25,6 +25,11 @@ type Pricing struct {
 	ModelPrice             float64                 `json:"model_price"`
 	OwnerBy                string                  `json:"owner_by"`
 	CompletionRatio        float64                 `json:"completion_ratio"`
+	CacheRatio             *float64                `json:"cache_ratio,omitempty"`
+	CreateCacheRatio       *float64                `json:"create_cache_ratio,omitempty"`
+	ImageRatio             *float64                `json:"image_ratio,omitempty"`
+	AudioRatio             *float64                `json:"audio_ratio,omitempty"`
+	AudioCompletionRatio   *float64                `json:"audio_completion_ratio,omitempty"`
 	EnableGroup            []string                `json:"enable_groups"`
 	SupportedEndpointTypes []constant.EndpointType `json:"supported_endpoint_types"`
 	IsListed               bool                    `json:"is_listed"`
@@ -37,6 +42,8 @@ type Pricing struct {
 	// 类型与标签（用于定价页筛选，仅来自 model_listings，逗号分隔；不自动推断）
 	ListTypes string `json:"list_types,omitempty"`
 	ListTags  string `json:"list_tags,omitempty"`
+	// 版本标识，用于前端检测数据更新
+	PricingVersion string `json:"pricing_version,omitempty"`
 }
 
 type PricingVendor struct {
@@ -324,6 +331,23 @@ func updatePricing() {
 			pricing.CompletionRatio = ratio_setting.GetCompletionRatio(model)
 			pricing.QuotaType = 0
 		}
+		if cacheRatio, ok := ratio_setting.GetCacheRatio(model); ok {
+			pricing.CacheRatio = &cacheRatio
+		}
+		if createCacheRatio, ok := ratio_setting.GetCreateCacheRatio(model); ok {
+			pricing.CreateCacheRatio = &createCacheRatio
+		}
+		if imageRatio, ok := ratio_setting.GetImageRatio(model); ok {
+			pricing.ImageRatio = &imageRatio
+		}
+		if ratio_setting.ContainsAudioRatio(model) {
+			audioRatio := ratio_setting.GetAudioRatio(model)
+			pricing.AudioRatio = &audioRatio
+		}
+		if ratio_setting.ContainsAudioCompletionRatio(model) {
+			audioCompletionRatio := ratio_setting.GetAudioCompletionRatio(model)
+			pricing.AudioCompletionRatio = &audioCompletionRatio
+		}
 
 		// 设置上架状态，默认为 true
 		if isListed, ok := modelListingStatusMap[model]; ok {
@@ -359,6 +383,11 @@ func updatePricing() {
 		}
 
 		pricingMap = append(pricingMap, pricing)
+	}
+
+	// 防止大更新后数据不通用
+	if len(pricingMap) > 0 {
+		pricingMap[0].PricingVersion = "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
 	}
 
 	// 刷新缓存映射，供高并发快速查询
