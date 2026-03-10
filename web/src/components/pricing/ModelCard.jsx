@@ -569,7 +569,7 @@ export default function ModelCard({
       </p>
 
       {/* Tags */}
-      {translatedTags.length > 0 && (
+      {/* {translatedTags.length > 0 && (
         <div className="pricing-model-card-tags">
           {translatedTags.slice(0, 5).map((tag, index) => {
             // 使用原始 tag 来获取颜色（保持颜色一致性）
@@ -587,7 +587,7 @@ export default function ModelCard({
             </span>
           )}
         </div>
-      )}
+      )} */}
 
     </div>
   );

@@ -1,7 +1,7 @@
 package codex
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"errors"
 	"io"
 	"net/http"

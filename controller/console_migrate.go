@@ -3,7 +3,7 @@
 package controller
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"net/http"
 
 	"github.com/QuantumNous/new-api/common"

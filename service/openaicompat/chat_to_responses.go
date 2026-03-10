@@ -1,7 +1,7 @@
 package openaicompat
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"errors"
 	"fmt"
 	"strings"

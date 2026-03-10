@@ -39,6 +39,7 @@ import {
   stringToColor,
   calculateModelPrice,
   formatPriceInfo,
+  getModelPriceItems,
   getLobeHubIcon,
   getOfficialDiscount,
 } from '../../../../../helpers';
@@ -255,8 +256,8 @@ const PricingCardView = ({
           return (
             <Card
               key={modelKey || index}
-              className={`!rounded-2xl transition-all duration-200 hover:shadow-lg border cursor-pointer ${isSelected ? CARD_STYLES.selected : CARD_STYLES.default}`}
-              bodyStyle={{ height: '100%' }}
+              className={`pricing-modern-card transition-all duration-200 border cursor-pointer ${isSelected ? CARD_STYLES.selected : CARD_STYLES.default}`}
+              bodyStyle={{ height: '100%', padding: '20px' }}
               onClick={() => openModelDetail && openModelDetail(model)}
             >
               <div className='flex flex-col h-full'>
@@ -273,8 +274,14 @@ const PricingCardView = ({
                         return (
                           <div className='flex flex-col gap-0.5 text-xs mt-1'>
                             <div className='flex items-center gap-2'>
-                              {formatPriceInfo(priceData, t, siteDisplayType)}
-                              {discount && discount.badge}
+                              {(() => {
+                                const items = getModelPriceItems(priceData, t, siteDisplayType).filter(i => i.key === 'input' || i.key === 'completion' || i.key === 'fixed');
+                                return items.map(item => (
+                                  <span key={item.key} style={{ color: 'var(--semi-color-text-1)' }}>
+                                    {item.label} {item.value}{item.suffix}
+                                  </span>
+                                ));
+                              })()}
                             </div>
                             {discount && discount.strikethrough}
                           </div>
@@ -321,8 +328,20 @@ const PricingCardView = ({
 
                 {/* 底部区域 */}
                 <div className='mt-auto'>
+                  {/* 折扣 tag */}
+                  {(() => {
+                    const discount = getOfficialDiscount(model, priceData, displayPrice, tokenUnit, t);
+                    if (!discount) return null;
+                    return (
+                      <div className='flex items-center'>
+                        <Tag shape='circle' color='teal' size='small'>
+                          {discount.badge.props.children}
+                        </Tag>
+                      </div>
+                    );
+                  })()}
                   {/* 标签区域 */}
-                  {renderTags(model)}
+                  {/* {renderTags(model)} */}
 
                   {/* 倍率信息（可选） */}
                   {showRatio && (

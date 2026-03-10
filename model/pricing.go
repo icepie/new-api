@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -40,9 +39,9 @@ type Pricing struct {
 	// 官方元数据（JSON：modalities/attachment/reasoning/limit/knowledge 等，来自 models.dev）
 	OfficialMetadata string `json:"official_metadata,omitempty"`
 	// 类型与标签（用于定价页筛选，仅来自 model_listings，逗号分隔；不自动推断）
-	ListTypes       string `json:"list_types,omitempty"`
-	ListTags        string `json:"list_tags,omitempty"`
-	PricingVersion  string `json:"pricing_version,omitempty"`
+	ListTypes      string `json:"list_types,omitempty"`
+	ListTags       string `json:"list_tags,omitempty"`
+	PricingVersion string `json:"pricing_version,omitempty"`
 }
 
 type PricingVendor struct {
@@ -227,7 +226,7 @@ func updatePricing() {
 			continue
 		}
 		var raw map[string]interface{}
-		if err := json.Unmarshal([]byte(meta.Endpoints), &raw); err == nil {
+		if err := common.Unmarshal([]byte(meta.Endpoints), &raw); err == nil {
 			endpoints := make([]string, 0, len(raw))
 			for k, v := range raw {
 				switch v.(type) {
@@ -271,7 +270,7 @@ func updatePricing() {
 			continue
 		}
 		var raw map[string]interface{}
-		if err := json.Unmarshal([]byte(meta.Endpoints), &raw); err == nil {
+		if err := common.Unmarshal([]byte(meta.Endpoints), &raw); err == nil {
 			for k, v := range raw {
 				switch val := v.(type) {
 				case string:

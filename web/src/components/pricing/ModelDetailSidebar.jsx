@@ -780,7 +780,7 @@ export default function ModelDetailSidebar({
           </div>
 
           {/* Tags */}
-          {allTags.length > 0 && (
+          {/* {allTags.length > 0 && (
             <div className="pricing-detail-tags">
               {allTags.map((tag, index) => {
                 const tagColor = getTagColor(tag);
@@ -791,7 +791,7 @@ export default function ModelDetailSidebar({
                 );
               })}
             </div>
-          )}
+          )} */}
 
           {/* Action Buttons */}
           <div className="pricing-detail-actions">
@@ -850,7 +850,7 @@ export default function ModelDetailSidebar({
           )}
 
           {/* API Endpoints */}
-          {renderAPIEndpoints() && (
+          {/* {renderAPIEndpoints() && (
             <div className="pricing-detail-endpoints">
               <div className="pricing-detail-endpoints-header">
                 <div>
@@ -866,7 +866,7 @@ export default function ModelDetailSidebar({
                 {renderAPIEndpoints()}
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Price（与卡片一致：有官方价且更便宜时显示折扣 + 官方价） */}
           <div className="pricing-detail-price">

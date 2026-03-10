@@ -3,7 +3,7 @@ package vertex
 import (
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"encoding/pem"
 	"errors"
 	"net/http"

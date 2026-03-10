@@ -2,7 +2,7 @@ package zhipu
 
 import (
 	"bufio"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"io"
 	"net/http"
 	"strings"

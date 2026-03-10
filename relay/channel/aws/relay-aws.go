@@ -2,7 +2,7 @@ package aws
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"fmt"
 	"io"
 	"net/http"

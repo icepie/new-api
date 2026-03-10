@@ -38,18 +38,18 @@ const PricingDisplaySettings = ({
   const supportsCurrencyDisplay = siteDisplayType !== 'TOKENS';
 
   const items = [
-    ...(supportsCurrencyDisplay
-      ? [
-          {
-            value: 'recharge',
-            label: t('充值价格显示'),
-          },
-        ]
-      : []),
-    {
-      value: 'ratio',
-      label: t('显示倍率'),
-    },
+    // ...(supportsCurrencyDisplay
+    //   ? [
+    //       {
+    //         value: 'recharge',
+    //         label: t('充值价格显示'),
+    //       },
+    //     ]
+    //   : []),
+    // {
+    //   value: 'ratio',
+    //   label: t('显示倍率'),
+    // },
     {
       value: 'tableView',
       label: t('表格视图'),
@@ -105,7 +105,7 @@ const PricingDisplaySettings = ({
         t={t}
       />
 
-      {supportsCurrencyDisplay && showWithRecharge && (
+      {/* {supportsCurrencyDisplay && showWithRecharge && (
         <SelectableButtonGroup
           title={t('货币单位')}
           items={currencyItems}
@@ -115,7 +115,7 @@ const PricingDisplaySettings = ({
           loading={loading}
           t={t}
         />
-      )}
+      )} */}
     </div>
   );
 };

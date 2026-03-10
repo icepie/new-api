@@ -1,7 +1,7 @@
 package passkey
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"errors"
 
 	"github.com/gin-contrib/sessions"

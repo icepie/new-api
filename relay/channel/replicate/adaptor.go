@@ -2,7 +2,7 @@ package replicate
 
 import (
 	"bytes"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"errors"
 	"fmt"
 	"io"

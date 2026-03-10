@@ -724,7 +724,8 @@ export const calculateModelPrice = ({
       const rawDisplayPrice = displayPrice(priceUSD);
       const numericPrice =
         parseFloat(rawDisplayPrice.replace(/[^0-9.]/g, '')) / unitDivisor;
-      return `${symbol}${numericPrice.toFixed(precision)}`;
+      const formatted = numericPrice.toFixed(precision).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '.0');
+      return `${symbol}${formatted}`;
     };
 
     const inputPrice = formatTokenPrice(inputRatioPriceUSD);
@@ -957,7 +958,17 @@ export const getOfficialDiscount = (model, priceData, displayPrice, tokenUnit, t
   const discountNum = parseFloat(discount);
   const tier = discountNum <= 3 ? 'best' : discountNum <= 5 ? 'good' : discountNum <= 7 ? 'medium' : discountNum <= 9 ? 'slight' : 'minimal';
 
-  const fmt = (p) => displayPrice ? displayPrice(p) : `$${p.toFixed(3)}`;
+  const fmt = (p) => {
+    if (!displayPrice) {
+      const s = p.toFixed(4).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '.0');
+      return `$${s}`;
+    }
+    const raw = displayPrice(p);
+    const sym = raw.replace(/[0-9.]/g, '')[0] || '$';
+    const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+    const s = num.toFixed(4).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '.0');
+    return `${sym}${s}`;
+  };
   const unitLabel = tokenUnit === 'K' ? 'K' : 'M';
 
   const badge = (
@@ -976,7 +987,15 @@ export const getOfficialDiscount = (model, priceData, displayPrice, tokenUnit, t
     </span>
   );
 
-  return { badge, strikethrough };
+  return {
+    badge,
+    strikethrough,
+    discountLabel: `≈${t('官方')} ${discount} ${t('折')}`,
+    officialInputFmt: fmt(officialPrice.input),
+    officialOutputFmt: priceData.isPerToken ? fmt(officialPrice.output ?? officialPrice.input) : null,
+    unitLabel,
+    isPerToken: priceData.isPerToken,
+  };
 };
 
 // -------------------------------

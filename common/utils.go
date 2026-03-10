@@ -3,7 +3,7 @@ package common
 import (
 	crand "crypto/rand"
 	"encoding/base64"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"fmt"
 	"html/template"
 	"io"

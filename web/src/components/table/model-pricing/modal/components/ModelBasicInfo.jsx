@@ -72,7 +72,7 @@ const ModelBasicInfo = ({ modelData, vendorsMap = {}, t }) => {
       </div>
       <div className='text-gray-600'>
         <p className='mb-3 text-sm leading-relaxed'>{getModelDescription()}</p>
-        {getModelTags().length > 0 && (
+        {/* {getModelTags().length > 0 && (
           <Space wrap size='small'>
             {getModelTags().map((tag, index) => (
               <Tag key={index} color={tag.color} shape='circle' size='small'>
@@ -80,7 +80,7 @@ const ModelBasicInfo = ({ modelData, vendorsMap = {}, t }) => {
               </Tag>
             ))}
           </Space>
-        )}
+        )} */}
       </div>
     </Card>
   );

@@ -136,7 +136,11 @@ const ModelPricingTable = ({
           ))}
           {record.discount && (
             <div className='flex flex-col gap-0.5 mt-1'>
-              <div>{record.discount.badge}</div>
+              <div>
+                <Tag shape='circle' color='teal' size='small'>
+                  {record.discount.badge.props.children}
+                </Tag>
+              </div>
               <div>{record.discount.strikethrough}</div>
             </div>
           )}

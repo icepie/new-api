@@ -1,7 +1,7 @@
 package openai
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"

@@ -1,7 +1,7 @@
 package setting
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 
 	"github.com/QuantumNous/new-api/common"
 )

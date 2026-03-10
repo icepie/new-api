@@ -3,7 +3,7 @@ package model
 import (
 	"bytes"
 	"database/sql/driver"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"

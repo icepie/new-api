@@ -1,6 +1,6 @@
 package openrouter
 
-import "encoding/json"
+import "github.com/goccy/go-json"
 
 type RequestReasoning struct {
 	Enabled bool `json:"enabled"`

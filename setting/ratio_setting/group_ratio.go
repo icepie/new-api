@@ -1,7 +1,7 @@
 package ratio_setting
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"errors"
 
 	"github.com/QuantumNous/new-api/common"

@@ -85,11 +85,11 @@ const ModelDetailSideSheet = ({
               vendorsMap={vendorsMap}
               t={t}
             />
-            <ModelEndpoints
+            {/* <ModelEndpoints
               modelData={modelData}
               endpointMap={endpointMap}
               t={t}
-            />
+            /> */}
             <ModelPricingTable
               modelData={modelData}
               groupRatio={groupRatio}

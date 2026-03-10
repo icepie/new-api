@@ -1,6 +1,6 @@
 package coze
 
-import "encoding/json"
+import "github.com/goccy/go-json"
 
 type CozeError struct {
 	Code    int    `json:"code"`

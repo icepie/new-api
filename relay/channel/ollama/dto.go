@@ -1,7 +1,7 @@
 package ollama
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 )
 
 type OllamaChatMessage struct {

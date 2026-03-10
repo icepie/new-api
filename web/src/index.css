@@ -1,6 +1,7 @@
 /* ==================== Tailwind CSS 配置 ==================== */
 @import url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/css/harmonyos_sans_sc.css');
 @import url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/css/harmonyos_sans.css');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @layer tailwind-base, tailwind-components, tailwind-utils;
 
@@ -28,9 +29,15 @@ body.sidebar-collapsed {
 }
 
 body {
-  font-family: 'HarmonyOS Sans SC', 'HarmonyOS Sans', Lato, 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  font-family: Inter, 'HarmonyOS Sans SC', 'HarmonyOS Sans', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, Helvetica, sans-serif;
   color: var(--semi-color-text-0);
   background-color: var(--semi-color-bg-0);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*:not(code):not(pre):not(kbd):not(samp) {
+  font-family: inherit;
 }
 
 .app-layout {
@@ -52,6 +59,7 @@ code {
   display: inline-block;
   transform: skewX(-8deg);
   font-style: normal;
+  text-decoration: line-through;
 }
 
 /* ==================== 布局相关样式 ==================== */

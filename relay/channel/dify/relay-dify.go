@@ -3,7 +3,7 @@ package dify
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"fmt"
 	"io"
 	"mime/multipart"

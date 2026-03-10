@@ -187,7 +187,7 @@ export const getPricingTableColumns = ({
     modelNameColumn,
     vendorColumn,
     descriptionColumn,
-    tagsColumn,
+    // tagsColumn,
     quotaColumn,
   ];
 
@@ -250,7 +250,7 @@ export const getPricingTableColumns = ({
   };
 
   const columns = [...baseColumns];
-  columns.push(endpointColumn);
+  // columns.push(endpointColumn);
   if (showRatio) {
     columns.push(ratioColumn);
   }

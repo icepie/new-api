@@ -3,7 +3,7 @@ package oauth
 import (
 	"context"
 	"encoding/base64"
-	stdjson "encoding/json"
+	stdjson "github.com/goccy/go-json"
 	"errors"
 	"fmt"
 	"io"
