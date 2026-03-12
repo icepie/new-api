@@ -521,7 +521,7 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 		// gpt-5 匹配
 		if strings.HasPrefix(name, "gpt-5") {
 			if strings.HasPrefix(name, "gpt-5.4") {
-				return 6, true
+				return 6, false
 			}
 			return 8, true
 		}
