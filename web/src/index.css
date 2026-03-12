@@ -350,6 +350,7 @@ code {
   gap: 4px;
   width: 100%;
   min-width: 0;
+  font-size: 12px;
 }
 
 .sbg-ellipsis {

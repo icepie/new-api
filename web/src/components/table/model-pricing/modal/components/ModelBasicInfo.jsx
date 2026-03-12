@@ -58,29 +58,20 @@ const ModelBasicInfo = ({ modelData, vendorsMap = {}, t }) => {
   };
 
   return (
-    <Card className='!rounded-2xl shadow-sm border-0'>
-      <div className='flex items-center mb-4'>
-        <Avatar size='small' color='blue' className='mr-2 shadow-md'>
-          <IconInfoCircle size={16} />
+    <Card className='!rounded-2xl shadow-sm border-0' bodyStyle={{ padding: '16px' }}>
+      <div className='flex items-center mb-3'>
+        <Avatar size='extra-small' color='blue' className='mr-2'>
+          <IconInfoCircle size={14} />
         </Avatar>
         <div>
-          <Text className='text-base font-medium'>{t('基本信息')}</Text>
-          <div className='text-xs text-gray-600'>
+          <Text className='text-sm font-medium'>{t('基本信息')}</Text>
+          <div className='text-xs' style={{ color: 'var(--semi-color-text-2)' }}>
             {t('模型的详细描述和基本特性')}
           </div>
         </div>
       </div>
-      <div className='text-gray-600'>
-        <p className='mb-3 text-sm leading-relaxed'>{getModelDescription()}</p>
-        {/* {getModelTags().length > 0 && (
-          <Space wrap size='small'>
-            {getModelTags().map((tag, index) => (
-              <Tag key={index} color={tag.color} shape='circle' size='small'>
-                {tag.text}
-              </Tag>
-            ))}
-          </Space>
-        )} */}
+      <div>
+        <p className='mb-0 text-xs leading-relaxed' style={{ color: 'var(--semi-color-text-1)' }}>{getModelDescription()}</p>
       </div>
     </Card>
   );

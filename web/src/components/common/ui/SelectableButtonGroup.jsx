@@ -59,6 +59,7 @@ const SelectableButtonGroup = ({
   withCheckbox = false,
   loading = false,
   variant,
+  maxColumns,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [skeletonCount] = useState(12);
@@ -89,10 +90,11 @@ const SelectableButtonGroup = ({
 
   // 基于容器宽度计算响应式列数和标签显示策略
   const getResponsiveConfig = () => {
-    if (containerWidth <= 280) return { columns: 1, showTags: true }; // 极窄：1列+标签
-    if (containerWidth <= 380) return { columns: 2, showTags: true }; // 窄屏：2列+标签
-    if (containerWidth <= 460) return { columns: 3, showTags: false }; // 中等：3列不加标签
-    return { columns: 3, showTags: true }; // 最宽：3列+标签
+    const cap = maxColumns ?? Infinity;
+    if (containerWidth <= 280) return { columns: Math.min(1, cap), showTags: true };
+    if (containerWidth <= 380) return { columns: Math.min(2, cap), showTags: true };
+    if (containerWidth <= 460) return { columns: Math.min(3, cap), showTags: false };
+    return { columns: Math.min(3, cap), showTags: true };
   };
 
   const { columns: perRow, showTags: shouldShowTags } = getResponsiveConfig();

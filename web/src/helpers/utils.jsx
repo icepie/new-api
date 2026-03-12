@@ -847,7 +847,7 @@ export const getModelPriceItems = (
       );
     }
 
-    const unitSuffix = `/1${priceData.unitLabel}`;
+    const unitSuffix = `/${priceData.unitLabel}`;
     return [
       {
         key: 'input',
@@ -996,6 +996,63 @@ export const getOfficialDiscount = (model, priceData, displayPrice, tokenUnit, t
     unitLabel,
     isPerToken: priceData.isPerToken,
   };
+};
+
+// 按分组倍率计算折扣 tags，返回所有分组 [{ group, ratio, discount, tier, color, hasDiscount }]
+export const getGroupDiscountTags = (model, groupRatio) => {
+  const enableGroups = model?.enable_groups;
+  if (!Array.isArray(enableGroups) || enableGroups.length === 0) return [];
+  if (!groupRatio || Object.keys(groupRatio).length === 0) return [];
+
+  const formatDiscount = (ratio) => {
+    const raw = ratio * 10;
+    const rounded = Math.round(raw * 100) / 100;
+    return rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(2).replace(/\.?0+$/, '');
+  };
+
+  const getTier = (ratio) => {
+    if (ratio <= 0.3) return 'best';
+    if (ratio <= 0.5) return 'good';
+    if (ratio <= 0.7) return 'medium';
+    if (ratio <= 0.9) return 'slight';
+    return 'none';
+  };
+
+  // Semi UI Tag 支持的颜色列表（丰富版，尽量不重复）
+  const TAG_COLORS = [
+    'teal', 'violet', 'indigo', 'blue', 'cyan', 'green',
+    'lime', 'yellow', 'amber', 'orange', 'pink', 'red',
+    'purple', 'light-blue', 'light-green', 'grey',
+  ];
+  const getGroupColor = (groupName) => {
+    let hash = 0;
+    for (let i = 0; i < groupName.length; i++) {
+      hash = groupName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
+  };
+
+  const tags = [];
+  enableGroups.forEach((g) => {
+    const ratio = groupRatio[g];
+    if (ratio === undefined) return;
+    const hasDiscount = ratio < 1;
+    tags.push({
+      group: g,
+      ratio,
+      discount: hasDiscount ? formatDiscount(ratio) : null,
+      tier: getTier(ratio),
+      color: getGroupColor(g),
+      hasDiscount,
+    });
+  });
+
+  // 有折扣的排前面，按 ratio 升序；无折扣的按名称排
+  tags.sort((a, b) => {
+    if (a.hasDiscount !== b.hasDiscount) return a.hasDiscount ? -1 : 1;
+    return a.ratio - b.ratio;
+  });
+  return tags;
 };
 
 // -------------------------------

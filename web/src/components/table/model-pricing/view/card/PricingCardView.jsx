@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import '../../../../../styles/pricing.css';
 import {
   Card,
@@ -41,7 +41,7 @@ import {
   formatPriceInfo,
   getModelPriceItems,
   getLobeHubIcon,
-  getOfficialDiscount,
+  getGroupDiscountTags,
 } from '../../../../../helpers';
 import PricingCardSkeleton from './PricingCardSkeleton';
 import { useMinimumLoadingTime } from '../../../../../hooks/common/useMinimumLoadingTime';
@@ -49,8 +49,7 @@ import { renderLimitedItems } from '../../../../common/ui/RenderUtils';
 import { useIsMobile } from '../../../../../hooks/common/useIsMobile';
 
 const CARD_STYLES = {
-  container:
-    'w-12 h-12 rounded-2xl flex items-center justify-center relative shadow-md',
+  container: 'w-12 h-12 rounded-xl flex items-center justify-center relative',
   icon: 'w-8 h-8 flex items-center justify-center',
   selected: 'border-blue-500 bg-blue-50',
   default: 'border-gray-200 hover:border-gray-300',
@@ -98,50 +97,38 @@ const PricingCardView = ({
     rowSelection?.onChange?.(newKeys, null);
   };
 
-  // 获取模型图标
   const getModelIcon = (model) => {
     if (!model || !model.model_name) {
       return (
-        <div className={CARD_STYLES.container}>
+        <div className={CARD_STYLES.container} style={{ backgroundColor: 'var(--semi-color-fill-0)' }}>
           <Avatar size='large'>?</Avatar>
         </div>
       );
     }
-    // 1) 优先使用模型自定义图标
     if (model.icon) {
       return (
-        <div className={CARD_STYLES.container}>
+        <div className={CARD_STYLES.container} style={{ backgroundColor: 'var(--semi-color-fill-0)' }}>
           <div className={CARD_STYLES.icon}>
             {getLobeHubIcon(model.icon, 32)}
           </div>
         </div>
       );
     }
-    // 2) 退化为供应商图标
     if (model.vendor_icon) {
       return (
-        <div className={CARD_STYLES.container}>
+        <div className={CARD_STYLES.container} style={{ backgroundColor: 'var(--semi-color-fill-0)' }}>
           <div className={CARD_STYLES.icon}>
             {getLobeHubIcon(model.vendor_icon, 32)}
           </div>
         </div>
       );
     }
-
-    // 如果没有供应商图标，使用模型名称生成头像
-
     const avatarText = model.model_name.slice(0, 2).toUpperCase();
     return (
-      <div className={CARD_STYLES.container}>
+      <div className={CARD_STYLES.container} style={{ backgroundColor: 'var(--semi-color-fill-0)' }}>
         <Avatar
           size='large'
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 16,
-            fontSize: 16,
-            fontWeight: 'bold',
-          }}
+          style={{ width: 48, height: 48, borderRadius: 12, fontSize: 16, fontWeight: 'bold' }}
         >
           {avatarText}
         </Avatar>
@@ -242,148 +229,28 @@ const PricingCardView = ({
         {paginatedModels.map((model, index) => {
           const modelKey = getModelKey(model);
           const isSelected = selectedRowKeys.includes(modelKey);
-
-          const priceData = calculateModelPrice({
-            record: model,
-            selectedGroup,
-            groupRatio,
-            tokenUnit,
-            displayPrice,
-            currency,
-            quotaDisplayType: siteDisplayType,
-          });
-
           return (
-            <Card
+            <ModelCardItem
               key={modelKey || index}
-              className={`pricing-modern-card transition-all duration-200 border cursor-pointer ${isSelected ? CARD_STYLES.selected : CARD_STYLES.default}`}
-              bodyStyle={{ height: '100%', padding: '20px' }}
-              onClick={() => openModelDetail && openModelDetail(model)}
-            >
-              <div className='flex flex-col h-full'>
-                {/* 头部：图标 + 模型名称 + 操作按钮 */}
-                <div className='flex items-start justify-between mb-3'>
-                  <div className='flex items-start space-x-3 flex-1 min-w-0'>
-                    {getModelIcon(model)}
-                    <div className='flex-1 min-w-0'>
-                      <h3 className='text-lg font-bold text-gray-900 truncate'>
-                        {model.model_name}
-                      </h3>
-                      {(() => {
-                        const discount = getOfficialDiscount(model, priceData, displayPrice, tokenUnit, t);
-                        return (
-                          <div className='flex flex-col gap-0.5 text-xs mt-1'>
-                            <div className='flex items-center gap-2'>
-                              {(() => {
-                                const items = getModelPriceItems(priceData, t, siteDisplayType).filter(i => i.key === 'input' || i.key === 'completion' || i.key === 'fixed');
-                                return items.map(item => (
-                                  <span key={item.key} style={{ color: 'var(--semi-color-text-1)' }}>
-                                    {item.label} {item.value}{item.suffix}
-                                  </span>
-                                ));
-                              })()}
-                            </div>
-                            {discount && discount.strikethrough}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  <div className='flex items-center space-x-2 ml-3'>
-                    {/* 复制按钮 */}
-                    <Button
-                      size='small'
-                      theme='outline'
-                      type='tertiary'
-                      icon={<Copy size={12} />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyText(model.model_name);
-                      }}
-                    />
-
-                    {/* 选择框 */}
-                    {rowSelection && (
-                      <Checkbox
-                        checked={isSelected}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleCheckboxChange(model, e.target.checked);
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* 模型描述 - 占据剩余空间 */}
-                <div className='flex-1 mb-4'>
-                  <p
-                    className='text-xs line-clamp-2 leading-relaxed'
-                    style={{ color: 'var(--semi-color-text-2)' }}
-                  >
-                    {getModelDescription(model)}
-                  </p>
-                </div>
-
-                {/* 底部区域 */}
-                <div className='mt-auto'>
-                  {/* 折扣 tag */}
-                  {(() => {
-                    const discount = getOfficialDiscount(model, priceData, displayPrice, tokenUnit, t);
-                    if (!discount) return null;
-                    return (
-                      <div className='flex items-center'>
-                        <Tag shape='circle' color='teal' size='small'>
-                          {discount.badge.props.children}
-                        </Tag>
-                      </div>
-                    );
-                  })()}
-                  {/* 标签区域 */}
-                  {/* {renderTags(model)} */}
-
-                  {/* 倍率信息（可选） */}
-                  {showRatio && (
-                    <div className='pt-3'>
-                      <div className='flex items-center space-x-1 mb-2'>
-                        <span className='text-xs font-medium text-gray-700'>
-                          {t('倍率信息')}
-                        </span>
-                        <Tooltip
-                          content={t('倍率是为了方便换算不同价格的模型')}
-                        >
-                          <IconHelpCircle
-                            className='text-blue-500 cursor-pointer'
-                            size='small'
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setModalImageUrl('/ratio.png');
-                              setIsModalOpenurl(true);
-                            }}
-                          />
-                        </Tooltip>
-                      </div>
-                      <div className='grid grid-cols-3 gap-2 text-xs text-gray-600'>
-                        <div>
-                          {t('模型')}:{' '}
-                          {model.quota_type === 0 ? model.model_ratio : t('无')}
-                        </div>
-                        <div>
-                          {t('补全')}:{' '}
-                          {model.quota_type === 0
-                            ? parseFloat(model.completion_ratio.toFixed(3))
-                            : t('无')}
-                        </div>
-                        <div>
-                          {t('分组')}: {priceData?.usedGroupRatio ?? '-'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
+              model={model}
+              isSelected={isSelected}
+              selectedGroup={selectedGroup}
+              groupRatio={groupRatio}
+              tokenUnit={tokenUnit}
+              displayPrice={displayPrice}
+              currency={currency}
+              siteDisplayType={siteDisplayType}
+              showRatio={showRatio}
+              rowSelection={rowSelection}
+              copyText={copyText}
+              setModalImageUrl={setModalImageUrl}
+              setIsModalOpenurl={setIsModalOpenurl}
+              openModelDetail={openModelDetail}
+              handleCheckboxChange={handleCheckboxChange}
+              getModelIcon={getModelIcon}
+              getModelDescription={getModelDescription}
+              t={t}
+            />
           );
         })}
       </div>
@@ -408,6 +275,195 @@ const PricingCardView = ({
         </div>
       )}
     </div>
+  );
+};
+
+// 单张卡片组件，持有自己的分组选择 state
+const ModelCardItem = ({
+  model, isSelected, selectedGroup, groupRatio, tokenUnit, displayPrice,
+  currency, siteDisplayType, showRatio, rowSelection, copyText,
+  setModalImageUrl, setIsModalOpenurl, openModelDetail, handleCheckboxChange,
+  getModelIcon, getModelDescription, t,
+}) => {
+  const groupTags = getGroupDiscountTags(model, groupRatio);
+
+  const resolveGroup = (sg) => {
+    const enableGroups = model?.enable_groups || [];
+    if (sg && sg !== 'all' && enableGroups.includes(sg)) return sg;
+    // 全部分组或不支持的分组：选最便宜的
+    return groupTags.length > 0 ? groupTags[0].group : sg;
+  };
+
+  const [activeGroup, setActiveGroup] = useState(() => resolveGroup(selectedGroup));
+
+  useEffect(() => {
+    setActiveGroup(resolveGroup(selectedGroup));
+  }, [selectedGroup]);
+
+  const priceData = calculateModelPrice({
+    record: model,
+    selectedGroup: activeGroup,
+    groupRatio,
+    tokenUnit,
+    displayPrice,
+    currency,
+    quotaDisplayType: siteDisplayType,
+  });
+
+  const enableGroups = model?.enable_groups || [];
+  const showOriginalPrice = activeGroup !== 'default' && enableGroups.includes('default');
+  const defaultPriceData = showOriginalPrice
+    ? calculateModelPrice({
+        record: model,
+        selectedGroup: 'default',
+        groupRatio,
+        tokenUnit,
+        displayPrice,
+        currency,
+        quotaDisplayType: siteDisplayType,
+      })
+    : null;
+
+  const handleTagClick = useCallback((e, group) => {
+    e.stopPropagation();
+    setActiveGroup(group);
+  }, []);
+
+  return (
+    <Card
+      className={`pricing-modern-card transition-all duration-200 border cursor-pointer ${isSelected ? CARD_STYLES.selected : CARD_STYLES.default}`}
+      bodyStyle={{ height: '100%', padding: '20px' }}
+      onClick={() => openModelDetail && openModelDetail(model)}
+    >
+      <div className='flex flex-col h-full'>
+        {/* 头部：图标 + 模型名称 + 操作按钮 */}
+        <div className='flex items-start justify-between mb-4'>
+          <div className='flex items-start space-x-3 flex-1 min-w-0'>
+            {getModelIcon(model)}
+            <div className='flex-1 min-w-0'>
+              <h3 className='text-base font-semibold truncate' style={{ color: 'var(--semi-color-text-0)' }}>
+                {model.model_name}
+              </h3>
+              <div className='flex items-center gap-2 text-xs mt-1' style={{ color: 'var(--semi-color-text-2)' }}>
+                <div className='flex flex-col gap-0.5'>
+                  <div className='flex items-center gap-2 flex-wrap'>
+                    {getModelPriceItems(priceData, t, siteDisplayType)
+                      .filter(i => i.key === 'input' || i.key === 'completion' || i.key === 'fixed')
+                      .map(item => (
+                        <span key={item.key} style={{ color: 'var(--semi-color-text-1)', fontSize: '0.7rem' }}>
+                          {item.label} <span style={{ fontStyle: 'oblique 8deg' }}>{item.value}{item.suffix}</span>
+                        </span>
+                      ))}
+                    {/* 当前分组 tag inline 显示 */}
+                    {activeGroup && activeGroup !== 'all' && (() => {
+                      const activeTag = groupTags.find(t => t.group === activeGroup);
+                      if (!activeTag) return null;
+                      return (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center',
+                          fontSize: '0.625rem', lineHeight: 1,
+                          padding: '1px 4px', borderRadius: 4,
+                          backgroundColor: 'var(--semi-color-primary-light-default)',
+                          color: 'var(--semi-color-primary)', whiteSpace: 'nowrap',
+                        }}>
+                          {activeGroup}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  {/* 原价（default 分组价格）带删除线 */}
+                  {defaultPriceData && (
+                    <div className='flex items-center gap-2'>
+                      {getModelPriceItems(defaultPriceData, t, siteDisplayType)
+                        .filter(i => i.key === 'input' || i.key === 'completion' || i.key === 'fixed')
+                        .map((item, idx) => (
+                          <span key={item.key} style={{ color: 'var(--semi-color-text-3)', textDecoration: 'line-through', fontSize: '0.7rem' }}>
+                            {idx === 0 ? <>{t('原价')}: <span style={{ fontStyle: 'oblique 8deg' }}>{item.value}{item.suffix}</span></> : <span style={{ fontStyle: 'oblique 8deg' }}>{item.value}{item.suffix}</span>}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className='flex items-center space-x-2 ml-3'>
+            <Button
+              size='small'
+              theme='borderless'
+              type='tertiary'
+              icon={<Copy size={14} />}
+              onClick={(e) => {
+                e.stopPropagation();
+                copyText(model.model_name);
+              }}
+            />
+            {rowSelection && (
+              <Checkbox
+                checked={isSelected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  handleCheckboxChange(model, e.target.checked);
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* 底部：分组 tags + 计费类型 */}
+        <div className='mt-auto'>
+          <div className='flex items-center justify-between'>
+            <div className='flex flex-wrap items-center gap-1'>
+              {groupTags.map(({ group, discount, color, hasDiscount }) => (
+                <Tag
+                  key={group}
+                  shape='circle'
+                  color={activeGroup === group ? color : 'white'}
+                  size='small'
+                  className='pricing-group-tag'
+                  onClick={(e) => handleTagClick(e, group)}
+                >
+                  {hasDiscount ? `${group}: ≈ ${discount}${t('折')}` : group}
+                </Tag>
+              ))}
+            </div>
+            <div className='flex items-center gap-1 ml-2 flex-shrink-0'>
+              {model.quota_type === 1 ? (
+                <Tag shape='circle' color='teal' size='small'>{t('按次计费')}</Tag>
+              ) : model.quota_type === 0 ? (
+                <Tag shape='circle' color='violet' size='small'>{t('按量计费')}</Tag>
+              ) : null}
+            </div>
+          </div>
+
+          {/* 倍率信息（可选） */}
+          {showRatio && (
+            <div className='pt-3'>
+              <div className='flex items-center space-x-1 mb-2'>
+                <span className='text-xs font-medium text-gray-700'>{t('倍率信息')}</span>
+                <Tooltip content={t('倍率是为了方便换算不同价格的模型')}>
+                  <IconHelpCircle
+                    className='text-blue-500 cursor-pointer'
+                    size='small'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setModalImageUrl('/ratio.png');
+                      setIsModalOpenurl(true);
+                    }}
+                  />
+                </Tooltip>
+              </div>
+              <div className='grid grid-cols-3 gap-2 text-xs text-gray-600'>
+                <div>{t('模型')}: {model.quota_type === 0 ? model.model_ratio : t('无')}</div>
+                <div>{t('补全')}: {model.quota_type === 0 ? parseFloat(model.completion_ratio.toFixed(3)) : t('无')}</div>
+                <div>{t('分组')}: {priceData?.usedGroupRatio ?? '-'}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 };
 

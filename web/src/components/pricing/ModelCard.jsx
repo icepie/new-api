@@ -414,81 +414,38 @@ export default function ModelCard({
     );
   };
 
-  // 官方价/折扣块：仅比官方便宜时显示，与模型名同一行 flex 布局避免重叠
-  let officialBlockContent = null;
-  if (officialPrice) {
-    let savingsAmount = null;
-    let savingsPercent = null;
-    if (priceData && priceData.isPerToken) {
-      let currentInputUSD = priceData.inputPriceUSD;
-      if (currentInputUSD === undefined || currentInputUSD === null) {
-        currentInputUSD = input || 0;
-        if (typeof priceData.inputPrice === 'string') {
-          const parsed = parseFloat(priceData.inputPrice.replace('$', '').replace(freeLabel, '0'));
-          if (!isNaN(parsed)) {
-            currentInputUSD = priceData.unitLabel === 'K' ? parsed * 1000 : parsed;
-          }
-        }
-      }
-      let currentOutput = output || 0;
-      if (typeof priceData.completionPrice === 'string' || typeof priceData.outputPrice === 'string') {
-        const parsed = parseFloat((priceData.completionPrice || priceData.outputPrice || '').replace('$', '').replace(freeLabel, '0'));
-        if (!isNaN(parsed)) {
-          currentOutput = priceData.unitLabel === 'K' ? parsed * 1000 : parsed;
-        }
-      }
-      const inputSavings = officialPrice.input - currentInputUSD;
-      if (officialPrice.input > 0) {
-        savingsAmount = Math.round(inputSavings * 100) / 100;
-        savingsPercent = (inputSavings / officialPrice.input) * 100;
-      }
-    } else {
-      let currentPrice = output || input || 0;
-      if (typeof priceData?.price === 'string') {
-        const parsed = parseFloat(priceData.price.replace('$', '').replace(freeLabel, '0'));
-        if (!isNaN(parsed)) currentPrice = parsed;
-      }
-      const officialRequestPrice = officialPrice.input || 0;
-      savingsAmount = officialRequestPrice - currentPrice;
-      if (officialRequestPrice > 0) {
-        savingsPercent = (savingsAmount / officialRequestPrice) * 100;
-      }
-    }
-    const formatOfficialPrice = (price) => {
-      if (!price || price === 0) return '';
-      if (displayPrice) return displayPrice(price);
-      return `$${price.toFixed(3)}`;
+  // 分组折扣 tags：按 enable_groups 中每个分组的 groupRatio 计算折扣
+  const groupDiscountTags = (() => {
+    const enableGroups = model?.enable_groups;
+    if (!Array.isArray(enableGroups) || enableGroups.length === 0) return [];
+    if (!groupRatio || Object.keys(groupRatio).length === 0) return [];
+
+    const formatDiscount = (ratio) => {
+      const raw = ratio * 10;
+      const rounded = Math.round(raw * 100) / 100;
+      return rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(2).replace(/\.?0+$/, '');
     };
-    const officialInputPrice = formatOfficialPrice(officialPrice.input);
-    const officialOutputPrice = priceData && priceData.isPerToken ? formatOfficialPrice(officialPrice.output) : null;
-    if (savingsAmount != null && savingsPercent != null && savingsAmount > 0 && savingsPercent > 0) {
-      const rawDiscount = (1 - savingsPercent / 100) * 10;
-      const rounded = Math.round(rawDiscount * 100) / 100;
-      const discount = rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(2).replace(/\.?0+$/, '');
-      const discountNum = parseFloat(discount);
-      const tier = discountNum <= 3 ? 'best' : discountNum <= 5 ? 'good' : discountNum <= 7 ? 'medium' : discountNum <= 9 ? 'slight' : 'minimal';
-      officialBlockContent = (
-        <div className="pricing-model-card-official">
-          <div className={`pricing-model-card-official-badge pricing-model-card-official-badge--${tier}`}>
-            {locale === 'zh' ? <>≈官方 {discount} 折</> : <>≈{discount}0% of official</>}
-          </div>
-          {officialInputPrice && (
-            <div className="pricing-model-card-official-line">
-              {priceData && priceData.isPerToken ? (
-                locale === 'zh' ? (
-                  <>输入: <span className="pricing-detail-price-strikethrough">{officialInputPrice}</span> 输出: <span className="pricing-detail-price-strikethrough">{officialOutputPrice || '-'}</span> /{tokenUnit}</>
-                ) : (
-                  <>In: <span className="pricing-detail-price-strikethrough">{officialInputPrice}</span> Out: <span className="pricing-detail-price-strikethrough">{officialOutputPrice || '-'}</span> /{tokenUnit}</>
-                )
-              ) : (
-                locale === 'zh' ? <>单价: <span className="pricing-detail-price-strikethrough">{officialInputPrice}</span></> : <>Price: <span className="pricing-detail-price-strikethrough">{officialInputPrice}</span></>
-              )}
-            </div>
-          )}
-        </div>
-      );
-    }
-  }
+
+    const getTier = (ratio) => {
+      if (ratio <= 0.3) return 'best';
+      if (ratio <= 0.5) return 'good';
+      if (ratio <= 0.7) return 'medium';
+      if (ratio <= 0.9) return 'slight';
+      return 'minimal';
+    };
+
+    // 收集有效分组（ratio < 1 才算折扣）
+    const tags = [];
+    enableGroups.forEach((g) => {
+      const ratio = groupRatio[g];
+      if (ratio === undefined || ratio >= 1) return;
+      tags.push({ group: g, ratio, discount: formatDiscount(ratio), tier: getTier(ratio) });
+    });
+
+    // 按 ratio 升序排列（最优折扣在前）
+    tags.sort((a, b) => a.ratio - b.ratio);
+    return tags;
+  })();
 
   return (
     <div
@@ -498,7 +455,7 @@ export default function ModelCard({
       data-model-output={output}
       onClick={handleCardClick}
     >
-      {/* 顶部一行：模型名 + 复制 | 折扣与官方价（flex 自然分流，不重叠） */}
+      {/* 顶部一行：模型名 + 复制 | 分组折扣 tags */}
       <div className="pricing-model-card-header">
         <div className="pricing-detail-model-name-wrapper">
           <h3 className="pricing-model-card-provider-name">
@@ -517,13 +474,21 @@ export default function ModelCard({
             )}
           </button>
         </div>
-        {officialBlockContent}
+        {groupDiscountTags.length > 0 && (
+          <div className="pricing-model-card-official">
+            {groupDiscountTags.map(({ group, discount, tier }) => (
+              <div key={group} className={`pricing-model-card-official-badge pricing-model-card-official-badge--${tier}`}>
+                {group}: {locale === 'zh' ? `${discount}折` : `${discount}0%`}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Provider Logo and Name - 现在显示在模型名称下方，使用次要文字样式（之前模型名称的样式） */}
-      <div className="pricing-model-card-provider" style={{ marginBottom: '8px' }}>
+      <div className="pricing-model-card-provider" style={{ marginBottom: '6px' }}>
         <div className="pricing-model-card-provider-icon">
-          <ProviderIcon provider={providerIconName} iconName={icon || vendorIcon} size={28} />
+          <ProviderIcon provider={providerIconName} iconName={icon || vendorIcon} size={22} />
         </div>
         <div className="pricing-model-card-name">
           {displayProviderName}

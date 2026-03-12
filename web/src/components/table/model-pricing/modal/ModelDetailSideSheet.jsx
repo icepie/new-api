@@ -54,10 +54,10 @@ const ModelDetailSideSheet = ({
         <ModelHeader modelData={modelData} vendorsMap={vendorsMap} t={t} />
       }
       bodyStyle={{
-        padding: '16px',
+        padding: '12px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
+        gap: '12px',
         overflowY: 'auto',
       }}
       visible={visible}
@@ -72,7 +72,7 @@ const ModelDetailSideSheet = ({
       }
       onCancel={onClose}
     >
-      <div className='p-2'>
+      <div className='flex flex-col gap-3'>
         {!modelData && (
           <div className='flex justify-center items-center py-10'>
             <Text type='secondary'>{t('加载中...')}</Text>

@@ -20,7 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React from 'react';
 import { Card, Avatar, Typography, Table, Tag } from '@douyinfe/semi-ui';
 import { IconCoinMoneyStroked } from '@douyinfe/semi-icons';
-import { calculateModelPrice, getModelPriceItems, getOfficialDiscount } from '../../../../../helpers';
+import { calculateModelPrice, getModelPriceItems, getGroupDiscountTags } from '../../../../../helpers';
 
 const { Text } = Typography;
 
@@ -77,7 +77,16 @@ const ModelPricingTable = ({
               ? t('按次计费')
               : '-',
         priceItems: getModelPriceItems(priceData, t, siteDisplayType),
-        discount: getOfficialDiscount(modelData, priceData, displayPrice, tokenUnit, t),
+        discountTag: (() => {
+          if (groupRatioValue >= 1) return null;
+          // 复用 getGroupDiscountTags 的颜色逻辑
+          const tags = getGroupDiscountTags({ enable_groups: [group] }, { [group]: groupRatioValue });
+          return tags[0] || null;
+        })(),
+        groupColor: (() => {
+          const tags = getGroupDiscountTags({ enable_groups: [group] }, { [group]: groupRatioValue });
+          return tags[0]?.color || 'white';
+        })(),
       };
     });
 
@@ -86,10 +95,9 @@ const ModelPricingTable = ({
       {
         title: t('分组'),
         dataIndex: 'group',
-        render: (text) => (
-          <Tag color='white' size='small' shape='circle'>
+        render: (text, record) => (
+          <Tag color={record.groupColor} size='small' shape='circle'>
             {text}
-            {t('分组')}
           </Tag>
         ),
       },
@@ -128,22 +136,25 @@ const ModelPricingTable = ({
       title: siteDisplayType === 'TOKENS' ? t('计费摘要') : t('价格摘要'),
       dataIndex: 'priceItems',
       render: (items, record) => (
-        <div className='space-y-1'>
-          {items.map((item) => (
-            <div key={item.key} className='font-semibold text-orange-600'>
-              {item.label} {item.value}{item.suffix}
-            </div>
-          ))}
-          {record.discount && (
-            <div className='flex flex-col gap-0.5 mt-1'>
-              <div>
-                <Tag shape='circle' color='teal' size='small'>
-                  {record.discount.badge.props.children}
-                </Tag>
-              </div>
-              <div>{record.discount.strikethrough}</div>
-            </div>
-          )}
+        <div className='flex flex-col gap-0.5'>
+          <div className='flex items-center gap-2 flex-wrap text-xs'>
+            {items.map((item) => (
+              <span key={item.key} style={{ color: 'var(--semi-color-text-1)' }}>
+                {item.label} <span style={{ fontStyle: 'oblique 8deg' }}>{item.value}{item.suffix}</span>
+              </span>
+            ))}
+            {record.discountTag && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center',
+                fontSize: '0.625rem', lineHeight: 1,
+                padding: '1px 4px', borderRadius: 4,
+                backgroundColor: 'var(--semi-color-primary-light-default)',
+                color: 'var(--semi-color-primary)', whiteSpace: 'nowrap',
+              }}>
+                ≈ {record.discountTag.discount}{t('折')}
+              </span>
+            )}
+          </div>
         </div>
       ),
     });
@@ -164,20 +175,20 @@ const ModelPricingTable = ({
   if (!table || (table && table.props?.dataSource?.length === 0)) return null;
 
   return (
-    <Card className='!rounded-2xl shadow-sm border-0'>
-      <div className='flex items-center mb-4'>
-        <Avatar size='small' color='orange' className='mr-2 shadow-md'>
-          <IconCoinMoneyStroked size={16} />
+    <Card className='!rounded-2xl shadow-sm border-0' bodyStyle={{ padding: '16px' }}>
+      <div className='flex items-center mb-3'>
+        <Avatar size='extra-small' color='orange' className='mr-2'>
+          <IconCoinMoneyStroked size={14} />
         </Avatar>
         <div>
-          <Text className='text-base font-medium'>{t('分组价格')}</Text>
-          <div className='text-xs text-gray-600'>
+          <Text className='text-sm font-medium'>{t('分组价格')}</Text>
+          <div className='text-xs' style={{ color: 'var(--semi-color-text-2)' }}>
             {t('不同用户分组的价格信息')}
           </div>
         </div>
       </div>
       {autoChain.length > 0 && (
-        <div className='flex flex-wrap items-center gap-1 mb-4 p-2 bg-gray-50 rounded-lg'>
+        <div className='flex flex-wrap items-center gap-1 mb-3 p-2 rounded-lg' style={{ backgroundColor: 'var(--semi-color-fill-0)' }}>
           <span className='text-xs text-gray-600'>{t('auto分组调用链路')}</span>
           <span className='text-xs'>→</span>
           {autoChain.map((g, idx) => (
