@@ -23,6 +23,8 @@ import path from 'path';
 import fs from 'node:fs';
 import { codeInspectorPlugin } from 'code-inspector-plugin';
 import pkg from '@douyinfe/vite-plugin-semi';
+import viteCompression from 'vite-plugin-compression';
+import { ViteImageOptimizer } from 'vite-plugin-image-optimizer';
 const { vitePluginSemi } = pkg;
 
 /** Generates dist/version.json at build time for frontend update detection */
@@ -81,9 +83,32 @@ export default defineConfig({
     react(),
     vitePluginSemi(),
     versionPlugin(),
+    ViteImageOptimizer({
+      test: /\.(jpe?g|png|webp|svg|avif)$/i,
+      includePublic: true,
+      cache: true,
+      cacheLocation: path.resolve(__dirname, 'node_modules/.vite-image-optimizer-cache'),
+      jpg: { quality: 82, mozjpeg: true },
+      jpeg: { quality: 82, mozjpeg: true },
+      png: { quality: 82, compressionLevel: 9 },
+      webp: { quality: 82, lossless: false },
+      avif: { quality: 80, lossless: false },
+      svg: { multipass: true },
+    }),
+    viteCompression({
+      algorithm: 'gzip',
+      ext: '.gz',
+      threshold: 10240,
+      deleteOriginFile: false,
+    }),
+    viteCompression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 10240,
+      deleteOriginFile: false,
+    }),
   ],
   optimizeDeps: {
-    force: true,
     esbuildOptions: {
       loader: {
         '.js': 'jsx',
@@ -92,24 +117,51 @@ export default defineConfig({
     },
   },
   build: {
+    reportCompressedSize: false,
+    chunkSizeWarningLimit: 3000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-core': ['react', 'react-dom', 'react-router-dom'],
-          'semi-ui': ['@douyinfe/semi-icons', '@douyinfe/semi-ui'],
-          tools: ['axios', 'history', 'marked'],
-          'react-components': [
-            'react-dropzone',
-            'react-fireworks',
-            'react-telegram-login',
-            'react-toastify',
-            'react-turnstile',
-          ],
-          i18n: [
-            'i18next',
-            'react-i18next',
-            'i18next-browser-languagedetector',
-          ],
+        manualChunks(id) {
+          // vendor: react core
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) {
+            return 'react-core';
+          }
+          // vendor: semi-ui
+          if (id.includes('@douyinfe/semi-ui') || id.includes('@douyinfe/semi-icons') || id.includes('@douyinfe/semi-illustrations')) {
+            return 'semi-ui';
+          }
+          // vendor: mermaid (large, lazy-loaded but still needs its own chunk)
+          if (id.includes('node_modules/mermaid') || id.includes('node_modules/dagre') || id.includes('node_modules/cytoscape') || id.includes('node_modules/d3-')) {
+            return 'mermaid-vendor';
+          }
+          // vendor: katex
+          if (id.includes('node_modules/katex')) {
+            return 'katex-vendor';
+          }
+          // vendor: vchart / visactor
+          if (id.includes('@visactor/')) {
+            return 'vchart-vendor';
+          }
+          // vendor: markdown pipeline
+          if (id.includes('node_modules/react-markdown') || id.includes('node_modules/remark-') || id.includes('node_modules/rehype-') || id.includes('node_modules/unified') || id.includes('node_modules/hast') || id.includes('node_modules/mdast') || id.includes('node_modules/micromark') || id.includes('node_modules/highlight.js')) {
+            return 'markdown-vendor';
+          }
+          // vendor: lobe icons (always full bundle due to dynamic access)
+          if (id.includes('@lobehub/icons')) {
+            return 'lobe-icons';
+          }
+          // vendor: i18n
+          if (id.includes('node_modules/i18next') || id.includes('node_modules/react-i18next')) {
+            return 'i18n';
+          }
+          // vendor: misc react components
+          if (id.includes('node_modules/react-dropzone') || id.includes('node_modules/react-fireworks') || id.includes('node_modules/react-telegram-login') || id.includes('node_modules/react-toastify') || id.includes('node_modules/react-turnstile')) {
+            return 'react-components';
+          }
+          // vendor: tools
+          if (id.includes('node_modules/axios') || id.includes('node_modules/marked') || id.includes('node_modules/history')) {
+            return 'tools';
+          }
         },
       },
     },

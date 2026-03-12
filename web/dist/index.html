@@ -44,24 +44,26 @@
     
     <script>
       (function() {
-        // 处理 URL 参数 theme=dark/light
-        var urlParams = new URLSearchParams(window.location.search);
-        var themeParam = urlParams.get('theme');
-        var saved = localStorage.getItem('theme');
-        var theme = themeParam || saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        if (themeParam) localStorage.setItem('theme', themeParam);
-        document.documentElement.setAttribute('data-theme', theme);
-        if (theme === 'dark') document.documentElement.classList.add('dark');
+        var saved = localStorage.getItem('theme-mode');
+        var isDark = saved === 'dark' || (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) document.documentElement.classList.add('dark');
       })();
     </script>
-    <script type="module" crossorigin src="https://nicerouterstatic.niceaigc.com/assets/index-CyBqNkep.js"></script>
-    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/react-core-JTlsWJTI.js">
-    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/semi-ui-DXokyDtp.js">
-    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/i18n-DbgeRkLZ.js">
-    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/tools-DVUuCOGi.js">
-    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/react-components-rQnzd6h9.js">
+    <script type="module" crossorigin src="https://nicerouterstatic.niceaigc.com/assets/index-Cb1aVnlu.js"></script>
+    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/i18n-Dzb1x6Dj.js">
+    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/react-core-CNNfyb6p.js">
+    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/react-components-JKDZMjEE.js">
+    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/tools-EmX65hll.js">
+    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/katex-vendor-D-fZioa0.js">
+    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/lobe-icons-BwsFqTFt.js">
+    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/markdown-vendor-C-TQFwbK.js">
+    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/semi-ui-lyYxgXuH.js">
+    <link rel="modulepreload" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/mermaid-vendor-5KEiGZhy.js">
+    <link rel="stylesheet" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/react-components-BAIEJiVS.css">
+    <link rel="stylesheet" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/katex-vendor-DyGHuMXq.css">
+    <link rel="stylesheet" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/markdown-vendor-BfC0goYb.css">
     <link rel="stylesheet" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/semi-ui-D8Rt_eBW.css">
-    <link rel="stylesheet" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/index-vcvTpeD5.css">
+    <link rel="stylesheet" crossorigin href="https://nicerouterstatic.niceaigc.com/assets/index-dgmcoR2-.css">
   </head>
 
   <body class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors min-h-screen">
@@ -71,15 +73,9 @@
         --loading-bg: #ffffff;
         --dot-color: #111827;
       }
-      [data-theme='dark'], html.dark {
+      html.dark {
         --loading-bg: #030712;
         --dot-color: #e5e7eb;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root:not([data-theme='light']) {
-          --loading-bg: #030712;
-          --dot-color: #e5e7eb;
-        }
       }
       #app-loading {
         position: fixed;

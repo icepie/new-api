@@ -44,14 +44,9 @@
     
     <script>
       (function() {
-        // 处理 URL 参数 theme=dark/light
-        var urlParams = new URLSearchParams(window.location.search);
-        var themeParam = urlParams.get('theme');
-        var saved = localStorage.getItem('theme');
-        var theme = themeParam || saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        if (themeParam) localStorage.setItem('theme', themeParam);
-        document.documentElement.setAttribute('data-theme', theme);
-        if (theme === 'dark') document.documentElement.classList.add('dark');
+        var saved = localStorage.getItem('theme-mode');
+        var isDark = saved === 'dark' || (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) document.documentElement.classList.add('dark');
       })();
     </script>
   </head>
@@ -63,15 +58,9 @@
         --loading-bg: #ffffff;
         --dot-color: #111827;
       }
-      [data-theme='dark'], html.dark {
+      html.dark {
         --loading-bg: #030712;
         --dot-color: #e5e7eb;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root:not([data-theme='light']) {
-          --loading-bg: #030712;
-          --dot-color: #e5e7eb;
-        }
       }
       #app-loading {
         position: fixed;
