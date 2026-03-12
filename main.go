@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	_ "embed"
 	"fmt"
 	"io"
 	"log"
@@ -37,9 +36,6 @@ import (
 	_ "net/http/pprof"
 )
 
-//go:embed web/dist/index.html
-var indexPageEmbed []byte
-
 // indexPage holds the current index.html content, refreshed periodically from CDN.
 var indexPage []byte
 var indexPageMu sync.RWMutex
@@ -69,14 +65,12 @@ func applyAnalyticsInjections(data []byte) []byte {
 }
 
 func startIndexPageRefresher() {
-	// 启动时先尝试从 CDN 拉取，失败则用 embed 兜底
 	data, err := fetchIndexFromCDN()
 	if err != nil {
-		common.SysError(fmt.Sprintf("failed to fetch index.html from CDN at startup, using embedded: %v", err))
-		data = indexPageEmbed
-	} else {
-		common.SysLog("index.html loaded from CDN")
+		common.FatalLog(fmt.Sprintf("failed to fetch index.html from CDN at startup: %v", err))
+		return
 	}
+	common.SysLog("index.html loaded from CDN")
 	indexPageMu.Lock()
 	indexPage = applyAnalyticsInjections(data)
 	indexPageMu.Unlock()
