@@ -79,17 +79,21 @@ func startIndexPageRefresher() {
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 		for range ticker.C {
-			fresh, err := fetchIndexFromCDN()
-			if err != nil {
-				common.SysError(fmt.Sprintf("failed to fetch index.html from CDN: %v", err))
-				continue
-			}
-			indexPageMu.Lock()
-			indexPage = applyAnalyticsInjections(fresh)
-			indexPageMu.Unlock()
-			common.SysLog("index.html refreshed from CDN")
+			ForceRefreshIndexPage()
 		}
 	}()
+}
+
+func ForceRefreshIndexPage() {
+	fresh, err := fetchIndexFromCDN()
+	if err != nil {
+		common.SysError(fmt.Sprintf("failed to fetch index.html from CDN: %v", err))
+		return
+	}
+	indexPageMu.Lock()
+	indexPage = applyAnalyticsInjections(fresh)
+	indexPageMu.Unlock()
+	common.SysLog("index.html refreshed from CDN")
 }
 
 func getIndexPage() []byte {
@@ -239,6 +243,12 @@ func main() {
 	server.Use(sessions.Sessions("session", store))
 
 	startIndexPageRefresher()
+
+	// Admin API: force refresh index.html from CDN
+	server.POST("/api/admin/refresh_index", middleware.AdminAuth(), func(c *gin.Context) {
+		go ForceRefreshIndexPage()
+		c.JSON(http.StatusOK, gin.H{"message": "refreshing"})
+	})
 
 	// 设置路由
 	router.SetRouter(server, getIndexPage)
