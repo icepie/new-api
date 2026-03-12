@@ -42,31 +42,81 @@
     <!--umami-->
     <!--Google Analytics-->
     
-    <script is:inline>
-      // 立即处理 URL 参数 theme=dark/light，避免闪烁
+    <script>
       (function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const themeParam = urlParams.get('theme');
-        
-        if (themeParam === 'dark' || themeParam === 'light') {
-          const root = document.documentElement;
-          
-          if (themeParam === 'dark') {
-            root.classList.add('dark');
-          } else {
-            root.classList.remove('dark');
-          }
-          
-          // 保存到 localStorage，以便后续页面也使用该主题
-          localStorage.setItem('theme', themeParam);
-        }
+        // 处理 URL 参数 theme=dark/light
+        var urlParams = new URLSearchParams(window.location.search);
+        var themeParam = urlParams.get('theme');
+        var saved = localStorage.getItem('theme');
+        var theme = themeParam || saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (themeParam) localStorage.setItem('theme', themeParam);
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') document.documentElement.classList.add('dark');
       })();
     </script>
   </head>
 
   <body class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors min-h-screen">
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <div id="root">
+      <style>
+        :root {
+          --loading-bg: #ffffff;
+          --dot-color: #111827;
+        }
+        [data-theme='dark'], html.dark {
+          --loading-bg: #030712;
+          --dot-color: #e5e7eb;
+        }
+        @media (prefers-color-scheme: dark) {
+          :root:not([data-theme='light']) {
+            --loading-bg: #030712;
+            --dot-color: #e5e7eb;
+          }
+        }
+        #app-loading {
+          position: fixed;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--loading-bg);
+          z-index: 9999;
+          transition: opacity 0.3s ease;
+        }
+        #app-loading.fade-out { opacity: 0; pointer-events: none; }
+        .loading-dots { display: flex; gap: 8px; }
+        .loading-dots span {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          background: var(--dot-color);
+          animation: dot-bounce 1.2s ease-in-out infinite;
+        }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dot-bounce {
+          0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+          40% { transform: scale(1); opacity: 1; }
+        }
+      </style>
+      <div id="app-loading">
+        <div class="loading-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function() {
+        var el = document.getElementById('app-loading');
+        new MutationObserver(function(_, obs) {
+          if (document.getElementById('root').children.length > 1) {
+            el.classList.add('fade-out');
+            setTimeout(function() { el.remove(); }, 300);
+            obs.disconnect();
+          }
+        }).observe(document.getElementById('root'), { childList: true });
+      })();
+    </script>
     <script type="module" src="/src/index.jsx"></script>
   </body>
 </html>

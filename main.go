@@ -4,12 +4,14 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -36,7 +38,71 @@ import (
 )
 
 //go:embed web/dist/index.html
+var indexPageEmbed []byte
+
+// indexPage holds the current index.html content, refreshed periodically from CDN.
 var indexPage []byte
+var indexPageMu sync.RWMutex
+
+const indexCDNURL = "https://nicerouterstatic.niceaigc.com/index.html"
+
+func fetchIndexFromCDN() ([]byte, error) {
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, _ := http.NewRequest("GET", indexCDNURL, nil)
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Pragma", "no-cache")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("CDN returned %d", resp.StatusCode)
+	}
+	return io.ReadAll(resp.Body)
+}
+
+func applyAnalyticsInjections(data []byte) []byte {
+	data = injectUmami(data)
+	data = injectGA(data)
+	return data
+}
+
+func startIndexPageRefresher() {
+	// 启动时先尝试从 CDN 拉取，失败则用 embed 兜底
+	data, err := fetchIndexFromCDN()
+	if err != nil {
+		common.SysError(fmt.Sprintf("failed to fetch index.html from CDN at startup, using embedded: %v", err))
+		data = indexPageEmbed
+	} else {
+		common.SysLog("index.html loaded from CDN")
+	}
+	indexPageMu.Lock()
+	indexPage = applyAnalyticsInjections(data)
+	indexPageMu.Unlock()
+	// 每 5 分钟刷新一次
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			fresh, err := fetchIndexFromCDN()
+			if err != nil {
+				common.SysError(fmt.Sprintf("failed to fetch index.html from CDN: %v", err))
+				continue
+			}
+			indexPageMu.Lock()
+			indexPage = applyAnalyticsInjections(fresh)
+			indexPageMu.Unlock()
+			common.SysLog("index.html refreshed from CDN")
+		}
+	}()
+}
+
+func getIndexPage() []byte {
+	indexPageMu.RLock()
+	defer indexPageMu.RUnlock()
+	return indexPage
+}
 
 func main() {
 	startTime := time.Now()
@@ -178,11 +244,10 @@ func main() {
 	})
 	server.Use(sessions.Sessions("session", store))
 
-	InjectUmamiAnalytics()
-	InjectGoogleAnalytics()
+	startIndexPageRefresher()
 
 	// 设置路由
-	router.SetRouter(server, indexPage)
+	router.SetRouter(server, getIndexPage)
 	var port = os.Getenv("PORT")
 	if port == "" {
 		port = strconv.Itoa(*common.Port)
@@ -197,7 +262,7 @@ func main() {
 	}
 }
 
-func InjectUmamiAnalytics() {
+func injectUmami(data []byte) []byte {
 	analyticsInjectBuilder := &strings.Builder{}
 	if os.Getenv("UMAMI_WEBSITE_ID") != "" {
 		umamiSiteID := os.Getenv("UMAMI_WEBSITE_ID")
@@ -212,15 +277,13 @@ func InjectUmamiAnalytics() {
 		analyticsInjectBuilder.WriteString("\"></script>")
 	}
 	analyticsInjectBuilder.WriteString("<!--Umami QuantumNous-->\n")
-	analyticsInject := analyticsInjectBuilder.String()
-	indexPage = bytes.ReplaceAll(indexPage, []byte("<!--umami-->\n"), []byte(analyticsInject))
+	return bytes.ReplaceAll(data, []byte("<!--umami-->\n"), []byte(analyticsInjectBuilder.String()))
 }
 
-func InjectGoogleAnalytics() {
+func injectGA(data []byte) []byte {
 	analyticsInjectBuilder := &strings.Builder{}
 	if os.Getenv("GOOGLE_ANALYTICS_ID") != "" {
 		gaID := os.Getenv("GOOGLE_ANALYTICS_ID")
-		// Google Analytics 4 (gtag.js)
 		analyticsInjectBuilder.WriteString("<script async src=\"https://www.googletagmanager.com/gtag/js?id=")
 		analyticsInjectBuilder.WriteString(gaID)
 		analyticsInjectBuilder.WriteString("\"></script>")
@@ -234,8 +297,7 @@ func InjectGoogleAnalytics() {
 		analyticsInjectBuilder.WriteString("</script>")
 	}
 	analyticsInjectBuilder.WriteString("<!--Google Analytics QuantumNous-->\n")
-	analyticsInject := analyticsInjectBuilder.String()
-	indexPage = bytes.ReplaceAll(indexPage, []byte("<!--Google Analytics-->\n"), []byte(analyticsInject))
+	return bytes.ReplaceAll(data, []byte("<!--Google Analytics-->\n"), []byte(analyticsInjectBuilder.String()))
 }
 
 func InitResources() error {

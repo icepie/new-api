@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetWebRouter(router *gin.Engine, indexPage []byte) {
+func SetWebRouter(router *gin.Engine, indexPage func() []byte) {
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.Use(middleware.GlobalWebRateLimit())
 	router.Use(middleware.Cache())
@@ -21,6 +21,6 @@ func SetWebRouter(router *gin.Engine, indexPage []byte) {
 			return
 		}
 		c.Header("Cache-Control", "no-cache")
-		c.Data(http.StatusOK, "text/html; charset=utf-8", indexPage)
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexPage())
 	})
 }
