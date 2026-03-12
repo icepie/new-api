@@ -1,7 +1,7 @@
 /* ==================== Tailwind CSS 配置 ==================== */
-@import url('/fonts/harmonyos_sans_sc.css');
-@import url('/fonts/harmonyos_sans.css');
-@import url('/fonts/inter.css');
+@import url('https://nicerouterstatic.niceaigc.com/fonts/harmonyos_sans_sc.css');
+@import url('https://nicerouterstatic.niceaigc.com/fonts/harmonyos_sans.css');
+@import url('https://nicerouterstatic.niceaigc.com/fonts/inter.css');
 
 @layer tailwind-base, tailwind-components, tailwind-utils;
 

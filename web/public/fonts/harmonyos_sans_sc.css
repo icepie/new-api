@@ -14,7 +14,7 @@
     font-family: 'HarmonyOS Sans SC';
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Thin.eot');
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Thin.eot') format('embedded-opentype'),
-        url('/fonts/HarmonyOS_Sans_SC_Thin.woff2') format('woff2'),
+        url('https://nicerouterstatic.niceaigc.com/fonts/HarmonyOS_Sans_SC_Thin.woff2') format('woff2'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Thin.woff') format('woff'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Thin.ttf') format('truetype'),
         url('../fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Thin.svg#HarmonyOS_Sans_SC_Thin') format('svg');
@@ -28,7 +28,7 @@
     font-family: 'HarmonyOS Sans SC';
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Light.eot');
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Light.eot') format('embedded-opentype'),
-        url('/fonts/HarmonyOS_Sans_SC_Light.woff2') format('woff2'),
+        url('https://nicerouterstatic.niceaigc.com/fonts/HarmonyOS_Sans_SC_Light.woff2') format('woff2'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Light.woff') format('woff'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Light.ttf') format('truetype'),
         url('../fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Light.svg#HarmonyOS_Sans_SC_Light') format('svg');
@@ -42,7 +42,7 @@
     font-family: 'HarmonyOS Sans SC';
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Regular.eot');
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Regular.eot') format('embedded-opentype'),
-        url('/fonts/HarmonyOS_Sans_SC_Regular.woff2') format('woff2'),
+        url('https://nicerouterstatic.niceaigc.com/fonts/HarmonyOS_Sans_SC_Regular.woff2') format('woff2'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Regular.woff') format('woff'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Regular.ttf') format('truetype'),
         url('../fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Regular.svg#HarmonyOS_Sans_SC') format('svg');
@@ -56,7 +56,7 @@
     font-family: 'HarmonyOS Sans SC';
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Medium.eot');
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Medium.eot') format('embedded-opentype'),
-        url('/fonts/HarmonyOS_Sans_SC_Medium.woff2') format('woff2'),
+        url('https://nicerouterstatic.niceaigc.com/fonts/HarmonyOS_Sans_SC_Medium.woff2') format('woff2'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Medium.woff') format('woff'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Medium.ttf') format('truetype'),
         url('../fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Medium.svg#HarmonyOS_Sans_SC_Medium') format('svg');
@@ -70,7 +70,7 @@
     font-family: 'HarmonyOS Sans SC';
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Bold.eot');
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Bold.eot') format('embedded-opentype'),
-        url('/fonts/HarmonyOS_Sans_SC_Bold.woff2') format('woff2'),
+        url('https://nicerouterstatic.niceaigc.com/fonts/HarmonyOS_Sans_SC_Bold.woff2') format('woff2'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Bold.woff') format('woff'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Bold.ttf') format('truetype'),
         url('../fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Bold.svg#HarmonyOS_Sans_SC_Bold') format('svg');
@@ -84,7 +84,7 @@
     font-family: 'HarmonyOS Sans SC';
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Black.eot');
     src: url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Black.eot') format('embedded-opentype'),
-        url('/fonts/HarmonyOS_Sans_SC_Black.woff2') format('woff2'),
+        url('https://nicerouterstatic.niceaigc.com/fonts/HarmonyOS_Sans_SC_Black.woff2') format('woff2'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Black.woff') format('woff'),
         url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Black.ttf') format('truetype'),
         url('../fonts/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Black.svg#HarmonyOS_Sans_SC_Black') format('svg');
