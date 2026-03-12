@@ -1,7 +1,7 @@
 /* ==================== Tailwind CSS 配置 ==================== */
-@import url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/css/harmonyos_sans_sc.css');
-@import url('https://cdn.jsdelivr.net/gh/IKKI2000/harmonyos-fonts@main/css/harmonyos_sans.css');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('/fonts/harmonyos_sans_sc.css');
+@import url('/fonts/harmonyos_sans.css');
+@import url('/fonts/inter.css');
 
 @layer tailwind-base, tailwind-components, tailwind-utils;
 
