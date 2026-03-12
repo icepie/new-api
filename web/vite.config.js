@@ -20,9 +20,25 @@ For commercial licensing, please contact support@quantumnous.com
 import react from '@vitejs/plugin-react';
 import { defineConfig, transformWithEsbuild } from 'vite';
 import path from 'path';
+import fs from 'node:fs';
 import { codeInspectorPlugin } from 'code-inspector-plugin';
 import pkg from '@douyinfe/vite-plugin-semi';
 const { vitePluginSemi } = pkg;
+
+/** Generates dist/version.json at build time for frontend update detection */
+function versionPlugin() {
+  let outDir;
+  return {
+    name: 'vite-plugin-version',
+    apply: 'build',
+    configResolved(config) { outDir = config.build.outDir; },
+    closeBundle() {
+      const version = { version: Date.now().toString(), buildTime: new Date().toISOString() };
+      if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+      fs.writeFileSync(path.resolve(outDir, 'version.json'), JSON.stringify(version, null, 2));
+    },
+  };
+}
 
 // CDN 模式：设置环境变量 NEW_API_CDN=1 启用
 // CDN 域名通过 NEW_API_CDN_URL 配置，例如：https://static.example.com
@@ -64,6 +80,7 @@ export default defineConfig({
     },
     react(),
     vitePluginSemi(),
+    versionPlugin(),
   ],
   optimizeDeps: {
     force: true,

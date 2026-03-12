@@ -22,8 +22,9 @@ import { Layout } from '@douyinfe/semi-ui';
 import SiderBar from './SiderBar';
 import App from '../../App';
 import FooterBar from './Footer';
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import React, { useContext, useEffect, useState } from 'react';
+import { useVersionCheck } from '../../hooks/common/useVersionCheck';
 import { useIsMobile } from '../../hooks/common/useIsMobile';
 import { useSidebarCollapsed } from '../../hooks/common/useSidebarCollapsed';
 import { useTranslation } from 'react-i18next';
@@ -50,6 +51,18 @@ const PageLayout = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { i18n } = useTranslation();
   const location = useLocation();
+
+  const { hasUpdate, refresh } = useVersionCheck();
+  useEffect(() => {
+    if (hasUpdate) {
+      toast.info(
+        <span>
+          检测到新版本，<button onClick={refresh} style={{ color: 'inherit', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>点击刷新</button>
+        </span>,
+        { autoClose: false, closeOnClick: false, toastId: 'version-update' }
+      );
+    }
+  }, [hasUpdate, refresh]);
 
   const cardProPages = [
     '/console/channel',
