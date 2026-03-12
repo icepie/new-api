@@ -24,6 +24,11 @@ import { codeInspectorPlugin } from 'code-inspector-plugin';
 import pkg from '@douyinfe/vite-plugin-semi';
 const { vitePluginSemi } = pkg;
 
+// CDN 模式：设置环境变量 NEW_API_CDN=1 启用
+// CDN 域名通过 NEW_API_CDN_URL 配置，例如：https://static.example.com
+const isCDNMode = process.env.NEW_API_CDN === '1';
+const cdnBase = process.env.NEW_API_CDN_URL || 'https://nicerouterstatic.niceaigc.com';
+
 // https://vitejs.dev/config/
 export default defineConfig({
   resolve: {
@@ -31,6 +36,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  experimental: isCDNMode
+    ? {
+        renderBuiltUrl(filename) {
+          return `${cdnBase}/${filename}`;
+        },
+      }
+    : undefined,
   plugins: [
     codeInspectorPlugin({
       bundler: 'vite',

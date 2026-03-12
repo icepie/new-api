@@ -26,17 +26,6 @@ jobs:
         run: |
           VERSION=$(git describe --tags)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Build Frontend
-        env:
-          CI: ""
-        run: |
-          cd web
-          bun install
-          DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$VERSION bun run build
-          cd ..
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
@@ -71,18 +60,6 @@ jobs:
         run: |
           VERSION=$(git describe --tags)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Build Frontend
-        env:
-          CI: ""
-          NODE_OPTIONS: "--max-old-space-size=4096"
-        run: |
-          cd web
-          bun install
-          DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$VERSION bun run build
-          cd ..
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
@@ -114,17 +91,6 @@ jobs:
         run: |
           VERSION=$(git describe --tags)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Build Frontend
-        env:
-          CI: ""
-        run: |
-          cd web
-          bun install
-          DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$VERSION bun run build
-          cd ..
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
