@@ -66,7 +66,7 @@ export const useNavigation = (
         to: '/console',
       },
       {
-        text: t('模型定价'),
+        text: t('查看价格'),
         itemKey: 'pricing',
         to: '/pricing',
         // 如果设置了URL但没有开启内嵌，则跳转到外部链接
