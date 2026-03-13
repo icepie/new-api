@@ -122,15 +122,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // vendor: react core
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) {
+          // React core — must be first and standalone so all other chunks can depend on it
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/scheduler/')
+          ) {
             return 'react-core';
           }
-          // vendor: semi-ui
-          if (id.includes('@douyinfe/semi-ui') || id.includes('@douyinfe/semi-icons') || id.includes('@douyinfe/semi-illustrations')) {
-            return 'semi-ui';
-          }
-          // vendor: mermaid (large, lazy-loaded but still needs its own chunk)
+          // vendor: mermaid (large, lazy-loaded)
           if (id.includes('node_modules/mermaid') || id.includes('node_modules/dagre') || id.includes('node_modules/cytoscape') || id.includes('node_modules/d3-')) {
             return 'mermaid-vendor';
           }
@@ -146,20 +146,8 @@ export default defineConfig({
           if (id.includes('node_modules/react-markdown') || id.includes('node_modules/remark-') || id.includes('node_modules/rehype-') || id.includes('node_modules/unified') || id.includes('node_modules/hast') || id.includes('node_modules/mdast') || id.includes('node_modules/micromark') || id.includes('node_modules/highlight.js')) {
             return 'markdown-vendor';
           }
-          // vendor: lobe icons (always full bundle due to dynamic access)
-          if (id.includes('@lobehub/icons')) {
-            return 'lobe-icons';
-          }
-          // vendor: i18n
-          if (id.includes('node_modules/i18next') || id.includes('node_modules/react-i18next')) {
-            return 'i18n';
-          }
-          // vendor: misc react components
-          if (id.includes('node_modules/react-dropzone') || id.includes('node_modules/react-fireworks') || id.includes('node_modules/react-telegram-login') || id.includes('node_modules/react-toastify') || id.includes('node_modules/react-turnstile')) {
-            return 'react-components';
-          }
-          // vendor: tools
-          if (id.includes('node_modules/axios') || id.includes('node_modules/marked') || id.includes('node_modules/history')) {
+          // vendor: tools (no React dependency)
+          if (id.includes('node_modules/axios') || id.includes('node_modules/marked') || id.includes('node_modules/history') || id.includes('node_modules/i18next/')) {
             return 'tools';
           }
         },
