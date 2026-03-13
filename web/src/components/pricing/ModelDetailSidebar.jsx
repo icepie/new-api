@@ -873,7 +873,7 @@ export default function ModelDetailSidebar({
             {discountInfo && (
               <div className="pricing-detail-price-official">
                 <span className={`pricing-detail-price-discount-badge pricing-detail-price-discount-badge--${discountInfo.discountTier || 'good'}`}>
-                  {locale === 'zh' ? `≈官方 ${discountInfo.discount} 折` : `≈${discountInfo.discount}0% of official`}
+                  {locale === 'zh' ? `≈官网 ${discountInfo.discount} 折` : `≈${discountInfo.discount}0% of official`}
                 </span>
                 <span className="pricing-detail-price-official-line">
                   {priceData && priceData.isPerToken ? (

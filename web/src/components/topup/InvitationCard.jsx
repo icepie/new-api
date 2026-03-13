@@ -27,7 +27,9 @@ import {
   Badge,
   Space,
 } from '@douyinfe/semi-ui';
-import { Copy, Users, BarChart2, TrendingUp, Gift, Zap } from 'lucide-react';
+import { IconCopy, IconUsers, IconChartBar, IconTrendingUp, IconGift, IconBolt } from '@tabler/icons-react';
+import SmartBackground from 'smart-background';
+import { SMART_BACKGROUND_VARIANTS } from '../common/ui/smartBackgroundThemes';
 
 const { Text } = Typography;
 
@@ -44,7 +46,7 @@ const InvitationCard = ({
       {/* 卡片头部 */}
       <div className='flex items-center mb-4'>
         <Avatar size='small' color='green' className='mr-3 shadow-md'>
-          <Gift size={16} />
+          <IconGift size={16} />
         </Avatar>
         <div>
           <Typography.Text className='text-lg font-medium'>
@@ -60,16 +62,10 @@ const InvitationCard = ({
         <Card
           className='!rounded-xl w-full'
           cover={
-            <div
-              className='relative h-30'
-              style={{
-                '--palette-primary-darkerChannel': '0 75 80',
-                backgroundImage: `linear-gradient(0deg, rgba(var(--palette-primary-darkerChannel) / 80%), rgba(var(--palette-primary-darkerChannel) / 80%)), url('${import.meta.env.VITE_PUBLIC_URL}/cover-4.webp')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-              }}
-            >
+            <div style={{ position: 'relative', height: 120 }}>
+              <SmartBackground
+                {...SMART_BACKGROUND_VARIANTS.invitation}
+              >
               {/* 标题和按钮 */}
               <div className='relative z-10 h-full flex flex-col justify-between p-4'>
                 <div className='flex justify-between items-center'>
@@ -87,7 +83,7 @@ const InvitationCard = ({
                     onClick={() => setOpenTransfer(true)}
                     className='!rounded-lg'
                   >
-                    <Zap size={12} className='mr-1' />
+                    <IconBolt size={12} className='mr-1' />
                     {t('划转到余额')}
                   </Button>
                 </div>
@@ -103,7 +99,7 @@ const InvitationCard = ({
                       {renderQuota(userState?.user?.aff_quota || 0)}
                     </div>
                     <div className='flex items-center justify-center text-sm'>
-                      <TrendingUp
+                      <IconTrendingUp
                         size={14}
                         className='mr-1'
                         style={{ color: 'rgba(255,255,255,0.8)' }}
@@ -128,7 +124,7 @@ const InvitationCard = ({
                       {renderQuota(userState?.user?.aff_history_quota || 0)}
                     </div>
                     <div className='flex items-center justify-center text-sm'>
-                      <BarChart2
+                      <IconChartBar
                         size={14}
                         className='mr-1'
                         style={{ color: 'rgba(255,255,255,0.8)' }}
@@ -153,7 +149,7 @@ const InvitationCard = ({
                       {userState?.user?.aff_count || 0}
                     </div>
                     <div className='flex items-center justify-center text-sm'>
-                      <Users
+                      <IconUsers
                         size={14}
                         className='mr-1'
                         style={{ color: 'rgba(255,255,255,0.8)' }}
@@ -170,6 +166,7 @@ const InvitationCard = ({
                   </div>
                 </div>
               </div>
+            </SmartBackground>
             </div>
           }
         >
@@ -184,7 +181,7 @@ const InvitationCard = ({
                 type='primary'
                 theme='solid'
                 onClick={handleAffLinkClick}
-                icon={<Copy size={14} />}
+                icon={<IconCopy size={14} />}
                 className='!rounded-lg'
               >
                 {t('复制')}

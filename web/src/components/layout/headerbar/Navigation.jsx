@@ -22,23 +22,23 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@douyinfe/semi-ui';
 import { IconMenu, IconClose } from '@douyinfe/semi-icons';
 import {
-  Home,
-  LayoutDashboard,
-  CircleDollarSign,
-  BookOpen,
-  FileCode2,
-  Info,
-  ExternalLink,
-} from 'lucide-react';
+  IconHome,
+  IconLayoutDashboard,
+  IconCurrencyDollar,
+  IconBook,
+  IconCode,
+  IconInfoCircle,
+  IconExternalLink,
+} from '@tabler/icons-react';
 import SkeletonWrapper from '../components/SkeletonWrapper';
 
 const NAV_ICONS = {
-  home: Home,
-  console: LayoutDashboard,
-  pricing: CircleDollarSign,
-  docs: BookOpen,
-  apiDocs: FileCode2,
-  about: Info,
+  home: IconHome,
+  console: IconLayoutDashboard,
+  pricing: IconCurrencyDollar,
+  docs: IconBook,
+  apiDocs: IconCode,
+  about: IconInfoCircle,
 };
 
 const SPRING = 'cubic-bezier(0.34,1.56,0.64,1)';
@@ -101,9 +101,9 @@ const Navigation = ({
 
       const content = (
         <>
-          {Icon && <Icon size={15} strokeWidth={2.4} />}
+          {Icon && <Icon size={15} stroke={1.8} />}
           <span>{link.text}</span>
-          {link.isExternal && <ExternalLink size={11} className='opacity-50' />}
+          {link.isExternal && <IconExternalLink size={11} stroke={1.8} className='opacity-50' />}
         </>
       );
 
@@ -199,9 +199,9 @@ const Navigation = ({
                   onMouseUp={(e)   => { e.currentTarget.style.transform = 'scale(1)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
-                  {Icon && <Icon size={16} strokeWidth={2.4} />}
+                  {Icon && <Icon size={16} stroke={1.8} />}
                   <span className='flex-1'>{link.text}</span>
-                  {link.isExternal && <ExternalLink size={12} className='opacity-40' />}
+                  {link.isExternal && <IconExternalLink size={12} stroke={1.8} className='opacity-40' />}
                 </button>
               );
             })}

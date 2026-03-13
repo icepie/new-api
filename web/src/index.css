@@ -111,6 +111,11 @@ code {
   height: 44px !important;
 }
 
+/* 侧边栏折叠 tooltip：重置 inline color，继承 tooltip 自身颜色 */
+.semi-tooltip-content span {
+  color: inherit !important;
+}
+
 #root
   > section
   > header
@@ -165,14 +170,47 @@ code {
 }
 
 .sidebar-nav-item:hover {
-  background-color: rgba(var(--semi-blue-0), 0.08);
-  color: var(--semi-color-primary);
+  background-color: rgba(0, 0, 0, 0.06);
 }
 
-.sidebar-nav-item-selected {
-  background-color: rgba(var(--semi-blue-0), 0.12);
-  color: var(--semi-color-primary);
-  font-weight: 500;
+.dark .sidebar-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-nav-item-selected,
+.semi-navigation-item-selected.sidebar-nav-item-selected {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  font-weight: 600;
+}
+
+.dark .sidebar-nav-item-selected,
+.dark .semi-navigation-item-selected.sidebar-nav-item-selected {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 覆盖 Semi Nav 选中项的蓝色背景 */
+.sidebar-nav .semi-navigation-item-selected {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark .sidebar-nav .semi-navigation-item-selected {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.sidebar-nav .semi-navigation-item-selected .semi-navigation-item-icon:first-child,
+.sidebar-nav .semi-navigation-sub .semi-navigation-item-selected .semi-navigation-item-icon:first-child,
+.sidebar-nav .semi-navigation-item-normal:hover.semi-navigation-item-selected .semi-navigation-item-icon:first-child {
+  color: inherit !important;
+}
+
+.sidebar-nav .semi-navigation-sub .semi-navigation-item-selected,
+.sidebar-nav .semi-navigation-sub .semi-navigation-item:hover.semi-navigation-item-selected {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark .sidebar-nav .semi-navigation-sub .semi-navigation-item-selected,
+.dark .sidebar-nav .semi-navigation-sub .semi-navigation-item:hover.semi-navigation-item-selected {
+  background-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 /* 图标容器样式 */
@@ -207,10 +245,10 @@ code {
 .sidebar-group-label {
   padding: 4px 15px 8px;
   color: var(--semi-color-text-2);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  opacity: 0.8;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  opacity: 0.85;
 }
 
 /* 底部折叠按钮 */
@@ -942,6 +980,11 @@ html.dark .with-pastel-balls::before {
 .semi-card-header,
 .semi-card-body {
   padding: 10px !important;
+}
+
+/* 去掉 cover 卡片 cover 与 body 之间的分隔线 */
+.semi-card-cover + .semi-card-body {
+  border-top: none !important;
 }
 
 /* ==================== 使用日志: channel affinity tag ==================== */

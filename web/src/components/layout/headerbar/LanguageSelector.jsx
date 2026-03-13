@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@douyinfe/semi-ui';
-import { Languages } from 'lucide-react';
+import { IconLanguage } from '@tabler/icons-react';
 
 const SPRING = 'cubic-bezier(0.34,1.56,0.64,1)';
 const EASE_OUT = 'cubic-bezier(0.22,1,0.36,1)';
@@ -63,13 +63,13 @@ const LanguageSelector = ({ currentLang, onLanguageChange, t }) => {
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <Button
-        icon={<Languages size={18} />}
+        icon={<IconLanguage size={18} stroke={1.8} color={dark ? '#ffffff' : '#111827'} />}
         aria-label={t('common.changeLanguage')}
         theme='borderless'
         type='tertiary'
         onClick={() => setOpen((v) => !v)}
-        className='!p-1.5 !text-current !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
-        style={{ transition: `background 0.2s ${SPRING}` }}
+        style={{ color: dark ? '#ffffff' : '#111827', transition: `background 0.2s ${SPRING}` }}
+        className='!p-1.5 !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
       />
 
       <div

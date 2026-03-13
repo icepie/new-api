@@ -59,28 +59,28 @@ import {
 } from '@lobehub/icons';
 
 import {
-  LayoutDashboard,
-  TerminalSquare,
-  MessageSquare,
-  Key,
-  BarChart3,
-  Image as ImageIcon,
-  CheckSquare,
-  CreditCard,
-  Layers,
-  Gift,
-  User,
-  Settings,
-  CircleUser,
-  Package,
-  Server,
-  CalendarClock,
-  Globe,
-  Users,
-  Wallet,
-  Bell,
-  SlidersHorizontal,
-} from 'lucide-react';
+  IconLayoutDashboard,
+  IconTerminal2,
+  IconMessage,
+  IconKey,
+  IconChartBar,
+  IconPhoto,
+  IconSquareCheck,
+  IconCreditCard,
+  IconStack2,
+  IconGift,
+  IconUser,
+  IconSettings,
+  IconUserCircle,
+  IconPackage,
+  IconServer,
+  IconCalendarClock,
+  IconWorld,
+  IconUsers,
+  IconWallet,
+  IconBell,
+  IconAdjustmentsHorizontal,
+} from '@tabler/icons-react';
 import {
   SiAtlassian,
   SiAuth0,
@@ -107,63 +107,62 @@ import {
   SiX,
 } from 'react-icons/si';
 
-// 获取侧边栏Lucide图标组件
-export function getLucideIcon(key, selected = false) {
-  const size = 16;
-  const strokeWidth = 2;
-  const SELECTED_COLOR = 'var(--semi-color-primary)';
-  const iconColor = selected ? SELECTED_COLOR : 'currentColor';
+// 获取侧边栏 Tabler 图标组件
+export function getLucideIcon(key, selected = false, color) {
+  const size = 18;
+  const stroke = 1.8;
+  const iconColor = color ?? (selected ? 'var(--semi-color-primary)' : 'currentColor');
   const commonProps = {
     size,
-    strokeWidth,
-    className: `transition-colors duration-200 ${selected ? 'transition-transform duration-200 scale-105' : ''}`,
+    stroke,
+    color: iconColor,
+    className: `transition-colors duration-200 ${selected ? 'scale-105' : ''}`,
   };
 
-  // 根据不同的key返回不同的图标
   switch (key) {
     case 'detail':
-      return <LayoutDashboard {...commonProps} color={iconColor} />;
+      return <IconLayoutDashboard {...commonProps} />;
     case 'playground':
-      return <TerminalSquare {...commonProps} color={iconColor} />;
+      return <IconTerminal2 {...commonProps} />;
     case 'chat':
-      return <MessageSquare {...commonProps} color={iconColor} />;
+      return <IconMessage {...commonProps} />;
     case 'token':
-      return <Key {...commonProps} color={iconColor} />;
+      return <IconKey {...commonProps} />;
     case 'log':
-      return <BarChart3 {...commonProps} color={iconColor} />;
+      return <IconChartBar {...commonProps} />;
     case 'midjourney':
-      return <ImageIcon {...commonProps} color={iconColor} />;
+      return <IconPhoto {...commonProps} />;
     case 'task':
-      return <CheckSquare {...commonProps} color={iconColor} />;
+      return <IconSquareCheck {...commonProps} />;
     case 'topup':
-      return <CreditCard {...commonProps} color={iconColor} />;
+      return <IconCreditCard {...commonProps} />;
     case 'channel':
-      return <Layers {...commonProps} color={iconColor} />;
+      return <IconStack2 {...commonProps} />;
     case 'redemption':
-      return <Gift {...commonProps} color={iconColor} />;
+      return <IconGift {...commonProps} />;
     case 'user':
     case 'personal':
-      return <User {...commonProps} color={iconColor} />;
+      return <IconUser {...commonProps} />;
     case 'models':
-      return <Package {...commonProps} color={iconColor} />;
+      return <IconPackage {...commonProps} />;
     case 'deployment':
-      return <Server {...commonProps} color={iconColor} />;
+      return <IconServer {...commonProps} />;
     case 'subscription':
-      return <CalendarClock {...commonProps} color={iconColor} />;
+      return <IconCalendarClock {...commonProps} />;
     case 'setting':
-      return <Settings {...commonProps} color={iconColor} />;
+      return <IconSettings {...commonProps} />;
     case 'proxy_site':
-      return <Globe {...commonProps} color={iconColor} />;
+      return <IconWorld {...commonProps} />;
     case 'site_users':
-      return <Users {...commonProps} color={iconColor} />;
+      return <IconUsers {...commonProps} />;
     case 'site_topups':
-      return <Wallet {...commonProps} color={iconColor} />;
+      return <IconWallet {...commonProps} />;
     case 'site_announcements':
-      return <Bell {...commonProps} color={iconColor} />;
+      return <IconBell {...commonProps} />;
     case 'site_settings':
-      return <SlidersHorizontal {...commonProps} color={iconColor} />;
+      return <IconAdjustmentsHorizontal {...commonProps} />;
     default:
-      return <CircleUser {...commonProps} color={iconColor} />;
+      return <IconUserCircle {...commonProps} />;
   }
 }
 
@@ -435,7 +434,7 @@ export function getChannelIcon(channelType) {
  * @param {number} size - 图标大小，默认为 14
  * @returns {JSX.Element} - 对应的图标组件或 Avatar
  */
-export function getLobeHubIcon(iconName, size = 14) {
+export function getLobeHubIcon(iconName, size = 14, preferColor = false) {
   if (typeof iconName === 'string') iconName = iconName.trim();
   // 如果没有图标名称，返回 Avatar
   if (!iconName) {
@@ -450,7 +449,10 @@ export function getLobeHubIcon(iconName, size = 14) {
   let IconComponent = undefined;
   let propStartIndex = 1;
 
-  if (BaseIcon && segments.length > 1 && BaseIcon[segments[1]]) {
+  if (preferColor && BaseIcon && BaseIcon['Color']) {
+    IconComponent = BaseIcon['Color'];
+    propStartIndex = 1;
+  } else if (BaseIcon && segments.length > 1 && BaseIcon[segments[1]]) {
     IconComponent = BaseIcon[segments[1]];
     propStartIndex = 2;
   } else {

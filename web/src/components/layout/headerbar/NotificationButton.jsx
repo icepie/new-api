@@ -17,19 +17,33 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Badge } from '@douyinfe/semi-ui';
-import { Bell } from 'lucide-react';
+import { IconBell } from '@tabler/icons-react';
+
+const useDark = () => {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const obs = new MutationObserver(() => setDark(document.documentElement.classList.contains('dark')));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+};
 
 const NotificationButton = ({ unreadCount, onNoticeOpen, t }) => {
+  const dark = useDark();
+  const iconColor = dark ? '#ffffff' : '#111827';
+
   const buttonProps = {
-    icon: <Bell size={18} />,
+    icon: <IconBell size={18} stroke={1.8} color={iconColor} />,
     'aria-label': t('系统公告'),
     onClick: onNoticeOpen,
     theme: 'borderless',
     type: 'tertiary',
+    style: { color: iconColor },
     className:
-      '!p-1.5 !text-current focus:!bg-semi-color-fill-1 dark:focus:!bg-gray-700 !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2',
+      '!p-1.5 !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2',
   };
 
   if (unreadCount > 0) {

@@ -17,19 +17,26 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Dropdown, Typography } from '@douyinfe/semi-ui';
-import { ChevronDown } from 'lucide-react';
-import {
-  IconExit,
-  IconUserSetting,
-  IconCreditCard,
-  IconKey,
-} from '@douyinfe/semi-icons';
+import { Button } from '@douyinfe/semi-ui';
+import { IconChevronDown, IconUserCog, IconKey, IconCreditCard, IconLogout } from '@tabler/icons-react';
 import { stringToColor } from '../../../helpers';
 import SkeletonWrapper from '../components/SkeletonWrapper';
 import GravatarAvatar from '../../common/avatar/GravatarAvatar';
+
+const SPRING = 'cubic-bezier(0.34,1.56,0.64,1)';
+const EASE_OUT = 'cubic-bezier(0.22,1,0.36,1)';
+
+const useDark = () => {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const obs = new MutationObserver(() => setDark(document.documentElement.classList.contains('dark')));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+};
 
 const UserArea = ({
   userState,
@@ -41,6 +48,17 @@ const UserArea = ({
   t,
 }) => {
   const dropdownRef = useRef(null);
+  const dark = useDark();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
   if (isLoading) {
     return (
       <SkeletonWrapper
@@ -55,91 +73,89 @@ const UserArea = ({
   if (userState.user) {
     return (
       <div className='relative' ref={dropdownRef}>
-        <Dropdown
-          position='bottomRight'
-          getPopupContainer={() => dropdownRef.current}
-          render={
-            <Dropdown.Menu className='!bg-semi-color-bg-overlay !border-semi-color-border !shadow-lg !rounded-lg dark:!bg-gray-700 dark:!border-gray-600'>
-              <Dropdown.Item
-                onClick={() => {
-                  navigate('/console/personal');
-                }}
-                className='!px-3 !py-1.5 !text-sm !text-semi-color-text-0 hover:!bg-semi-color-fill-1 dark:!text-gray-200 dark:hover:!bg-blue-500 dark:hover:!text-white'
-              >
-                <div className='flex items-center gap-2'>
-                  <IconUserSetting
-                    size='small'
-                    className='text-gray-500 dark:text-gray-400'
-                  />
-                  <span>{t('个人设置')}</span>
-                </div>
-              </Dropdown.Item>
-              <Dropdown.Item
-                onClick={() => {
-                  navigate('/console/token');
-                }}
-                className='!px-3 !py-1.5 !text-sm !text-semi-color-text-0 hover:!bg-semi-color-fill-1 dark:!text-gray-200 dark:hover:!bg-blue-500 dark:hover:!text-white'
-              >
-                <div className='flex items-center gap-2'>
-                  <IconKey
-                    size='small'
-                    className='text-gray-500 dark:text-gray-400'
-                  />
-                  <span>{t('令牌管理')}</span>
-                </div>
-              </Dropdown.Item>
-              <Dropdown.Item
-                onClick={() => {
-                  navigate('/console/topup');
-                }}
-                className='!px-3 !py-1.5 !text-sm !text-semi-color-text-0 hover:!bg-semi-color-fill-1 dark:!text-gray-200 dark:hover:!bg-blue-500 dark:hover:!text-white'
-              >
-                <div className='flex items-center gap-2'>
-                  <IconCreditCard
-                    size='small'
-                    className='text-gray-500 dark:text-gray-400'
-                  />
-                  <span>{t('钱包管理')}</span>
-                </div>
-              </Dropdown.Item>
-              <Dropdown.Item
-                onClick={logout}
-                className='!px-3 !py-1.5 !text-sm !text-semi-color-text-0 hover:!bg-semi-color-fill-1 dark:!text-gray-200 dark:hover:!bg-red-500 dark:hover:!text-white'
-              >
-                <div className='flex items-center gap-2'>
-                  <IconExit
-                    size='small'
-                    className='text-gray-500 dark:text-gray-400'
-                  />
-                  <span>{t('退出')}</span>
-                </div>
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          }
+        <Button
+          theme='borderless'
+          type='tertiary'
+          onClick={() => setOpen((v) => !v)}
+          className='flex items-center gap-1.5 !p-1 !rounded-full hover:!bg-semi-color-fill-1 !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
+          style={{ transition: `background 0.2s ${SPRING}` }}
         >
-          <Button
-            theme='borderless'
-            type='tertiary'
-            className='flex items-center gap-1.5 !p-1 !rounded-full hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-700 !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
+          <GravatarAvatar
+            email={userState.user.email}
+            fallbackText={userState.user.username[0].toUpperCase()}
+            size='extra-small'
+            color={stringToColor(userState.user.username)}
+            className='mr-1'
+          />
+          <span className='hidden md:inline mr-1' style={{ fontSize: 12, fontWeight: 600, color: dark ? '#ffffff' : '#111827' }}>
+            {userState.user.username}
+          </span>
+          <IconChevronDown size={14} stroke={1.8} style={{ color: dark ? '#ffffff' : '#111827' }} />
+        </Button>
+
+        {/* 下拉面板 */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            right: 0,
+            minWidth: 160,
+            transformOrigin: 'top right',
+            transform: open ? 'scale(1) translateY(0)' : 'scale(0.88) translateY(-8px)',
+            opacity: open ? 1 : 0,
+            pointerEvents: open ? 'auto' : 'none',
+            transition: `transform 0.28s ${SPRING}, opacity 0.2s ${EASE_OUT}`,
+            zIndex: 200,
+            backgroundColor: dark ? '#27272a' : '#ffffff',
+          }}
+          className='rounded-2xl shadow-xl overflow-hidden py-1.5'
+        >
+          {[
+            { icon: <IconUserCog size={16} stroke={1.8} />,    label: t('个人设置'), onClick: () => { navigate('/console/personal'); setOpen(false); } },
+            { icon: <IconKey size={16} stroke={1.8} />,        label: t('令牌管理'),  onClick: () => { navigate('/console/token');    setOpen(false); } },
+            { icon: <IconCreditCard size={16} stroke={1.8} />, label: t('钱包管理'),  onClick: () => { navigate('/console/topup');    setOpen(false); } },
+          ].map((item, i) => (
+            <button
+              key={item.label}
+              onClick={item.onClick}
+              style={{
+                transitionDelay: open ? `${i * 35}ms` : '0ms',
+                transform: open ? 'translateX(0)' : 'translateX(12px)',
+                opacity: open ? 1 : 0,
+                transition: `transform 0.3s ${SPRING}, opacity 0.2s ${EASE_OUT}, background 0.18s ${SPRING}`,
+                width: '100%',
+                color: dark ? '#ffffff' : '#111827',
+              }}
+              className='flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-left select-none hover:bg-black/5 dark:hover:bg-white/8'
+              onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)'; }}
+              onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              {item.icon}
+              <span className='flex-1'>{item.label}</span>
+            </button>
+          ))}
+          {/* 分隔线 + 退出 */}
+          <div style={{ borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)', margin: '4px 0' }} />
+          <button
+            onClick={() => { logout(); setOpen(false); }}
+            style={{
+              transitionDelay: open ? '105ms' : '0ms',
+              transform: open ? 'translateX(0)' : 'translateX(12px)',
+              opacity: open ? 1 : 0,
+              transition: `transform 0.3s ${SPRING}, opacity 0.2s ${EASE_OUT}, background 0.18s ${SPRING}`,
+              width: '100%',
+              color: '#ef4444',
+            }}
+            className='flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-left select-none hover:bg-red-50 dark:hover:bg-red-500/10'
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
           >
-            <GravatarAvatar
-              email={userState.user.email}
-              fallbackText={userState.user.username[0].toUpperCase()}
-              size='extra-small'
-              color={stringToColor(userState.user.username)}
-              className='mr-1'
-            />
-            <span className='hidden md:inline'>
-              <Typography.Text className='!text-xs !font-medium !text-semi-color-text-1 dark:!text-gray-300 mr-1'>
-                {userState.user.username}
-              </Typography.Text>
-            </span>
-            <ChevronDown
-              size={14}
-              className='text-xs text-semi-color-text-2 dark:text-gray-400'
-            />
-          </Button>
-        </Dropdown>
+            <IconLogout size={16} stroke={1.8} />
+            <span className='flex-1'>{t('退出')}</span>
+          </button>
+        </div>
       </div>
     );
   } else {

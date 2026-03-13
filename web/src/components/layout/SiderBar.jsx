@@ -21,7 +21,7 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getLucideIcon } from '../../helpers/render';
-import { ChevronLeft } from 'lucide-react';
+import { IconChevronLeft } from '@tabler/icons-react';
 import { useSidebarCollapsed } from '../../hooks/common/useSidebarCollapsed';
 import { useSidebar } from '../../hooks/common/useSidebar';
 import { useMinimumLoadingTime } from '../../hooks/common/useMinimumLoadingTime';
@@ -30,6 +30,16 @@ import SkeletonWrapper from './components/SkeletonWrapper';
 import { UserContext } from '../../context/User';
 
 import { Nav, Divider, Button } from '@douyinfe/semi-ui';
+
+const useDark = () => {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const obs = new MutationObserver(() => setDark(document.documentElement.classList.contains('dark')));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+};
 
 const routerMap = {
   home: '/',
@@ -353,32 +363,28 @@ const SiderBar = ({ onNavigate = () => {} }) => {
     }
   }, [collapsed]);
 
-  // 选中高亮颜色（统一）
-  const SELECTED_COLOR = 'var(--semi-color-primary)';
+  const dark = useDark();
+
+  // 文字颜色与导航栏保持一致：黑/白，选中状态由背景区分
+  const textColor = dark ? '#ffffff' : '#111827';
 
   // 渲染自定义菜单项
   const renderNavItem = (item) => {
     // 跳过隐藏的项目
     if (item.className === 'tableHiddle') return null;
 
-    const isSelected = selectedKeys.includes(item.itemKey);
-    const textColor = isSelected ? SELECTED_COLOR : 'inherit';
-
     return (
       <Nav.Item
         key={item.itemKey}
         itemKey={item.itemKey}
         text={
-          <span
-            className='truncate font-medium text-sm'
-            style={{ color: textColor }}
-          >
+          <span className='truncate font-semibold text-sm' style={{ color: textColor }}>
             {item.text}
           </span>
         }
         icon={
           <div className='sidebar-icon-container flex-shrink-0'>
-            {getLucideIcon(item.itemKey, isSelected)}
+            {getLucideIcon(item.itemKey, selectedKeys.includes(item.itemKey), textColor)}
           </div>
         }
         className={item.className}
@@ -389,46 +395,32 @@ const SiderBar = ({ onNavigate = () => {} }) => {
   // 渲染子菜单项
   const renderSubItem = (item) => {
     if (item.items && item.items.length > 0) {
-      const isSelected = selectedKeys.includes(item.itemKey);
-      const textColor = isSelected ? SELECTED_COLOR : 'inherit';
-
       return (
         <Nav.Sub
           key={item.itemKey}
           itemKey={item.itemKey}
           text={
-            <span
-              className='truncate font-medium text-sm'
-              style={{ color: textColor }}
-            >
+            <span className='truncate font-semibold text-sm' style={{ color: textColor }}>
               {item.text}
             </span>
           }
           icon={
             <div className='sidebar-icon-container flex-shrink-0'>
-              {getLucideIcon(item.itemKey, isSelected)}
+              {getLucideIcon(item.itemKey, selectedKeys.includes(item.itemKey), textColor)}
             </div>
           }
         >
-          {item.items.map((subItem) => {
-            const isSubSelected = selectedKeys.includes(subItem.itemKey);
-            const subTextColor = isSubSelected ? SELECTED_COLOR : 'inherit';
-
-            return (
-              <Nav.Item
-                key={subItem.itemKey}
-                itemKey={subItem.itemKey}
-                text={
-                  <span
-                    className='truncate font-medium text-sm'
-                    style={{ color: subTextColor }}
-                  >
-                    {subItem.text}
-                  </span>
-                }
-              />
-            );
-          })}
+          {item.items.map((subItem) => (
+            <Nav.Item
+              key={subItem.itemKey}
+              itemKey={subItem.itemKey}
+              text={
+                <span className='truncate font-semibold text-sm' style={{ color: textColor }}>
+                  {subItem.text}
+                </span>
+              }
+            />
+          ))}
         </Nav.Sub>
       );
     } else {
@@ -567,9 +559,9 @@ const SiderBar = ({ onNavigate = () => {} }) => {
             type='tertiary'
             size='small'
             icon={
-              <ChevronLeft
+              <IconChevronLeft
                 size={16}
-                strokeWidth={2.5}
+                stroke={2}
                 color='var(--semi-color-text-2)'
                 style={{
                   transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',

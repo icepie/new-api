@@ -31,8 +31,10 @@ import {
   renderQuota,
   stringToColor,
 } from '../../../../helpers';
-import { Coins, BarChart2, Users } from 'lucide-react';
+import { IconCoins, IconChartBar, IconUsers } from '@tabler/icons-react';
 import GravatarAvatar from '../../../common/avatar/GravatarAvatar';
+import SmartBackground from 'smart-background';
+import { SMART_BACKGROUND_VARIANTS } from '../../../common/ui/smartBackgroundThemes';
 
 const UserInfoHeader = ({ t, userState }) => {
   const getUsername = () => {
@@ -55,16 +57,10 @@ const UserInfoHeader = ({ t, userState }) => {
     <Card
       className='!rounded-2xl overflow-hidden'
       cover={
-        <div
-          className='relative h-32'
-          style={{
-            '--palette-primary-darkerChannel': '0 75 80',
-            backgroundImage: `linear-gradient(0deg, rgba(var(--palette-primary-darkerChannel) / 80%), rgba(var(--palette-primary-darkerChannel) / 80%)), url('${import.meta.env.VITE_PUBLIC_URL}/cover-4.webp')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-          }}
-        >
+        <div style={{ position: 'relative', height: 128 }}>
+          <SmartBackground
+            {...SMART_BACKGROUND_VARIANTS.userInfo}
+          >
           {/* 用户信息内容 */}
           <div className='relative z-10 h-full flex flex-col justify-end p-6'>
             <div className='flex items-center'>
@@ -116,6 +112,7 @@ const UserInfoHeader = ({ t, userState }) => {
               </div>
             </div>
           </div>
+        </SmartBackground>
         </div>
       }
     >
@@ -137,7 +134,7 @@ const UserInfoHeader = ({ t, userState }) => {
           >
             <div className='flex items-center gap-4'>
               <div className='flex items-center gap-2'>
-                <Coins size={16} />
+                <IconCoins size={16} />
                 <Typography.Text size='small' type='tertiary'>
                   {t('历史消耗')}
                 </Typography.Text>
@@ -147,7 +144,7 @@ const UserInfoHeader = ({ t, userState }) => {
               </div>
               <Divider layout='vertical' />
               <div className='flex items-center gap-2'>
-                <BarChart2 size={16} />
+                <IconChartBar size={16} />
                 <Typography.Text size='small' type='tertiary'>
                   {t('请求次数')}
                 </Typography.Text>
@@ -157,7 +154,7 @@ const UserInfoHeader = ({ t, userState }) => {
               </div>
               <Divider layout='vertical' />
               <div className='flex items-center gap-2'>
-                <Users size={16} />
+                <IconUsers size={16} />
                 <Typography.Text size='small' type='tertiary'>
                   {t('用户分组')}
                 </Typography.Text>
@@ -180,7 +177,7 @@ const UserInfoHeader = ({ t, userState }) => {
           <div className='space-y-3'>
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-2'>
-                <Coins size={16} />
+                <IconCoins size={16} />
                 <Typography.Text size='small' type='tertiary'>
                   {t('历史消耗')}
                 </Typography.Text>
@@ -192,7 +189,7 @@ const UserInfoHeader = ({ t, userState }) => {
             <Divider margin='8px' />
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-2'>
-                <BarChart2 size={16} />
+                <IconChartBar size={16} />
                 <Typography.Text size='small' type='tertiary'>
                   {t('请求次数')}
                 </Typography.Text>
@@ -204,7 +201,7 @@ const UserInfoHeader = ({ t, userState }) => {
             <Divider margin='8px' />
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-2'>
-                <Users size={16} />
+                <IconUsers size={16} />
                 <Typography.Text size='small' type='tertiary'>
                   {t('用户分组')}
                 </Typography.Text>

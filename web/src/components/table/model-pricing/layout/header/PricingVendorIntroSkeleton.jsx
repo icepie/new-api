@@ -19,15 +19,15 @@ For commercial licensing, please contact support@quantumnous.com
 
 import React, { memo } from 'react';
 import { Card, Skeleton } from '@douyinfe/semi-ui';
+import SmartBackground from 'smart-background';
+import { SMART_BACKGROUND_VARIANTS } from '../../../../common/ui/smartBackgroundThemes';
 
 const THEME_COLORS = {
   allVendors: {
-    primary: '37 99 235',
     background: 'rgba(59, 130, 246, 0.1)',
     border: 'rgba(59, 130, 246, 0.2)',
   },
   specific: {
-    primary: '16 185 129',
     background: 'rgba(16, 185, 129, 0.1)',
     border: 'rgba(16, 185, 129, 0.2)',
   },
@@ -47,13 +47,6 @@ const SIZES = {
 };
 
 const SKELETON_STYLES = {
-  cover: (primaryColor) => ({
-    '--palette-primary-darkerChannel': primaryColor,
-    backgroundImage: `linear-gradient(0deg, rgba(var(--palette-primary-darkerChannel) / 80%), rgba(var(--palette-primary-darkerChannel) / 80%)), url('${import.meta.env.VITE_PUBLIC_URL}/cover-4.webp')`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
-  }),
   title: {
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 8,
@@ -102,14 +95,12 @@ const PricingVendorIntroSkeleton = memo(
       <Card
         className='!rounded-2xl shadow-sm border-0'
         cover={
-          <div
-            className='relative h-full'
-            style={SKELETON_STYLES.cover(
-              isAllVendors
-                ? THEME_COLORS.allVendors.primary
-                : THEME_COLORS.specific.primary,
-            )}
-          >
+          <div style={{ position: 'relative', height: 100 }}>
+            <SmartBackground
+              {...(isAllVendors
+                ? SMART_BACKGROUND_VARIANTS.pricingAll
+                : SMART_BACKGROUND_VARIANTS.pricingVendor)}
+            >
             <div className='relative z-10 h-full flex items-center justify-between p-4'>
               <div className='flex-1 min-w-0 mr-4'>
                 <div className='flex flex-row flex-wrap items-center gap-2 sm:gap-3 mb-2'>
@@ -153,7 +144,15 @@ const PricingVendorIntroSkeleton = memo(
                 </div>
               </div>
 
-              <div className='flex-shrink-0 w-16 h-16 rounded-2xl bg-white/90 shadow-md backdrop-blur-sm flex items-center justify-center'>
+              <div
+                className='flex-shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center'
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.14)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  boxShadow: 'rgba(255,255,255,0.18) 0px 1px 0px inset',
+                  backdropFilter: 'blur(6px)',
+                }}
+              >
                 {createSkeletonRect(
                   {
                     ...SKELETON_STYLES.avatar(isAllVendors),
@@ -164,6 +163,7 @@ const PricingVendorIntroSkeleton = memo(
                 )}
               </div>
             </div>
+            </SmartBackground>
           </div>
         }
       >

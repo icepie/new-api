@@ -37,18 +37,20 @@ import {
 } from '@douyinfe/semi-ui';
 import { SiAlipay, SiWechat, SiStripe } from 'react-icons/si';
 import {
-  CreditCard,
-  Coins,
-  Wallet,
-  BarChart2,
-  TrendingUp,
-  Receipt,
-  Sparkles,
-} from 'lucide-react';
+  IconCreditCard,
+  IconCoins,
+  IconWallet,
+  IconChartBar,
+  IconTrendingUp,
+  IconReceipt,
+  IconSparkles,
+} from '@tabler/icons-react';
 import { IconGift } from '@douyinfe/semi-icons';
+import SmartBackground from 'smart-background';
 import { useMinimumLoadingTime } from '../../hooks/common/useMinimumLoadingTime';
 import { getCurrencyConfig } from '../../helpers/render';
 import SubscriptionPlansCard from './SubscriptionPlansCard';
+import { SMART_BACKGROUND_VARIANTS } from '../common/ui/smartBackgroundThemes';
 
 const { Text } = Typography;
 
@@ -121,89 +123,83 @@ const RechargeCard = ({
       <Card
         className='!rounded-xl w-full'
         cover={
-          <div
-            className='relative h-30'
-            style={{
-              '--palette-primary-darkerChannel': '37 99 235',
-              backgroundImage: `linear-gradient(0deg, rgba(var(--palette-primary-darkerChannel) / 80%), rgba(var(--palette-primary-darkerChannel) / 80%)), url('${import.meta.env.VITE_PUBLIC_URL}/cover-4.webp')`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-            }}
-          >
-            <div className='relative z-10 h-full flex flex-col justify-between p-4'>
-              <div className='flex justify-between items-center'>
-                <Text strong style={{ color: 'white', fontSize: '16px' }}>
-                  {t('账户统计')}
-                </Text>
-              </div>
-
-              {/* 统计数据 */}
-              <div className='grid grid-cols-3 gap-6 mt-4'>
-                {/* 当前余额 */}
-                <div className='text-center'>
-                  <div
-                    className='text-base sm:text-2xl font-bold mb-2'
-                    style={{ color: 'white' }}
-                  >
-                    {renderQuota(userState?.user?.quota)}
-                  </div>
-                  <div className='flex items-center justify-center text-sm'>
-                    <Wallet
-                      size={14}
-                      className='mr-1'
-                      style={{ color: 'rgba(255,255,255,0.8)' }}
-                    />
-                    <Text
-                      style={{
-                        color: 'rgba(255,255,255,0.8)',
-                        fontSize: '12px',
-                      }}
-                    >
-                      {t('当前余额')}
-                    </Text>
-                  </div>
+          <div style={{ position: 'relative', height: 120 }}>
+            <SmartBackground
+              {...SMART_BACKGROUND_VARIANTS.recharge}
+            >
+              <div className='relative z-10 h-full flex flex-col justify-between p-4'>
+                <div className='flex justify-between items-center'>
+                  <Text strong style={{ color: 'white', fontSize: '16px' }}>
+                    {t('账户统计')}
+                  </Text>
                 </div>
 
-                {/* 历史消耗 */}
-                <div className='text-center'>
-                  <div
-                    className='text-base sm:text-2xl font-bold mb-2'
-                    style={{ color: 'white' }}
-                  >
-                    {renderQuota(userState?.user?.used_quota)}
-                  </div>
-                  <div className='flex items-center justify-center text-sm'>
-                    <TrendingUp
-                      size={14}
-                      className='mr-1'
-                      style={{ color: 'rgba(255,255,255,0.8)' }}
-                    />
-                    <Text
-                      style={{
-                        color: 'rgba(255,255,255,0.8)',
-                        fontSize: '12px',
-                      }}
+                {/* 统计数据 */}
+                <div className='grid grid-cols-3 gap-6 mt-4'>
+                  {/* 当前余额 */}
+                  <div className='text-center'>
+                    <div
+                      className='text-base sm:text-2xl font-bold mb-2'
+                      style={{ color: 'white' }}
                     >
-                      {t('历史消耗')}
-                    </Text>
+                      {renderQuota(userState?.user?.quota)}
+                    </div>
+                    <div className='flex items-center justify-center text-sm'>
+                      <IconWallet
+                        size={14}
+                        className='mr-1'
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                      />
+                      <Text
+                        style={{
+                          color: 'rgba(255,255,255,0.8)',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {t('当前余额')}
+                      </Text>
+                    </div>
                   </div>
-                </div>
 
-                {/* 请求次数 */}
-                <div className='text-center'>
-                  <div
-                    className='text-base sm:text-2xl font-bold mb-2'
-                    style={{ color: 'white' }}
-                  >
-                    {userState?.user?.request_count || 0}
+                  {/* 历史消耗 */}
+                  <div className='text-center'>
+                    <div
+                      className='text-base sm:text-2xl font-bold mb-2'
+                      style={{ color: 'white' }}
+                    >
+                      {renderQuota(userState?.user?.used_quota)}
+                    </div>
+                    <div className='flex items-center justify-center text-sm'>
+                      <IconTrendingUp
+                        size={14}
+                        className='mr-1'
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                      />
+                      <Text
+                        style={{
+                          color: 'rgba(255,255,255,0.8)',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {t('历史消耗')}
+                      </Text>
+                    </div>
                   </div>
-                  <div className='flex items-center justify-center text-sm'>
-                    <BarChart2
-                      size={14}
-                      className='mr-1'
-                      style={{ color: 'rgba(255,255,255,0.8)' }}
-                    />
+
+                  {/* 请求次数 */}
+                  <div className='text-center'>
+                    <div
+                      className='text-base sm:text-2xl font-bold mb-2'
+                      style={{ color: 'white' }}
+                    >
+                      {userState?.user?.request_count || 0}
+                    </div>
+                    <div className='flex items-center justify-center text-sm'>
+                      <IconChartBar
+                        size={14}
+                        className='mr-1'
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                      />
                     <Text
                       style={{
                         color: 'rgba(255,255,255,0.8)',
@@ -216,6 +212,7 @@ const RechargeCard = ({
                 </div>
               </div>
             </div>
+            </SmartBackground>
           </div>
         }
       >
@@ -318,7 +315,7 @@ const RechargeCard = ({
                                   ) : payMethod.type === 'stripe' ? (
                                     <SiStripe size={18} color='#635BFF' />
                                   ) : (
-                                    <CreditCard
+                                    <IconCreditCard
                                       size={18}
                                       color={
                                         payMethod.color ||
@@ -451,7 +448,7 @@ const RechargeCard = ({
                               heading={6}
                               style={{ margin: '0 0 8px 0' }}
                             >
-                              <Coins size={18} />
+                              <IconCoins size={18} />
                               {formatLargeNumber(displayValue)} {symbol}
                               {hasDiscount && (
                                 <Tag style={{ marginLeft: 4 }} color='green'>
@@ -584,7 +581,7 @@ const RechargeCard = ({
       <div className='flex items-center justify-between mb-4'>
         <div className='flex items-center'>
           <Avatar size='small' color='blue' className='mr-3 shadow-md'>
-            <CreditCard size={16} />
+            <IconCreditCard size={16} />
           </Avatar>
           <div>
             <Typography.Text className='text-lg font-medium'>
@@ -594,7 +591,7 @@ const RechargeCard = ({
           </div>
         </div>
         <Button
-          icon={<Receipt size={16} />}
+          icon={<IconReceipt size={16} />}
           theme='solid'
           onClick={onOpenHistory}
         >
@@ -607,7 +604,7 @@ const RechargeCard = ({
           <TabPane
             tab={
               <div className='flex items-center gap-2'>
-                <Sparkles size={16} />
+                <IconSparkles size={16} />
                 {t('订阅套餐')}
               </div>
             }
