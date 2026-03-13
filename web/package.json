@@ -50,7 +50,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:cdn": "NEW_API_CDN=1 vite build",
-    "upload:cos": "node scripts/upload-to-cos.js",
+    "upload:cos": "node --env-file=.env scripts/upload-to-cos.js",
     "deploy:cdn": "bun run build:cdn && bun run upload:cos",
     "lint": "prettier . --check",
     "lint:fix": "prettier . --write",

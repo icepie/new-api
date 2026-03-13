@@ -111,11 +111,6 @@ const ThemeToggle = ({ theme, onThemeToggle, t }) => {
           );
         })}
 
-        {theme === 'auto' && (
-          <div className='px-4 py-2 text-xs text-gray-400 dark:text-gray-500 border-t border-black/5 dark:border-white/8 mt-1'>
-            {t('当前跟随系统')}：{actualTheme === 'dark' ? t('深色') : t('浅色')}
-          </div>
-        )}
       </div>
     </div>
   );
