@@ -12,12 +12,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetRouter(router *gin.Engine, indexPage func() []byte) {
+func SetRouter(router *gin.Engine, indexPage func() []byte, docPage func() []byte) {
 	SetApiRouter(router)
 	SetStarRouter(router)
 	SetDashboardRouter(router)
 	SetRelayRouter(router)
 	SetVideoRouter(router)
+	SetDocRouter(router, docPage)
 	frontendBaseUrl := os.Getenv("FRONTEND_BASE_URL")
 	if common.IsMasterNode && frontendBaseUrl != "" {
 		frontendBaseUrl = ""

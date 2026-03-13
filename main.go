@@ -40,11 +40,16 @@ import (
 var indexPage []byte
 var indexPageMu sync.RWMutex
 
-const indexCDNURL = "https://nicerouterstatic.niceaigc.com/index.html"
+// docPage holds the current /doc/index.html content, refreshed periodically from CDN.
+var docPage []byte
+var docPageMu sync.RWMutex
 
-func fetchIndexFromCDN() ([]byte, error) {
+const indexCDNURL = "https://nicerouterstatic.niceaigc.com/index.html"
+const docCDNURL = "https://nicerouterstatic.niceaigc.com/doc/index.html"
+
+func fetchFromCDN(url string) ([]byte, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, _ := http.NewRequest("GET", indexCDNURL, nil)
+	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Pragma", "no-cache")
 	resp, err := client.Do(req)
@@ -56,6 +61,10 @@ func fetchIndexFromCDN() ([]byte, error) {
 		return nil, fmt.Errorf("CDN returned %d", resp.StatusCode)
 	}
 	return io.ReadAll(resp.Body)
+}
+
+func fetchIndexFromCDN() ([]byte, error) {
+	return fetchFromCDN(indexCDNURL)
 }
 
 func applyAnalyticsInjections(data []byte) []byte {
@@ -74,14 +83,51 @@ func startIndexPageRefresher() {
 	indexPageMu.Lock()
 	indexPage = applyAnalyticsInjections(data)
 	indexPageMu.Unlock()
-	// 每 5 分钟刷新一次
+	// 每 1 分钟刷新一次
 	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
+		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()
 		for range ticker.C {
 			ForceRefreshIndexPage()
 		}
 	}()
+}
+
+func startDocPageRefresher() {
+	data, err := fetchFromCDN(docCDNURL)
+	if err != nil {
+		common.SysError(fmt.Sprintf("failed to fetch doc/index.html from CDN at startup: %v", err))
+		return
+	}
+	common.SysLog("doc/index.html loaded from CDN")
+	docPageMu.Lock()
+	docPage = data
+	docPageMu.Unlock()
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			ForceRefreshDocPage()
+		}
+	}()
+}
+
+func ForceRefreshDocPage() {
+	fresh, err := fetchFromCDN(docCDNURL)
+	if err != nil {
+		common.SysError(fmt.Sprintf("failed to fetch doc/index.html from CDN: %v", err))
+		return
+	}
+	docPageMu.Lock()
+	docPage = fresh
+	docPageMu.Unlock()
+	common.SysLog("doc/index.html refreshed from CDN")
+}
+
+func getDocPage() []byte {
+	docPageMu.RLock()
+	defer docPageMu.RUnlock()
+	return docPage
 }
 
 func ForceRefreshIndexPage() {
@@ -243,15 +289,21 @@ func main() {
 	server.Use(sessions.Sessions("session", store))
 
 	startIndexPageRefresher()
+	startDocPageRefresher()
 
 	// Admin API: force refresh index.html from CDN
 	server.POST("/api/admin/refresh_index", middleware.AdminAuth(), func(c *gin.Context) {
 		go ForceRefreshIndexPage()
 		c.JSON(http.StatusOK, gin.H{"message": "refreshing"})
 	})
+	// Admin API: force refresh doc/index.html from CDN
+	server.POST("/api/admin/refresh_doc", middleware.AdminAuth(), func(c *gin.Context) {
+		go ForceRefreshDocPage()
+		c.JSON(http.StatusOK, gin.H{"message": "refreshing"})
+	})
 
 	// 设置路由
-	router.SetRouter(server, getIndexPage)
+	router.SetRouter(server, getIndexPage, getDocPage)
 	var port = os.Getenv("PORT")
 	if port == "" {
 		port = strconv.Itoa(*common.Port)
