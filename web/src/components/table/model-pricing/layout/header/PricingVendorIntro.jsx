@@ -165,72 +165,44 @@ const createBackgroundIconSymbols = (iconNames, size) =>
 
 const getHeaderBackgroundConfig = (isAllVendors) => {
   const theme = isAllVendors ? THEME_COLORS.allVendors : THEME_COLORS.specific;
-  const backgroundSymbols = isAllVendors
-    ? createBackgroundIconSymbols(
+  if (isAllVendors) {
+    return {
+      underlayColor: theme.solid,
+      animation: theme.animation,
+      symbols: createBackgroundIconSymbols(
         [
-          'OpenAI',
-          'Claude',
-          'Gemini',
-          'DeepSeek',
-          'Qwen',
-          'Mistral',
-          'Moonshot',
-          'Zhipu',
-          'Doubao',
-          'Spark',
-          'Groq',
-          'Perplexity',
-          'Cohere',
-          'Together',
-          'Ai360',
-          'ChatGLM',
-          'Minimax',
-          'Hunyuan',
-          'Jina',
-          'XAI',
-          'Yi',
+          'OpenAI', 'Claude', 'Gemini', 'DeepSeek', 'Qwen', 'Mistral',
+          'Moonshot', 'Zhipu', 'Doubao', 'Spark', 'Groq', 'Perplexity',
+          'Cohere', 'Together', 'Ai360', 'ChatGLM', 'Minimax', 'Hunyuan',
+          'Jina', 'XAI', 'Yi',
         ],
         28,
-      )
-    : createBackgroundIconSymbols(
-        [
-          'OpenAI',
-          'Claude',
-          'Gemini',
-          'DeepSeek',
-          'Qwen',
-          'Groq',
-          'Mistral',
-          'Moonshot',
-          'Zhipu',
-          'Doubao',
-          'Spark',
-          'ChatGLM',
-          'Minimax',
-          'Hunyuan',
-        ],
-        26,
-      );
+      ),
+      symbolSize: 26,
+      gap: 28,
+      rotate: -8,
+      symbolsStyle: {
+        color: 'rgba(255,255,255,0.95)',
+        fontWeight: 800,
+        letterSpacing: '0.08em',
+        opacity: 0.82,
+        filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.14))',
+      },
+      childrenWrapStyle: { padding: 0, overflow: 'hidden' },
+    };
+  }
   return {
-    underlayColor: isAllVendors ? theme.solid : undefined,
-    underlayImage: isAllVendors ? undefined : theme.image,
-    animation: isAllVendors ? theme.animation : undefined,
-    symbols: backgroundSymbols,
-    symbolSize: isAllVendors ? 26 : 56,
-    gap: isAllVendors ? 28 : 10,
-    random: isAllVendors ? undefined : { fontSizeRange: [44, 68] },
-    rotate: isAllVendors ? -8 : 36,
+    underlayImage: theme.image,
+    symbols: ['◆', '◇', '▸', '○', '◉', '▪', '▫', '◈', '✦', '✧', '⬡', '⬢'],
+    symbolSize: 14,
+    gap: 22,
+    rotate: -12,
     symbolsStyle: {
-      color: 'rgba(255,255,255,0.95)',
-      fontWeight: 800,
-      letterSpacing: '0.08em',
-      opacity: isAllVendors ? 0.82 : 0.9,
-      filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.14))',
+      color: 'rgba(255,255,255,0.22)',
+      fontWeight: 700,
+      letterSpacing: '0.1em',
     },
-    childrenWrapStyle: {
-      padding: 0,
-      overflow: 'hidden',
-    },
+    childrenWrapStyle: { padding: 0, overflow: 'hidden' },
   };
 };
 
