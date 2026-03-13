@@ -12,7 +12,7 @@ import (
 const docCDNOrigin = "https://nicerouterstatic.niceaigc.com"
 
 // staticDocPrefixes are paths under /doc that should be proxied directly from CDN (no redirect).
-var staticDocPrefixes = []string{"/assets/", "/workbox-", "/slimsearch.worker.js", "/favicon", "/logo", "/apple-touch-icon", "/robots.txt", "/sitemap"}
+var staticDocPrefixes = []string{"/assets/", "/workbox-", "/slimsearch.worker.js", "/favicon", "/logo", "/apple-touch-icon", "/robots.txt", "/sitemap", "/favicon-circle.png"}
 
 // proxyDocPrefixes are paths that must be served inline (no redirect allowed by browser).
 var proxyDocFiles = []string{"/service-worker.js", "/manifest.webmanifest"}
@@ -34,11 +34,19 @@ func fetchDocHTML(path string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
+// stripDataTheme removes the data-theme attribute from the <html> tag so the
+// client-side init script fully controls it, preventing Vue hydration mismatches.
+func stripDataTheme(data []byte) []byte {
+	s := strings.Replace(string(data), ` data-theme="light"`, "", 1)
+	s = strings.Replace(s, ` data-theme="dark"`, "", 1)
+	return []byte(s)
+}
+
 func SetDocRouter(router *gin.Engine, docPage func() []byte) {
 	doc := router.Group("/doc")
 	doc.GET("", func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
-		c.Data(http.StatusOK, "text/html; charset=utf-8", docPage())
+		c.Data(http.StatusOK, "text/html; charset=utf-8", stripDataTheme(docPage()))
 	})
 	doc.GET("/*path", func(c *gin.Context) {
 		path := c.Param("path")
@@ -87,10 +95,10 @@ func SetDocRouter(router *gin.Engine, docPage func() []byte) {
 		if err != nil || data == nil {
 			// fallback to cached index
 			c.Header("Cache-Control", "no-cache")
-			c.Data(http.StatusOK, "text/html; charset=utf-8", docPage())
+			c.Data(http.StatusOK, "text/html; charset=utf-8", stripDataTheme(docPage()))
 			return
 		}
 		c.Header("Cache-Control", "no-cache")
-		c.Data(http.StatusOK, "text/html; charset=utf-8", data)
+		c.Data(http.StatusOK, "text/html; charset=utf-8", stripDataTheme(data))
 	})
 }
