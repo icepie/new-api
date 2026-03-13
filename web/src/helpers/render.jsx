@@ -573,7 +573,7 @@ export function getOAuthProviderIcon(iconName, size = 20) {
   const iconSize = Number(size) > 0 ? Number(size) : 20;
 
   if (!raw) {
-    return <Layers size={iconSize} color='var(--semi-color-text-2)' />;
+    return <IconStack2 size={iconSize} color='var(--semi-color-text-2)' />;
   }
 
   if (isHttpUrl(raw)) {
