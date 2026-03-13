@@ -448,7 +448,7 @@ const ModelCardItem = ({
                     size='small'
                     onClick={(e) => {
                       e.stopPropagation();
-                      setModalImageUrl('/ratio.png');
+                      setModalImageUrl(`${import.meta.env.VITE_PUBLIC_URL}/ratio.png`);
                       setIsModalOpenurl(true);
                     }}
                   />

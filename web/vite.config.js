@@ -54,6 +54,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  define: {
+    'import.meta.env.VITE_PUBLIC_URL': JSON.stringify(isCDNMode ? cdnBase : ''),
+  },
   experimental: isCDNMode
     ? {
         renderBuiltUrl(filename) {
