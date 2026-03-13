@@ -316,6 +316,11 @@ export const getUsersColumns = ({
       dataIndex: 'id',
     },
     {
+      title: 'Star ID',
+      dataIndex: 'star_user_id',
+      render: (text) => text ? <Tag color='white' shape='circle' className='!text-xs'>{text}</Tag> : '-',
+    },
+    {
       title: t('用户名'),
       dataIndex: 'username',
       render: (text, record) => renderUsername(text, record),

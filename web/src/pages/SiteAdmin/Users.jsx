@@ -119,6 +119,7 @@ const renderInviteInfo = (record) => (
 
 const columns = [
   { title: 'ID', dataIndex: 'id' },
+  { title: 'Star ID', dataIndex: 'star_user_id', render: (text) => text ? <Tag color='white' shape='circle' className='!text-xs'>{text}</Tag> : '-' },
   { title: '用户名', dataIndex: 'username', render: (text, record) => renderUsername(text, record) },
   { title: '状态', dataIndex: 'info', render: (_, record) => renderStatus(record) },
   { title: '剩余额度/总额度', key: 'quota_usage', render: (_, record) => renderQuotaUsage(record) },
@@ -154,7 +155,7 @@ const SiteAdminUsers = () => {
 
   return (
     <div className='mt-[60px] px-2'>
-      <Title heading={5} style={{ marginBottom: 16 }}>站点用户管理</Title>
+      <Title heading={4} style={{ marginBottom: 16 }}>站点用户管理</Title>
       <Table
         columns={columns}
         dataSource={users}

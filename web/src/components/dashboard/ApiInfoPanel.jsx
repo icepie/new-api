@@ -42,7 +42,7 @@ const ApiInfoPanel = ({
       title={
         <div className={FLEX_CENTER_GAP2}>
           <Server size={16} />
-          {t('API信息')}
+          <span style={{ fontWeight: 700 }}>{t('API信息')}</span>
         </div>
       }
       bodyStyle={{ padding: 0 }}

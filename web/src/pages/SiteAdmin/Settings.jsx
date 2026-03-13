@@ -95,7 +95,7 @@ const SiteAdminSettings = () => {
 
   return (
     <div className='mt-[60px] px-2' style={{ maxWidth: 600 }}>
-      <Title heading={5} style={{ marginBottom: 20 }}>站点设置</Title>
+      <Title heading={4} style={{ marginBottom: 20 }}>站点设置</Title>
       <Spin spinning={loading}>
         {/* 只读站点信息 */}
         {siteInfo && (

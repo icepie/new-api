@@ -42,7 +42,7 @@ const AnnouncementsPanel = ({
         <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 w-full'>
           <div className='flex items-center gap-2'>
             <Bell size={16} />
-            {t('系统公告')}
+            <span style={{ fontWeight: 700 }}>{t('系统公告')}</span>
             <Tag color='white' shape='circle'>
               {t('显示最新20条')}
             </Tag>

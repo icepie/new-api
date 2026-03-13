@@ -143,7 +143,7 @@ const SiteAdminTopUps = () => {
   return (
     <div className='mt-[60px] px-2'>
       <div className='flex items-center justify-between mb-4'>
-        <Title heading={5} style={{ margin: 0 }}>站点充值记录</Title>
+        <Title heading={4} style={{ margin: 0 }}>站点充值记录</Title>
         <Input
           prefix={<IconSearch />}
           placeholder='订单号'

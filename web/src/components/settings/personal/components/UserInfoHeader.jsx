@@ -105,7 +105,7 @@ const UserInfoHeader = ({ t, userState }) => {
                       </Tag>
                     )}
                     <Tag size='large' shape='circle' style={{ color: 'white' }}>
-                      ID: {userState?.user?.id}
+                      ID: {userState?.user?.star_user_id || userState?.user?.id}
                     </Tag>
                   </div>
                 </div>
@@ -135,30 +135,30 @@ const UserInfoHeader = ({ t, userState }) => {
             <div className='flex items-center gap-4'>
               <div className='flex items-center gap-2'>
                 <IconCoins size={16} />
-                <Typography.Text size='small' type='tertiary'>
+                <Typography.Text size='small' strong style={{ color: 'var(--semi-color-text-2)' }}>
                   {t('历史消耗')}
                 </Typography.Text>
-                <Typography.Text size='small' type='tertiary' strong>
+                <Typography.Text size='small' strong style={{ color: 'var(--semi-color-text-2)' }}>
                   {renderQuota(userState?.user?.used_quota)}
                 </Typography.Text>
               </div>
               <Divider layout='vertical' />
               <div className='flex items-center gap-2'>
                 <IconChartBar size={16} />
-                <Typography.Text size='small' type='tertiary'>
+                <Typography.Text size='small' strong style={{ color: 'var(--semi-color-text-2)' }}>
                   {t('请求次数')}
                 </Typography.Text>
-                <Typography.Text size='small' type='tertiary' strong>
+                <Typography.Text size='small' strong style={{ color: 'var(--semi-color-text-2)' }}>
                   {userState.user?.request_count || 0}
                 </Typography.Text>
               </div>
               <Divider layout='vertical' />
               <div className='flex items-center gap-2'>
                 <IconUsers size={16} />
-                <Typography.Text size='small' type='tertiary'>
+                <Typography.Text size='small' strong style={{ color: 'var(--semi-color-text-2)' }}>
                   {t('用户分组')}
                 </Typography.Text>
-                <Typography.Text size='small' type='tertiary' strong>
+                <Typography.Text size='small' strong style={{ color: 'var(--semi-color-text-2)' }}>
                   {userState?.user?.group || t('默认')}
                 </Typography.Text>
               </div>
@@ -178,7 +178,7 @@ const UserInfoHeader = ({ t, userState }) => {
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-2'>
                 <IconCoins size={16} />
-                <Typography.Text size='small' type='tertiary'>
+                <Typography.Text size='small' strong style={{ color: 'var(--semi-color-text-2)' }}>
                   {t('历史消耗')}
                 </Typography.Text>
               </div>
@@ -190,7 +190,7 @@ const UserInfoHeader = ({ t, userState }) => {
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-2'>
                 <IconChartBar size={16} />
-                <Typography.Text size='small' type='tertiary'>
+                <Typography.Text size='small' strong style={{ color: 'var(--semi-color-text-2)' }}>
                   {t('请求次数')}
                 </Typography.Text>
               </div>
@@ -202,7 +202,7 @@ const UserInfoHeader = ({ t, userState }) => {
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-2'>
                 <IconUsers size={16} />
-                <Typography.Text size='small' type='tertiary'>
+                <Typography.Text size='small' strong style={{ color: 'var(--semi-color-text-2)' }}>
                   {t('用户分组')}
                 </Typography.Text>
               </div>

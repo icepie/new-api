@@ -43,7 +43,7 @@ const ChartsPanel = ({
         <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-3'>
           <div className={FLEX_CENTER_GAP2}>
             <PieChart size={16} />
-            {t('模型数据分析')}
+            <span style={{ fontWeight: 700 }}>{t('模型数据分析')}</span>
           </div>
           <Tabs
             type='slash'

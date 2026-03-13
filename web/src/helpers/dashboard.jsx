@@ -139,7 +139,7 @@ export const getTrendSpec = (data, color) => ({
 export const createSectionTitle = (Icon, text) => (
   <div className='flex items-center gap-2'>
     <Icon size={16} />
-    {text}
+    <span style={{ fontWeight: 700 }}>{text}</span>
   </div>
 );
 

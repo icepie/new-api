@@ -302,7 +302,7 @@ const SiteAdminAnnouncements = () => {
           marginBottom: 8,
         }}
       >
-        <Title heading={5} style={{ margin: 0 }}>
+        <Title heading={4} style={{ margin: 0 }}>
           站点公告管理
         </Title>
       </div>
