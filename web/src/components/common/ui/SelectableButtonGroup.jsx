@@ -60,6 +60,7 @@ const SelectableButtonGroup = ({
   loading = false,
   variant,
   maxColumns,
+  alwaysShowTags = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [skeletonCount] = useState(12);
@@ -98,6 +99,7 @@ const SelectableButtonGroup = ({
   };
 
   const { columns: perRow, showTags: shouldShowTags } = getResponsiveConfig();
+  const effectiveShowTags = alwaysShowTags ? true : shouldShowTags;
   const maxVisibleRows = Math.max(1, Math.floor(collapseHeight / 32)); // Approx row height 32
   const needCollapse = collapsible && items.length > perRow * maxVisibleRows;
   const showSkeleton = useMinimumLoadingTime(loading);
@@ -207,7 +209,7 @@ const SelectableButtonGroup = ({
                 <div className='sbg-content'>
                   {item.icon && <span className='sbg-icon'>{item.icon}</span>}
                   <ConditionalTooltipText text={item.label} />
-                  {item.tagCount !== undefined && shouldShowTags && (
+                  {item.tagCount !== undefined && effectiveShowTags && (
                     <span className={`sbg-badge ${isActive ? 'sbg-badge-active' : ''}`}>
                       {item.tagCount}
                     </span>
@@ -230,7 +232,7 @@ const SelectableButtonGroup = ({
               <div className='sbg-content'>
                 {item.icon && <span className='sbg-icon'>{item.icon}</span>}
                 <ConditionalTooltipText text={item.label} />
-                {item.tagCount !== undefined && shouldShowTags && item.tagCount !== '' && (
+                {item.tagCount !== undefined && effectiveShowTags && item.tagCount !== '' && (
                   <span className={`sbg-badge ${isActive ? 'sbg-badge-active' : ''}`}>
                     {item.tagCount}
                   </span>

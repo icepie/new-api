@@ -18,14 +18,10 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React, { useEffect, useState, useContext, useMemo } from 'react';
-import {
-  Button,
-  Modal,
-  Empty,
-  Tabs,
-  TabPane,
-  Timeline,
-} from '@douyinfe/semi-ui';
+import { Button, Modal, Empty, Timeline } from '@douyinfe/semi-ui';
+import { useActualTheme } from '../../context/Theme';
+
+const SPRING = 'cubic-bezier(0.34,1.56,0.64,1)';
 import { useTranslation } from 'react-i18next';
 import { API, showError, getRelativeTime } from '../../helpers';
 import { marked } from 'marked';
@@ -34,7 +30,7 @@ import {
   IllustrationNoContentDark,
 } from '@douyinfe/semi-illustrations';
 import { StatusContext } from '../../context/Status';
-import { Bell, Megaphone } from 'lucide-react';
+import { Bell, Megaphone, CalendarClock, X } from 'lucide-react';
 
 const NoticeModal = ({
   visible,
@@ -44,6 +40,8 @@ const NoticeModal = ({
   unreadKeys = [],
 }) => {
   const { t } = useTranslation();
+  const actualTheme = useActualTheme();
+  const dark = actualTheme === 'dark';
   const [noticeContent, setNoticeContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -88,12 +86,7 @@ const NoticeModal = ({
       const res = await API.get('/api/notice');
       const { success, message, data } = res.data;
       if (success) {
-        if (data !== '') {
-          const htmlNotice = marked.parse(data);
-          setNoticeContent(htmlNotice);
-        } else {
-          setNoticeContent('');
-        }
+        setNoticeContent(data ? marked.parse(data) : '');
       } else {
         showError(message);
       }
@@ -105,15 +98,11 @@ const NoticeModal = ({
   };
 
   useEffect(() => {
-    if (visible) {
-      displayNotice();
-    }
+    if (visible) displayNotice();
   }, [visible]);
 
   useEffect(() => {
-    if (visible) {
-      setActiveTab(defaultTab);
-    }
+    if (visible) setActiveTab(defaultTab);
   }, [defaultTab, visible]);
 
   const renderMarkdownNotice = () => {
@@ -124,23 +113,17 @@ const NoticeModal = ({
         </div>
       );
     }
-
     if (!noticeContent) {
       return (
         <div className='py-12'>
           <Empty
-            image={
-              <IllustrationNoContent style={{ width: 150, height: 150 }} />
-            }
-            darkModeImage={
-              <IllustrationNoContentDark style={{ width: 150, height: 150 }} />
-            }
+            image={<IllustrationNoContent style={{ width: 150, height: 150 }} />}
+            darkModeImage={<IllustrationNoContentDark style={{ width: 150, height: 150 }} />}
             description={t('暂无公告')}
           />
         </div>
       );
     }
-
     return (
       <div
         dangerouslySetInnerHTML={{ __html: noticeContent }}
@@ -154,18 +137,13 @@ const NoticeModal = ({
       return (
         <div className='py-12'>
           <Empty
-            image={
-              <IllustrationNoContent style={{ width: 150, height: 150 }} />
-            }
-            darkModeImage={
-              <IllustrationNoContentDark style={{ width: 150, height: 150 }} />
-            }
+            image={<IllustrationNoContent style={{ width: 150, height: 150 }} />}
+            darkModeImage={<IllustrationNoContentDark style={{ width: 150, height: 150 }} />}
             description={t('暂无系统公告')}
           />
         </div>
       );
     }
-
     return (
       <div className='max-h-[55vh] overflow-y-auto pr-2 card-content-scroll'>
         <Timeline mode='left'>
@@ -185,14 +163,11 @@ const NoticeModal = ({
                     />
                   ) : null
                 }
-                className={item.isUnread ? '' : ''}
               >
-                <div>
-                  <div
-                    className={item.isUnread ? 'shine-text' : ''}
-                    dangerouslySetInnerHTML={{ __html: htmlContent }}
-                  />
-                </div>
+                <div
+                  className={item.isUnread ? 'shine-text' : ''}
+                  dangerouslySetInnerHTML={{ __html: htmlContent }}
+                />
               </Timeline.Item>
             );
           })}
@@ -201,53 +176,58 @@ const NoticeModal = ({
     );
   };
 
-  const renderBody = () => {
-    if (activeTab === 'inApp') {
-      return renderMarkdownNotice();
-    }
-    return renderAnnouncementTimeline();
-  };
-
   return (
     <Modal
       title={
-        <div className='flex items-center justify-between w-full'>
-          <span>{t('系统公告')}</span>
-          <Tabs activeKey={activeTab} onChange={setActiveTab} type='button'>
-            <TabPane
-              tab={
-                <span className='flex items-center gap-1'>
-                  <Bell size={14} /> {t('通知')}
-                </span>
-              }
-              itemKey='inApp'
-            />
-            <TabPane
-              tab={
-                <span className='flex items-center gap-1'>
-                  <Megaphone size={14} /> {t('系统公告')}
-                </span>
-              }
-              itemKey='system'
-            />
-          </Tabs>
+        <div className='flex items-center gap-3'>
+          <span className='font-semibold'>{t('系统公告')}</span>
+          <div className='flex gap-1'>
+            {[
+              { key: 'inApp',  icon: <Bell size={13} />,     label: t('通知') },
+              { key: 'system', icon: <Megaphone size={13} />, label: t('系统公告') },
+            ].map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  style={{
+                    transition: `background 0.2s ${SPRING}, color 0.15s ${SPRING}, transform 0.15s ${SPRING}`,
+                    ...(active
+                      ? { backgroundColor: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)', color: dark ? '#ffffff' : '#111827' }
+                      : { color: dark ? '#9ca3af' : '#6b7280' }
+                    ),
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                  onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.95)'; }}
+                  onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs select-none ${active ? 'font-semibold' : 'font-medium hover:bg-black/5 dark:hover:bg-white/8'}`}
+                >
+                  {tab.icon}{tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       }
       visible={visible}
       onCancel={onClose}
       footer={
-        <div className='flex justify-end'>
-          <Button type='secondary' onClick={handleCloseTodayNotice}>
-            {t('今日关闭')}
-          </Button>
-          <Button type='primary' onClick={onClose}>
-            {t('关闭公告')}
-          </Button>
+        <div className='flex items-center justify-between w-full'>
+          <button
+            onClick={handleCloseTodayNotice}
+            className='flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/8 select-none'
+          >
+            <CalendarClock size={13} />
+            {t('今日不再显示')}
+          </button>
+          <Button theme='borderless' type='tertiary' onClick={onClose}>{t('关闭')}</Button>
         </div>
       }
       size={isMobile ? 'full-width' : 'large'}
     >
-      {renderBody()}
+      {activeTab === 'inApp' ? renderMarkdownNotice() : renderAnnouncementTimeline()}
     </Modal>
   );
 };

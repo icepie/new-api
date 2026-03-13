@@ -17,101 +17,107 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useMemo, useState } from 'react';
-import { Button, Dropdown } from '@douyinfe/semi-ui';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { Button } from '@douyinfe/semi-ui';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { useActualTheme } from '../../../context/Theme';
 
+const SPRING = 'cubic-bezier(0.34,1.56,0.64,1)';
+const EASE_OUT = 'cubic-bezier(0.22,1,0.36,1)';
+
 const ThemeToggle = ({ theme, onThemeToggle, t }) => {
   const actualTheme = useActualTheme();
-  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const dark = actualTheme === 'dark';
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
 
-  const themeOptions = useMemo(
-    () => [
-      {
-        key: 'light',
-        icon: <Sun size={18} />,
-        buttonIcon: <Sun size={18} />,
-        label: t('浅色模式'),
-        description: t('始终使用浅色主题'),
-      },
-      {
-        key: 'dark',
-        icon: <Moon size={18} />,
-        buttonIcon: <Moon size={18} />,
-        label: t('深色模式'),
-        description: t('始终使用深色主题'),
-      },
-      {
-        key: 'auto',
-        icon: <Monitor size={18} />,
-        buttonIcon: <Monitor size={18} />,
-        label: t('自动模式'),
-        description: t('跟随系统主题设置'),
-      },
-    ],
-    [t],
-  );
+  const themeOptions = useMemo(() => [
+    { key: 'light', icon: <Sun size={16} />,    label: t('浅色模式'), description: t('始终使用浅色主题') },
+    { key: 'dark',  icon: <Moon size={16} />,   label: t('深色模式'), description: t('始终使用深色主题') },
+    { key: 'auto',  icon: <Monitor size={16} />, label: t('自动模式'), description: t('跟随系统主题设置') },
+  ], [t]);
 
-  const getItemClassName = (isSelected) =>
-    isSelected
-      ? '!bg-semi-color-primary-light-default !font-semibold'
-      : 'hover:!bg-semi-color-fill-1';
-
-  const currentButtonIcon = useMemo(() => {
-    const currentOption = themeOptions.find((option) => option.key === theme);
-    return currentOption?.buttonIcon || themeOptions[2].buttonIcon;
+  const currentIcon = useMemo(() => {
+    const opt = themeOptions.find((o) => o.key === theme);
+    return opt ? React.cloneElement(opt.icon, { size: 18 }) : <Monitor size={18} />;
   }, [theme, themeOptions]);
 
-  const handleThemeChange = (newTheme) => {
-    setDropdownVisible(false);
-    onThemeToggle(newTheme);
-  };
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
 
   return (
-    <Dropdown
-      trigger='click'
-      position='bottomRight'
-      visible={dropdownVisible}
-      onVisibleChange={(visible) => setDropdownVisible(visible)}
-      render={
-        <Dropdown.Menu className='!bg-semi-color-bg-overlay !border-semi-color-border !shadow-lg !rounded-lg dark:!bg-gray-700 dark:!border-gray-600'>
-          {themeOptions.map((option) => (
-            <Dropdown.Item
-              key={option.key}
-              icon={option.icon}
-              onClick={() => handleThemeChange(option.key)}
-              className={`${getItemClassName(theme === option.key)} transition-colors`}
-            >
-              <div className='flex flex-col'>
-                <span>{option.label}</span>
-                <span className='text-xs text-semi-color-text-2'>
-                  {option.description}
-                </span>
-              </div>
-            </Dropdown.Item>
-          ))}
-
-          {theme === 'auto' && (
-            <>
-              <Dropdown.Divider />
-              <div className='px-3 py-2 text-xs text-semi-color-text-2'>
-                {t('当前跟随系统')}：
-                {actualTheme === 'dark' ? t('深色') : t('浅色')}
-              </div>
-            </>
-          )}
-        </Dropdown.Menu>
-      }
-    >
+    <div ref={ref} style={{ position: 'relative' }}>
       <Button
-        icon={currentButtonIcon}
+        icon={currentIcon}
         aria-label={t('切换主题')}
         theme='borderless'
         type='tertiary'
-        className='!p-1.5 !text-current focus:!bg-semi-color-fill-1 dark:focus:!bg-gray-700 !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
+        onClick={() => setOpen((v) => !v)}
+        className='!p-1.5 !text-current !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
+        style={{ transition: `background 0.2s ${SPRING}` }}
       />
-    </Dropdown>
+
+      <div
+        style={{
+          position: 'absolute',
+          top: 'calc(100% + 8px)',
+          right: 0,
+          minWidth: 180,
+          transformOrigin: 'top right',
+          transform: open ? 'scale(1) translateY(0)' : 'scale(0.88) translateY(-8px)',
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? 'auto' : 'none',
+          transition: `transform 0.28s ${SPRING}, opacity 0.2s ${EASE_OUT}`,
+          zIndex: 200,
+          backgroundColor: dark ? '#27272a' : '#ffffff',
+        }}
+        className='rounded-2xl shadow-xl overflow-hidden py-1.5'
+      >
+        {themeOptions.map((opt, i) => {
+          const active = theme === opt.key;
+          return (
+            <button
+              key={opt.key}
+              onClick={() => { onThemeToggle(opt.key); setOpen(false); }}
+              style={{
+                transitionDelay: open ? `${i * 25}ms` : '0ms',
+                transform: open ? 'translateX(0)' : 'translateX(12px)',
+                opacity: open ? 1 : 0,
+                transition: `transform 0.3s ${SPRING}, opacity 0.2s ${EASE_OUT}, background 0.18s ${SPRING}`,
+                width: '100%',
+                ...(active
+                  ? { backgroundColor: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)', color: dark ? '#ffffff' : '#111827' }
+                  : {}
+                ),
+              }}
+              className={`flex items-center gap-3 px-4 py-2.5 text-sm text-left select-none
+                ${active ? 'font-semibold' : 'text-gray-800 dark:text-gray-100 hover:bg-black/5 dark:hover:bg-white/8'}`}
+              onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)'; }}
+              onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              {opt.icon}
+              <div className='flex flex-col'>
+                <span>{opt.label}</span>
+                <span className='text-xs text-gray-400 dark:text-gray-500 font-normal'>{opt.description}</span>
+              </div>
+            </button>
+          );
+        })}
+
+        {theme === 'auto' && (
+          <div className='px-4 py-2 text-xs text-gray-400 dark:text-gray-500 border-t border-black/5 dark:border-white/8 mt-1'>
+            {t('当前跟随系统')}：{actualTheme === 'dark' ? t('深色') : t('浅色')}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

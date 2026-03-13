@@ -424,7 +424,7 @@ const ModelCardItem = ({
                   className='pricing-group-tag'
                   onClick={(e) => handleTagClick(e, group)}
                 >
-                  {hasDiscount ? `${group}: ≈ ${discount}${t('折')}` : group}
+                  {hasDiscount ? `${group}: ≈ ${t('官网')} ${discount}${t('折')}` : group}
                 </Tag>
               ))}
             </div>

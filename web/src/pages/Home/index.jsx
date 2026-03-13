@@ -257,7 +257,7 @@ const Home = () => {
                       className='!rounded-3xl px-8 py-2'
                       icon={<IconPlay />}
                     >
-                      {t('获取密钥')}
+                      {t('获取密钥Key')}
                     </Button>
                   </Link>
                   {isDemoSiteMode && statusState?.status?.version ? (
@@ -282,7 +282,7 @@ const Home = () => {
                         icon={<IconFile />}
                         onClick={() => window.open(docsLink, '_blank')}
                       >
-                        {t('文档')}
+                        {t('文档说明')}
                       </Button>
                     )
                   )}

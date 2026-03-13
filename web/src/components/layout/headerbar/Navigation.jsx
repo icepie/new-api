@@ -17,10 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Button, Dropdown } from '@douyinfe/semi-ui';
-import { IconMenu } from '@douyinfe/semi-icons';
+import { Button } from '@douyinfe/semi-ui';
+import { IconMenu, IconClose } from '@douyinfe/semi-icons';
 import {
   Home,
   LayoutDashboard,
@@ -41,6 +41,21 @@ const NAV_ICONS = {
   about: Info,
 };
 
+const SPRING = 'cubic-bezier(0.34,1.56,0.64,1)';
+const EASE_OUT = 'cubic-bezier(0.22,1,0.36,1)';
+
+const useDark = () => {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const obs = new MutationObserver(() => {
+      setDark(document.documentElement.classList.contains('dark'));
+    });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+};
+
 const Navigation = ({
   mainNavLinks,
   isMobile,
@@ -50,13 +65,14 @@ const Navigation = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+  const dark = useDark();
 
   const isActive = (link) => {
     if (link.isExternal) return false;
-    const path = link.to;
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
+    if (link.to === '/') return location.pathname === '/';
+    return location.pathname.startsWith(link.to);
   };
 
   const getTargetPath = (link) => {
@@ -65,6 +81,19 @@ const Navigation = ({
     return link.to;
   };
 
+  // 点击外部关闭
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  // 路由变化关闭
+  useEffect(() => { setOpen(false); }, [location.pathname]);
+
   const renderNavLinks = () =>
     mainNavLinks.map((link) => {
       const Icon = NAV_ICONS[link.itemKey];
@@ -72,103 +101,112 @@ const Navigation = ({
 
       const content = (
         <>
-          {Icon && <Icon size={15} strokeWidth={active ? 2.4 : 2} />}
+          {Icon && <Icon size={15} strokeWidth={2.4} />}
           <span>{link.text}</span>
           {link.isExternal && <ExternalLink size={11} className='opacity-50' />}
         </>
       );
 
-      const cls = `flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold select-none
-        ${active
-          ? 'bg-black/8 dark:bg-white/10 text-gray-900 dark:text-white'
-          : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
-        }`;
+      const cls = `flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold select-none`;
 
       const style = {
-        transition: 'background 0.25s cubic-bezier(0.34,1.56,0.64,1), color 0.2s cubic-bezier(0.34,1.56,0.64,1), transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+        transition: `background 0.25s ${SPRING}, color 0.2s ${SPRING}, transform 0.2s ${SPRING}`,
+        ...(active
+          ? { backgroundColor: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)', color: dark ? '#ffffff' : '#111827' }
+          : { color: dark ? '#ffffff' : '#111827' }
+        ),
+      };
+      const springProps = {
+        style,
+        onMouseEnter: (e) => { e.currentTarget.style.transform = 'scale(1.06)'; },
+        onMouseLeave: (e) => { e.currentTarget.style.transform = 'scale(1)'; },
+        onMouseDown:  (e) => { e.currentTarget.style.transform = 'scale(0.94)'; },
+        onMouseUp:    (e) => { e.currentTarget.style.transform = 'scale(1.06)'; },
       };
 
-      const handleMouseEnter = (e) => { e.currentTarget.style.transform = 'scale(1.06)'; };
-      const handleMouseLeave = (e) => { e.currentTarget.style.transform = 'scale(1)'; };
-      const handleMouseDown  = (e) => { e.currentTarget.style.transform = 'scale(0.94)'; };
-      const handleMouseUp    = (e) => { e.currentTarget.style.transform = 'scale(1.06)'; };
-
-      const springProps = { style, onMouseEnter: handleMouseEnter, onMouseLeave: handleMouseLeave, onMouseDown: handleMouseDown, onMouseUp: handleMouseUp };
-
       if (link.isExternal) {
-        return (
-          <a key={link.itemKey} href={link.externalLink} target='_blank' rel='noopener noreferrer' className={cls} {...springProps}>
-            {content}
-          </a>
-        );
+        return <a key={link.itemKey} href={link.externalLink} target='_blank' rel='noopener noreferrer' className={cls} {...springProps}>{content}</a>;
       }
-
-      return (
-        <Link key={link.itemKey} to={getTargetPath(link)} className={cls} {...springProps}>
-          {content}
-        </Link>
-      );
+      return <Link key={link.itemKey} to={getTargetPath(link)} className={cls} {...springProps}>{content}</Link>;
     });
 
-  // 移动端折叠菜单
+  // 移动端
   if (isMobile) {
     const handleNavClick = (link) => {
-      setDropdownVisible(false);
+      setOpen(false);
       setTimeout(() => {
-        if (link.isExternal) {
-          window.open(link.externalLink, '_blank', 'noopener,noreferrer');
-        } else {
-          navigate(getTargetPath(link));
-        }
-      }, 100);
+        if (link.isExternal) window.open(link.externalLink, '_blank', 'noopener,noreferrer');
+        else navigate(getTargetPath(link));
+      }, 180);
     };
 
     return (
       <SkeletonWrapper loading={isLoading} type='navigation' count={1} width={40} height={40} isMobile={isMobile}>
-        <Dropdown
-          trigger='click'
-          position='bottomRight'
-          visible={dropdownVisible}
-          onVisibleChange={setDropdownVisible}
-          clickToHide={true}
-          render={
-            <Dropdown.Menu className='!bg-semi-color-bg-overlay !border-semi-color-border !shadow-lg !rounded-xl dark:!bg-gray-800 dark:!border-gray-700 !min-w-40'>
-              {mainNavLinks.map((link) => {
-                const Icon = NAV_ICONS[link.itemKey];
-                const active = isActive(link);
-                return (
-                  <Dropdown.Item
-                    key={link.itemKey}
-                    onClick={() => handleNavClick(link)}
-                    style={{ transition: 'background 0.22s cubic-bezier(0.34,1.56,0.64,1), transform 0.18s cubic-bezier(0.34,1.56,0.64,1)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.03)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-                    onMouseDown={(e)  => { e.currentTarget.style.transform = 'scale(0.96)'; }}
-                    onMouseUp={(e)    => { e.currentTarget.style.transform = 'scale(1.03)'; }}
-                    className={`!flex !items-center !gap-2.5 !px-3 !py-2 !text-sm !font-semibold transition-colors
-                      ${active
-                        ? '!text-semi-color-primary dark:!text-blue-400'
-                        : '!text-semi-color-text-0 dark:!text-gray-200 hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-700'
-                      }`}
-                  >
-                    {Icon && <Icon size={15} strokeWidth={active ? 2.2 : 1.8} />}
-                    <span>{link.text}</span>
-                    {link.isExternal && <ExternalLink size={11} className='opacity-40 ml-auto' />}
-                  </Dropdown.Item>
-                );
-              })}
-            </Dropdown.Menu>
-          }
-        >
+        <div ref={menuRef} className='relative'>
+          {/* 触发按钮 */}
           <Button
-            icon={<IconMenu className='text-lg' />}
+            icon={
+              <span style={{ display: 'inline-flex', transition: `transform 0.3s ${SPRING}`, transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                {open ? <IconClose className='text-lg' /> : <IconMenu className='text-lg' />}
+              </span>
+            }
             aria-label='导航菜单'
             theme='borderless'
             type='tertiary'
-            onClick={() => setDropdownVisible(!dropdownVisible)}
+            onClick={() => setOpen((v) => !v)}
             className='!p-1.5 !text-current !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
+            style={{ transition: `background 0.2s ${SPRING}, transform 0.2s ${SPRING}` }}
           />
-        </Dropdown>
+
+          {/* 下拉面板 */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              minWidth: 180,
+              transformOrigin: 'top right',
+              transform: open ? 'scale(1) translateY(0)' : 'scale(0.88) translateY(-8px)',
+              opacity: open ? 1 : 0,
+              pointerEvents: open ? 'auto' : 'none',
+              transition: `transform 0.28s ${SPRING}, opacity 0.2s ${EASE_OUT}`,
+              zIndex: 200,
+              backgroundColor: dark ? '#27272a' : '#ffffff',
+            }}
+            className='rounded-2xl shadow-xl overflow-hidden py-1.5 bg-white dark:bg-zinc-800'
+          >
+            {mainNavLinks.map((link, i) => {
+              const Icon = NAV_ICONS[link.itemKey];
+              const active = isActive(link);
+              return (
+                <button
+                  key={link.itemKey}
+                  onClick={() => handleNavClick(link)}
+                  style={{
+                    transitionDelay: open ? `${i * 35}ms` : '0ms',
+                    transform: open ? 'translateX(0)' : 'translateX(12px)',
+                    opacity: open ? 1 : 0,
+                    transition: `transform 0.3s ${SPRING}, opacity 0.2s ${EASE_OUT}, background 0.18s ${SPRING}`,
+                    width: '100%',
+                    ...(active
+                      ? { backgroundColor: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)', color: dark ? '#ffffff' : '#111827' }
+                      : {}
+                    ),
+                  }}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-left select-none
+                    ${active ? '' : 'text-gray-800 dark:text-gray-100 hover:bg-black/5 dark:hover:bg-white/8'}`}
+                  onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)'; }}
+                  onMouseUp={(e)   => { e.currentTarget.style.transform = 'scale(1)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                >
+                  {Icon && <Icon size={16} strokeWidth={2.4} />}
+                  <span className='flex-1'>{link.text}</span>
+                  {link.isExternal && <ExternalLink size={12} className='opacity-40' />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </SkeletonWrapper>
     );
   }

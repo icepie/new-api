@@ -76,7 +76,9 @@ const PricingGroups = ({
       onChange={setFilterGroup}
       loading={loading}
       variant='teal'
-      maxColumns={2}
+      maxColumns={1}
+      collapsible={false}
+      alwaysShowTags={true}
       t={t}
     />
   );
