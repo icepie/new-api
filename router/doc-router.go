@@ -39,9 +39,13 @@ func fetchDocResource(path string) ([]byte, error) {
 
 // stripDataTheme removes the data-theme attribute from the <html> tag so the
 // client-side init script fully controls it, preventing Vue hydration mismatches.
-func stripDataTheme(data []byte) []byte {
+// It also rewrites /doc/assets/ to CDN origin so static assets load directly
+// from CDN without going through the Go server.
+func processDocHTML(data []byte) []byte {
 	s := strings.Replace(string(data), ` data-theme="light"`, "", 1)
 	s = strings.Replace(s, ` data-theme="dark"`, "", 1)
+	s = strings.ReplaceAll(s, `="/doc/assets/`, `="`+docCDNOrigin+`/doc/assets/`)
+	s = strings.ReplaceAll(s, `="/doc/fonts/`, `="`+docCDNOrigin+`/doc/fonts/`)
 	return []byte(s)
 }
 
@@ -66,7 +70,7 @@ func serveDocHTML(c *gin.Context, path string) {
 		return
 	}
 	c.Header("Cache-Control", "no-cache")
-	c.Data(http.StatusOK, "text/html; charset=utf-8", stripDataTheme(data))
+	c.Data(http.StatusOK, "text/html; charset=utf-8", processDocHTML(data))
 }
 
 func SetDocRouter(router *gin.Engine, _ func() []byte) {
