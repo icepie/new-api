@@ -11,11 +11,14 @@ import (
 
 const docCDNOrigin = "https://nicerouterstatic.niceaigc.com"
 
-// staticDocPrefixes are paths under /doc that should be proxied directly from CDN (no redirect).
-var staticDocPrefixes = []string{"/assets/", "/workbox-", "/slimsearch.worker.js", "/favicon", "/logo", "/apple-touch-icon", "/robots.txt", "/sitemap", "/favicon-circle.png"}
+// staticDocPrefixes are paths that can be served via CDN redirect.
+var staticDocPrefixes = []string{"/assets/", "/favicon", "/logo", "/apple-touch-icon", "/robots.txt", "/sitemap"}
 
-// proxyDocPrefixes are paths that must be served inline (no redirect allowed by browser).
+// proxyDocFiles are paths that must be proxied inline (redirects not allowed by browser).
 var proxyDocFiles = []string{"/service-worker.js", "/manifest.webmanifest"}
+
+// proxyDocPrefixes are path prefixes that must be proxied inline.
+var proxyDocPrefixes = []string{"/workbox-", "/slimsearch.worker.js", "/favicon-circle.png"}
 
 var docHTTPClient = &http.Client{Timeout: 5 * time.Second}
 
@@ -51,22 +54,40 @@ func SetDocRouter(router *gin.Engine, docPage func() []byte) {
 	doc.GET("/*path", func(c *gin.Context) {
 		path := c.Param("path")
 
-		// service-worker.js and manifest.webmanifest must not redirect (browser blocks it)
+		// service-worker.js, manifest.webmanifest, workbox-*, slimsearch.worker.js
+		// must not redirect (browser/SW blocks redirects)
+		isProxyFile := false
 		for _, f := range proxyDocFiles {
 			if path == f {
-				data, err := fetchDocHTML(path)
-				if err != nil || data == nil {
-					c.Status(http.StatusNotFound)
-					return
+				isProxyFile = true
+				break
+			}
+		}
+		if !isProxyFile {
+			for _, p := range proxyDocPrefixes {
+				if strings.HasPrefix(path, p) || path == p {
+					isProxyFile = true
+					break
 				}
-				contentType := "application/javascript"
-				if strings.HasSuffix(path, ".webmanifest") {
-					contentType = "application/manifest+json"
-				}
-				c.Header("Cache-Control", "no-cache")
-				c.Data(http.StatusOK, contentType, data)
+			}
+		}
+		if isProxyFile {
+			data, err := fetchDocHTML(path)
+			if err != nil || data == nil {
+				c.Status(http.StatusNotFound)
 				return
 			}
+			contentType := "application/octet-stream"
+			if strings.HasSuffix(path, ".js") {
+				contentType = "application/javascript"
+			} else if strings.HasSuffix(path, ".webmanifest") {
+				contentType = "application/manifest+json"
+			} else if strings.HasSuffix(path, ".png") {
+				contentType = "image/png"
+			}
+			c.Header("Cache-Control", "no-cache")
+			c.Data(http.StatusOK, contentType, data)
+			return
 		}
 
 		for _, prefix := range staticDocPrefixes {
