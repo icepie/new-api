@@ -72,28 +72,39 @@ const Navigation = ({
 
       const content = (
         <>
-          {Icon && <Icon size={15} strokeWidth={active ? 2.2 : 1.8} />}
+          {Icon && <Icon size={15} strokeWidth={active ? 2.4 : 2} />}
           <span>{link.text}</span>
           {link.isExternal && <ExternalLink size={11} className='opacity-50' />}
         </>
       );
 
-      const cls = `flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200
+      const cls = `flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold select-none
         ${active
           ? 'bg-black/8 dark:bg-white/10 text-gray-900 dark:text-white'
-          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
+          : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/8'
         }`;
+
+      const style = {
+        transition: 'background 0.25s cubic-bezier(0.34,1.56,0.64,1), color 0.2s cubic-bezier(0.34,1.56,0.64,1), transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+      };
+
+      const handleMouseEnter = (e) => { e.currentTarget.style.transform = 'scale(1.06)'; };
+      const handleMouseLeave = (e) => { e.currentTarget.style.transform = 'scale(1)'; };
+      const handleMouseDown  = (e) => { e.currentTarget.style.transform = 'scale(0.94)'; };
+      const handleMouseUp    = (e) => { e.currentTarget.style.transform = 'scale(1.06)'; };
+
+      const springProps = { style, onMouseEnter: handleMouseEnter, onMouseLeave: handleMouseLeave, onMouseDown: handleMouseDown, onMouseUp: handleMouseUp };
 
       if (link.isExternal) {
         return (
-          <a key={link.itemKey} href={link.externalLink} target='_blank' rel='noopener noreferrer' className={cls}>
+          <a key={link.itemKey} href={link.externalLink} target='_blank' rel='noopener noreferrer' className={cls} {...springProps}>
             {content}
           </a>
         );
       }
 
       return (
-        <Link key={link.itemKey} to={getTargetPath(link)} className={cls}>
+        <Link key={link.itemKey} to={getTargetPath(link)} className={cls} {...springProps}>
           {content}
         </Link>
       );
@@ -129,9 +140,14 @@ const Navigation = ({
                   <Dropdown.Item
                     key={link.itemKey}
                     onClick={() => handleNavClick(link)}
-                    className={`!flex !items-center !gap-2.5 !px-3 !py-2 !text-sm transition-colors
+                    style={{ transition: 'background 0.22s cubic-bezier(0.34,1.56,0.64,1), transform 0.18s cubic-bezier(0.34,1.56,0.64,1)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.03)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                    onMouseDown={(e)  => { e.currentTarget.style.transform = 'scale(0.96)'; }}
+                    onMouseUp={(e)    => { e.currentTarget.style.transform = 'scale(1.03)'; }}
+                    className={`!flex !items-center !gap-2.5 !px-3 !py-2 !text-sm !font-semibold transition-colors
                       ${active
-                        ? '!text-semi-color-primary dark:!text-blue-400 !font-medium'
+                        ? '!text-semi-color-primary dark:!text-blue-400'
                         : '!text-semi-color-text-0 dark:!text-gray-200 hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-700'
                       }`}
                   >
