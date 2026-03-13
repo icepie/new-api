@@ -47,13 +47,21 @@ func SetDocRouter(router *gin.Engine, docPage func() []byte) {
 		}
 		// For HTML pages, fetch the specific page from CDN so each page has
 		// its own correct HTML (VuePress MPA), preserving theme/dark-mode state.
-		htmlPath := path
-		if strings.HasSuffix(htmlPath, "/") {
-			htmlPath += "index.html"
-		} else if !strings.HasSuffix(htmlPath, ".html") {
-			htmlPath += "/index.html"
+		// VuePress generates: /foo/bar.html and /foo/bar/index.html (for dirs)
+		var htmlPath string
+		if strings.HasSuffix(path, "/") {
+			htmlPath = path + "index.html"
+		} else if strings.HasSuffix(path, ".html") {
+			htmlPath = path
+		} else {
+			// try /foo/bar.html first, then /foo/bar/index.html
+			htmlPath = path + ".html"
 		}
 		data, err := fetchDocHTML(htmlPath)
+		if err != nil || data == nil {
+			// try directory index as fallback
+			data, err = fetchDocHTML(strings.TrimSuffix(path, ".html") + "/index.html")
+		}
 		if err != nil || data == nil {
 			// fallback to cached index
 			c.Header("Cache-Control", "no-cache")
