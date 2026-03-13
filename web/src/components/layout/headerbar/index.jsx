@@ -87,7 +87,7 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   );
 
   return (
-    <header className='text-semi-color-text-0 sticky top-0 z-50 transition-colors duration-300 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl'>
+    <header className='text-semi-color-text-0 sticky top-0 z-50 transition-colors duration-300 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl relative'>
       <NoticeModal
         visible={noticeVisible}
         onClose={handleNoticeClose}
@@ -97,8 +97,8 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
       />
 
       <div className='w-full px-2'>
-        <div className='flex items-center justify-between h-16'>
-          <div className='flex items-center'>
+        <div className='flex items-center h-16'>
+          <div className='flex items-center flex-1'>
             <MobileMenuButton
               isConsoleRoute={isConsoleRoute}
               isMobile={isMobile}
@@ -122,16 +122,18 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
           </div>
 
           {!isMobile && (
-            <Navigation
-              mainNavLinks={mainNavLinks}
-              isMobile={isMobile}
-              isLoading={isLoading}
-              userState={userState}
-              pricingRequireAuth={pricingRequireAuth}
-            />
+            <div className='absolute left-1/2 -translate-x-1/2'>
+              <Navigation
+                mainNavLinks={mainNavLinks}
+                isMobile={isMobile}
+                isLoading={isLoading}
+                userState={userState}
+                pricingRequireAuth={pricingRequireAuth}
+              />
+            </div>
           )}
 
-          <div className='flex items-center gap-2 md:gap-3'>
+          <div className='flex items-center gap-2 md:gap-3 flex-1 justify-end'>
             {isMobile && (
               <Navigation
                 mainNavLinks={mainNavLinks}
