@@ -24,6 +24,7 @@ import {
   showSuccess,
   timestamp2string,
   renderQuotaWithPrompt,
+  renderRatio,
   getModelCategories,
   selectFilter,
 } from '../../../../helpers';
@@ -230,6 +231,9 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
                     <Tag shape='circle' size='small' color='blue' style={{ flexShrink: 0 }}>
                       {idx + 1}
                     </Tag>
+                    {meta?.ratio != null && (
+                      <span style={{ flexShrink: 0 }}>{renderRatio(meta.ratio)}</span>
+                    )}
                   </div>
                 );
               })}
@@ -255,7 +259,9 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
                       <div style={{ fontSize: 11, color: 'var(--semi-color-text-2)' }}>{g.label}</div>
                     )}
                   </div>
-                  <span style={{ width: 20, flexShrink: 0 }} />
+                  {g.ratio != null && (
+                    <span style={{ flexShrink: 0 }}>{renderRatio(g.ratio)}</span>
+                  )}
                 </div>
               ))}
             </>
