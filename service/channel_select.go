@@ -198,7 +198,7 @@ func selectFromOrderedGroups(param *RetryParam, groups []string) (*model.Channel
 		}
 		logger.LogDebug(param.Ctx, "Multi-group selecting group: %s, priorityRetry: %d", group, priorityRetry)
 
-		channel, _ := model.GetRandomSatisfiedChannel(group, param.ModelName, priorityRetry)
+		channel, _ = model.GetRandomSatisfiedChannel(group, param.ModelName, priorityRetry)
 		if channel == nil {
 			logger.LogDebug(param.Ctx, "No available channel in group %s for model %s at priorityRetry %d, trying next group", group, param.ModelName, priorityRetry)
 			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
