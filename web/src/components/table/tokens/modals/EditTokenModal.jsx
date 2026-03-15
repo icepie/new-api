@@ -17,13 +17,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState, useContext, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useContext, useRef } from 'react';
 import {
   API,
   showError,
   showSuccess,
   timestamp2string,
-  renderGroupOption,
   renderQuotaWithPrompt,
   getModelCategories,
   selectFilter,
@@ -42,7 +41,7 @@ import {
   Col,
   Row,
   Select,
-  Tooltip,
+  Checkbox,
 } from '@douyinfe/semi-ui';
 import {
   IconCreditCard,
@@ -50,14 +49,218 @@ import {
   IconSave,
   IconClose,
   IconKey,
-  IconPlus,
-  IconDelete,
+  IconChevronDown,
   IconHandle,
 } from '@douyinfe/semi-icons';
 import { useTranslation } from 'react-i18next';
 import { StatusContext } from '../../../../context/Status';
 
 const { Text, Title } = Typography;
+
+// 下拉面板内的分组选择器：勾选 + 拖拽排序一体
+const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
+  const [open, setOpen] = useState(false);
+  const [panelStyle, setPanelStyle] = useState({});
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const triggerRef = useRef(null);
+  const panelRef = useRef(null);
+
+  // 计算 fixed 定位坐标
+  const calcPanelStyle = () => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPanelStyle({
+      position: 'fixed',
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 10000,
+    });
+  };
+
+  const handleOpen = () => {
+    calcPanelStyle();
+    setOpen((v) => !v);
+  };
+
+  // 点击面板外关闭
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target) &&
+        triggerRef.current && !triggerRef.current.contains(e.target)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const toggle = (groupName) => {
+    const idx = tokenGroups.findIndex((g) => g.group === groupName);
+    if (idx >= 0) {
+      setTokenGroups((prev) => prev.filter((_, i) => i !== idx));
+    } else {
+      setTokenGroups((prev) => [
+        ...prev,
+        { group: groupName, priority: prev.length + 1 },
+      ]);
+    }
+  };
+
+  const handleDragStart = (e, idx) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIdx(idx);
+  };
+
+  const handleDrop = (idx) => {
+    if (draggedIdx === null || draggedIdx === idx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    setTokenGroups((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(draggedIdx, 1);
+      next.splice(idx, 0, moved);
+      return next;
+    });
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  // 触发器文字
+  const triggerLabel = tokenGroups.length === 0
+    ? t('为空时使用系统默认分组顺序')
+    : tokenGroups.map((g, i) => `${i + 1}.${g.group}`).join('  ');
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* 触发器 */}
+      <div
+        ref={triggerRef}
+        onClick={handleOpen}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '6px 12px',
+          border: '1px solid var(--semi-color-border)',
+          borderRadius: 6,
+          cursor: 'pointer',
+          background: 'var(--semi-color-bg-2)',
+          minHeight: 32,
+          userSelect: 'none',
+        }}
+      >
+        <span style={{ fontSize: 13, color: tokenGroups.length === 0 ? 'var(--semi-color-text-2)' : 'var(--semi-color-text-0)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {triggerLabel}
+        </span>
+        <IconChevronDown
+          style={{
+            flexShrink: 0,
+            marginLeft: 6,
+            color: 'var(--semi-color-text-2)',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+          }}
+        />
+      </div>
+
+      {/* 下拉面板 — fixed 定位，突破父容器 overflow 限制 */}
+      {open && (
+        <div
+          ref={panelRef}
+          style={{
+            ...panelStyle,
+            background: 'var(--semi-color-bg-2)',
+            border: '1px solid var(--semi-color-border)',
+            borderRadius: 8,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+            maxHeight: 320,
+            overflowY: 'auto',
+          }}
+        >
+          {groups.length === 0 ? (
+            <div style={{ padding: '12px 16px', color: 'var(--semi-color-text-2)', fontSize: 13 }}>
+              {t('管理员未设置用户可选分组')}
+            </div>
+          ) : (
+            groups.map((g) => {
+              const selIdx = tokenGroups.findIndex((tg) => tg.group === g.value);
+              const isSelected = selIdx >= 0;
+              const isDragging = isSelected && draggedIdx === selIdx;
+              const isDragOver = isSelected && dragOverIdx === selIdx && draggedIdx !== selIdx;
+
+              return (
+                <div
+                  key={g.value}
+                  draggable={isSelected}
+                  onDragStart={isSelected ? (e) => handleDragStart(e, selIdx) : undefined}
+                  onDragOver={isSelected ? (e) => handleDragOver(e, selIdx) : undefined}
+                  onDrop={isSelected ? () => handleDrop(selIdx) : undefined}
+                  onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 12px',
+                    cursor: isSelected ? 'grab' : 'pointer',
+                    background: isDragOver
+                      ? 'var(--semi-color-primary-light-default)'
+                      : 'transparent',
+                    opacity: isDragging ? 0.4 : 1,
+                    borderBottom: '1px solid var(--semi-color-border)',
+                    transition: 'background 0.15s',
+                  }}
+                  onClick={() => toggle(g.value)}
+                >
+                  {/* 拖拽手柄（仅已选） */}
+                  <span
+                    style={{ color: 'var(--semi-color-text-2)', flexShrink: 0, visibility: isSelected ? 'visible' : 'hidden' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <IconHandle size='small' />
+                  </span>
+                  <Checkbox
+                    checked={isSelected}
+                    onChange={() => toggle(g.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{g.value}</div>
+                    {g.label && g.label !== g.value && (
+                      <div style={{ fontSize: 11, color: 'var(--semi-color-text-2)' }}>{g.label}</div>
+                    )}
+                  </div>
+                  {/* 优先级序号 */}
+                  {isSelected && (
+                    <Tag shape='circle' size='small' color='blue' style={{ flexShrink: 0 }}>
+                      {selIdx + 1}
+                    </Tag>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+      <div style={{ marginTop: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+        {t('勾选分组并拖拽调整优先级顺序，为空时使用系统默认分组顺序')}
+      </div>
+    </div>
+  );
+};
 
 const EditTokenModal = (props) => {
   const { t } = useTranslation();
@@ -69,8 +272,6 @@ const EditTokenModal = (props) => {
   const [groups, setGroups] = useState([]);
   // 多分组优先级列表，每项 { group: string, priority: number }，按 priority 升序排列
   const [tokenGroups, setTokenGroups] = useState([]);
-  const [draggedIdx, setDraggedIdx] = useState(null);
-  const [dragOverIdx, setDragOverIdx] = useState(null);
   const isEdit = props.editingToken.id !== undefined;
 
   const getInitValues = () => ({
@@ -226,44 +427,6 @@ const EditTokenModal = (props) => {
       );
     }
     return result;
-  };
-
-  const handleDragStart = useCallback((idx) => {
-    setDraggedIdx(idx);
-  }, []);
-
-  const handleDragOver = useCallback((e, idx) => {
-    e.preventDefault();
-    setDragOverIdx(idx);
-  }, []);
-
-  const handleDrop = useCallback((idx) => {
-    if (draggedIdx === null || draggedIdx === idx) {
-      setDraggedIdx(null);
-      setDragOverIdx(null);
-      return;
-    }
-    setTokenGroups((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(draggedIdx, 1);
-      next.splice(idx, 0, moved);
-      return next;
-    });
-    setDraggedIdx(null);
-    setDragOverIdx(null);
-  }, [draggedIdx]);
-
-  const addGroup = (groupName) => {
-    if (!groupName) return;
-    if (tokenGroups.some((g) => g.group === groupName)) return;
-    setTokenGroups((prev) => [
-      ...prev,
-      { group: groupName, priority: prev.length + 1 },
-    ]);
-  };
-
-  const removeGroup = (idx) => {
-    setTokenGroups((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const submit = async (values) => {
@@ -434,69 +597,12 @@ const EditTokenModal = (props) => {
                   </Col>
                   <Col span={24}>
                     <Form.Slot label={t('令牌分组')}>
-                      <div className='flex flex-col gap-2'>
-                        {/* 已选分组拖拽排序列表 */}
-                        {tokenGroups.length > 0 && (
-                          <div className='flex flex-col gap-1'>
-                            {tokenGroups.map((item, idx) => (
-                              <div
-                                key={item.group}
-                                draggable
-                                onDragStart={() => handleDragStart(idx)}
-                                onDragOver={(e) => handleDragOver(e, idx)}
-                                onDrop={() => handleDrop(idx)}
-                                onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
-                                className='flex items-center gap-2 px-2 py-1 rounded-lg border cursor-grab select-none'
-                                style={{
-                                  background: dragOverIdx === idx && draggedIdx !== idx
-                                    ? 'var(--semi-color-primary-light-default)'
-                                    : 'var(--semi-color-fill-0)',
-                                  opacity: draggedIdx === idx ? 0.4 : 1,
-                                  borderColor: dragOverIdx === idx && draggedIdx !== idx
-                                    ? 'var(--semi-color-primary)'
-                                    : 'var(--semi-color-border)',
-                                }}
-                              >
-                                <IconHandle style={{ color: 'var(--semi-color-text-2)', flexShrink: 0 }} />
-                                <Tag shape='circle' size='small' style={{ flexShrink: 0 }}>
-                                  {idx + 1}
-                                </Tag>
-                                <span className='flex-1 text-sm'>{item.group}</span>
-                                <Button
-                                  size='small'
-                                  type='danger'
-                                  theme='borderless'
-                                  icon={<IconDelete />}
-                                  onClick={() => removeGroup(idx)}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {/* 添加分组下拉 */}
-                        {groups.length > 0 ? (
-                          <Select
-                            placeholder={t('添加分组')}
-                            optionList={groups.filter(
-                              (g) => !tokenGroups.some((tg) => tg.group === g.value),
-                            )}
-                            renderOptionItem={renderGroupOption}
-                            onChange={(val) => addGroup(val)}
-                            value={null}
-                            showClear
-                            style={{ width: '100%' }}
-                          />
-                        ) : (
-                          <Select
-                            placeholder={t('管理员未设置用户可选分组')}
-                            disabled
-                            style={{ width: '100%' }}
-                          />
-                        )}
-                        <div className='text-xs' style={{ color: 'var(--semi-color-text-2)' }}>
-                          {t('按优先级从高到低排列，拖拽调整顺序。为空时使用系统默认分组顺序。')}
-                        </div>
-                      </div>
+                      <GroupSelector
+                        groups={groups}
+                        tokenGroups={tokenGroups}
+                        setTokenGroups={setTokenGroups}
+                        t={t}
+                      />
                     </Form.Slot>
                   </Col>
                   <Col xs={24} sm={24} md={24} lg={10} xl={10}>
