@@ -389,23 +389,19 @@ func SetupContextForToken(c *gin.Context, token *model.Token, parts ...string) e
 	}
 	common.SetContextKey(c, constant.ContextKeyTokenGroup, token.Group)
 	common.SetContextKey(c, constant.ContextKeyTokenCrossGroupRetry, token.CrossGroupRetry)
-	// 解析多分组列表：
-	// - token.Groups 非空：新多分组逻辑，按配置的优先级列表
-	// - token.Groups 为空且 token.Group 为空：未设置分组，走系统 autoGroups 优先级
-	// - token.Groups 为空且 token.Group 非空：旧令牌指定了单分组，继续走原有逻辑
-	if token.Groups != "" {
-		userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
-		tokenGroups := service.ResolveTokenGroups(token.Groups, userGroup)
-		if len(tokenGroups) > 0 {
-			common.SetContextKey(c, constant.ContextKeyTokenGroups, tokenGroups)
-		}
-	} else if token.Group == "" {
-		// 未设置任何分组，使用系统 autoGroups 优先级
-		userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
-		tokenGroups := service.ResolveTokenGroups("", userGroup)
-		if len(tokenGroups) > 0 {
-			common.SetContextKey(c, constant.ContextKeyTokenGroups, tokenGroups)
-		}
+	// 统一走多分组逻辑，不再区分新旧令牌：
+	// - token.Groups 非空：按配置的优先级列表
+	// - token.Groups 为空且 token.Group 非空：旧令牌单分组，包成单元素列表
+	// - token.Groups 为空且 token.Group 为空：使用系统 autoGroups 优先级
+	userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
+	var tokenGroups []string
+	if token.Groups == "" && token.Group != "" {
+		tokenGroups = []string{token.Group}
+	} else {
+		tokenGroups = service.ResolveTokenGroups(token.Groups, userGroup)
+	}
+	if len(tokenGroups) > 0 {
+		common.SetContextKey(c, constant.ContextKeyTokenGroups, tokenGroups)
 	}
 	if len(parts) > 1 {
 		if model.IsAdmin(token.UserId) {
