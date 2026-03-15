@@ -99,15 +99,19 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
   }, [open]);
 
   const toggle = (groupName) => {
-    const idx = tokenGroups.findIndex((g) => g.group === groupName);
-    if (idx >= 0) {
-      setTokenGroups((prev) => prev.filter((_, i) => i !== idx));
-    } else {
-      setTokenGroups((prev) => [...prev, { group: groupName, priority: prev.length + 1 }]);
-    }
+    setTokenGroups((prev) => {
+      const idx = prev.findIndex((g) => g.group === groupName);
+      if (idx >= 0) {
+        return prev.filter((_, i) => i !== idx);
+      }
+      return [...prev, { group: groupName, priority: prev.length + 1 }];
+    });
   };
 
+  const dragMoved = useRef(false);
+
   const handleDragStart = (e, idx) => {
+    dragMoved.current = false;
     setDraggedIdx(idx);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -115,6 +119,7 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
   const handleDragOver = (e, idx) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    dragMoved.current = true;
     if (dragOverIdx !== idx) setDragOverIdx(idx);
   };
 
@@ -214,14 +219,14 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
                     onDrop={(e) => handleDrop(e, idx)}
                     onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
                     style={rowStyle(isDragOver, isDragging, true)}
-                    onClick={() => toggle(item.group)}
+                    onClick={() => { if (!dragMoved.current) toggle(item.group); }}
                   >
                     <span style={{ color: 'var(--semi-color-text-2)', flexShrink: 0, cursor: 'grab', display: 'flex', alignItems: 'center', width: 16 }}
                       onClick={(e) => e.stopPropagation()}>
                       <IconHandle size='small' />
                     </span>
                     <Checkbox checked onChange={() => {}}
-                      onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }} />
+                      onClick={(e) => { e.stopPropagation(); if (!dragMoved.current) toggle(item.group); }} style={{ flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13 }}>{item.group}</div>
                       {meta?.label && meta.label !== item.group && (
