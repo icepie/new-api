@@ -42,6 +42,9 @@ func HandleGroupRatio(ctx *gin.Context, relayInfo *relaycommon.RelayInfo) types.
 		groupRatioInfo.GroupRatio = ratio_setting.GetGroupRatio(relayInfo.UsingGroup)
 	}
 
+	// 写回 PriceData，确保所有后续读 PriceData.GroupRatioInfo 的地方都用实际分组倍率
+	relayInfo.PriceData.GroupRatioInfo = groupRatioInfo
+
 	return groupRatioInfo
 }
 
