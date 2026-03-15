@@ -66,7 +66,6 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
 
-  // 计算 fixed 定位坐标
   const calcPanelStyle = () => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
@@ -84,7 +83,6 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
     setOpen((v) => !v);
   };
 
-  // 点击面板外关闭
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -104,10 +102,7 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
     if (idx >= 0) {
       setTokenGroups((prev) => prev.filter((_, i) => i !== idx));
     } else {
-      setTokenGroups((prev) => [
-        ...prev,
-        { group: groupName, priority: prev.length + 1 },
-      ]);
+      setTokenGroups((prev) => [...prev, { group: groupName, priority: prev.length + 1 }]);
     }
   };
 
@@ -119,10 +114,11 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
   const handleDragOver = (e, idx) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    setDragOverIdx(idx);
+    if (dragOverIdx !== idx) setDragOverIdx(idx);
   };
 
-  const handleDrop = (idx) => {
+  const handleDrop = (e, idx) => {
+    e.preventDefault();
     if (draggedIdx === null || draggedIdx === idx) {
       setDraggedIdx(null);
       setDragOverIdx(null);
@@ -138,14 +134,26 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
     setDragOverIdx(null);
   };
 
-  // 触发器文字
+  const unselected = groups.filter((g) => !tokenGroups.some((tg) => tg.group === g.value));
   const triggerLabel = tokenGroups.length === 0
     ? t('为空时使用系统默认分组顺序')
     : tokenGroups.map((g, i) => `${i + 1}.${g.group}`).join('  ');
 
+  const rowStyle = (isDragOver, isDragging, clickable) => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '7px 12px',
+    cursor: clickable ? 'pointer' : 'default',
+    background: isDragOver ? 'var(--semi-color-primary-light-default)' : 'transparent',
+    opacity: isDragging ? 0.35 : 1,
+    borderBottom: '1px solid var(--semi-color-border)',
+    transition: 'background 0.12s',
+    userSelect: 'none',
+  });
+
   return (
     <div style={{ position: 'relative', width: '100%' }}>
-      {/* 触发器 */}
       <div
         ref={triggerRef}
         onClick={handleOpen}
@@ -162,96 +170,95 @@ const GroupSelector = ({ groups, tokenGroups, setTokenGroups, t }) => {
           userSelect: 'none',
         }}
       >
-        <span style={{ fontSize: 13, color: tokenGroups.length === 0 ? 'var(--semi-color-text-2)' : 'var(--semi-color-text-0)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{
+          fontSize: 13,
+          color: tokenGroups.length === 0 ? 'var(--semi-color-text-2)' : 'var(--semi-color-text-0)',
+          flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
           {triggerLabel}
         </span>
-        <IconChevronDown
-          style={{
-            flexShrink: 0,
-            marginLeft: 6,
-            color: 'var(--semi-color-text-2)',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.2s',
-          }}
-        />
+        <IconChevronDown style={{
+          flexShrink: 0, marginLeft: 6, color: 'var(--semi-color-text-2)',
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s',
+        }} />
       </div>
 
-      {/* 下拉面板 — fixed 定位，突破父容器 overflow 限制 */}
       {open && (
-        <div
-          ref={panelRef}
-          style={{
-            ...panelStyle,
-            background: 'var(--semi-color-bg-2)',
-            border: '1px solid var(--semi-color-border)',
-            borderRadius: 8,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-            maxHeight: 320,
-            overflowY: 'auto',
-          }}
-        >
+        <div ref={panelRef} style={{
+          ...panelStyle,
+          background: 'var(--semi-color-bg-2)',
+          border: '1px solid var(--semi-color-border)',
+          borderRadius: 8,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+          maxHeight: 320,
+          overflowY: 'auto',
+        }}>
           {groups.length === 0 ? (
             <div style={{ padding: '12px 16px', color: 'var(--semi-color-text-2)', fontSize: 13 }}>
               {t('管理员未设置用户可选分组')}
             </div>
           ) : (
-            groups.map((g) => {
-              const selIdx = tokenGroups.findIndex((tg) => tg.group === g.value);
-              const isSelected = selIdx >= 0;
-              const isDragging = isSelected && draggedIdx === selIdx;
-              const isDragOver = isSelected && dragOverIdx === selIdx && draggedIdx !== selIdx;
+            <>
+              {/* 已选区：按 tokenGroups 顺序渲染，支持拖拽排序 */}
+              {tokenGroups.map((item, idx) => {
+                const meta = groups.find((g) => g.value === item.group);
+                const isDragging = draggedIdx === idx;
+                const isDragOver = dragOverIdx === idx && draggedIdx !== idx;
+                return (
+                  <div
+                    key={item.group}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDrop={(e) => handleDrop(e, idx)}
+                    onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
+                    style={rowStyle(isDragOver, isDragging, true)}
+                    onClick={() => toggle(item.group)}
+                  >
+                    <span style={{ color: 'var(--semi-color-text-2)', flexShrink: 0, cursor: 'grab', display: 'flex', alignItems: 'center', width: 16 }}
+                      onClick={(e) => e.stopPropagation()}>
+                      <IconHandle size='small' />
+                    </span>
+                    <Checkbox checked onChange={() => {}}
+                      onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13 }}>{item.group}</div>
+                      {meta?.label && meta.label !== item.group && (
+                        <div style={{ fontSize: 11, color: 'var(--semi-color-text-2)' }}>{meta.label}</div>
+                      )}
+                    </div>
+                    <Tag shape='circle' size='small' color='blue' style={{ flexShrink: 0 }}>
+                      {idx + 1}
+                    </Tag>
+                  </div>
+                );
+              })}
 
-              return (
+              {/* 分隔线（有已选且有未选时显示） */}
+              {tokenGroups.length > 0 && unselected.length > 0 && (
+                <div style={{ borderTop: '1px dashed var(--semi-color-border)', margin: '2px 0' }} />
+              )}
+
+              {/* 未选区：只勾选 */}
+              {unselected.map((g) => (
                 <div
                   key={g.value}
-                  draggable={isSelected}
-                  onDragStart={isSelected ? (e) => handleDragStart(e, selIdx) : undefined}
-                  onDragOver={isSelected ? (e) => handleDragOver(e, selIdx) : undefined}
-                  onDrop={isSelected ? () => handleDrop(selIdx) : undefined}
-                  onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '8px 12px',
-                    cursor: isSelected ? 'grab' : 'pointer',
-                    background: isDragOver
-                      ? 'var(--semi-color-primary-light-default)'
-                      : 'transparent',
-                    opacity: isDragging ? 0.4 : 1,
-                    borderBottom: '1px solid var(--semi-color-border)',
-                    transition: 'background 0.15s',
-                  }}
+                  style={rowStyle(false, false, true)}
                   onClick={() => toggle(g.value)}
                 >
-                  {/* 拖拽手柄（仅已选） */}
-                  <span
-                    style={{ color: 'var(--semi-color-text-2)', flexShrink: 0, visibility: isSelected ? 'visible' : 'hidden' }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <IconHandle size='small' />
-                  </span>
-                  <Checkbox
-                    checked={isSelected}
-                    onChange={() => toggle(g.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ flexShrink: 0 }}
-                  />
+                  <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', width: 16 }} />
+                  <Checkbox checked={false} onChange={() => {}}
+                    onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{g.value}</div>
+                    <div style={{ fontSize: 13 }}>{g.value}</div>
                     {g.label && g.label !== g.value && (
                       <div style={{ fontSize: 11, color: 'var(--semi-color-text-2)' }}>{g.label}</div>
                     )}
                   </div>
-                  {/* 优先级序号 */}
-                  {isSelected && (
-                    <Tag shape='circle' size='small' color='blue' style={{ flexShrink: 0 }}>
-                      {selIdx + 1}
-                    </Tag>
-                  )}
+                  <span style={{ width: 20, flexShrink: 0 }} />
                 </div>
-              );
-            })
+              ))}
+            </>
           )}
         </div>
       )}
