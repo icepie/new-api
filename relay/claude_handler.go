@@ -122,6 +122,7 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 			return newApiErr
 		}
 
+		helper.HandleGroupRatio(c, info)
 		service.PostClaudeConsumeQuota(c, info, usage)
 		return nil
 	}
@@ -190,6 +191,7 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		return newAPIError
 	}
 
+	helper.HandleGroupRatio(c, info)
 	service.PostClaudeConsumeQuota(c, info, usage.(*dto.Usage))
 	return nil
 }

@@ -152,6 +152,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 		return nil
 	}
 
+	helper.HandleGroupRatio(c, info)
 	if strings.HasPrefix(info.OriginModelName, "gpt-4o-audio") {
 		service.PostAudioConsumeQuota(c, info, usageDto, "")
 	} else {
