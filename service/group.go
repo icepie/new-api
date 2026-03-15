@@ -72,7 +72,29 @@ type TokenGroupEntry struct {
 	Priority int    `json:"priority"`
 }
 
-// ResolveTokenGroups 解析令牌的有序分组列表。
+// ResolveTokenGroupsFromEntries 从已解析的 TokenGroupEntry 列表解析有序分组，过滤无权分组。
+func ResolveTokenGroupsFromEntries(entries []TokenGroupEntry, userGroup string) []string {
+	usable := GetUserUsableGroups(userGroup)
+	valid := make([]TokenGroupEntry, 0, len(entries))
+	for _, e := range entries {
+		if _, ok := usable[e.Group]; ok {
+			valid = append(valid, e)
+		}
+	}
+	if len(valid) == 0 {
+		return ResolveTokenGroups("", userGroup)
+	}
+	sort.Slice(valid, func(i, j int) bool {
+		return valid[i].Priority < valid[j].Priority
+	})
+	result := make([]string, len(valid))
+	for i, e := range valid {
+		result[i] = e.Group
+	}
+	return result
+}
+
+
 // groups 为空时返回系统 autoGroups（按系统顺序），非空时解析 JSON 并按 priority 升序排序。
 // 返回的列表已过滤掉用户无权访问的分组。
 func ResolveTokenGroups(groups string, userGroup string) []string {

@@ -66,11 +66,10 @@ export const useDataLoader = (
         const groupOptions = processGroupsData(data, userGroup);
         setGroups(groupOptions);
 
-        const hasCurrentGroup = groupOptions.some(
-          (option) => option.value === inputs.group,
-        );
-        if (!hasCurrentGroup) {
-          handleInputChange('group', groupOptions[0]?.value || '');
+        // inputs.group is now a JSON array string; only reset if it's a legacy plain string
+        const isLegacyGroup = inputs.group && !inputs.group.startsWith('[');
+        if (isLegacyGroup) {
+          handleInputChange('group', '');
         }
       } else {
         showError(t(message));

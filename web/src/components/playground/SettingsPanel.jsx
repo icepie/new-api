@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, Select, Typography, Button, Switch } from '@douyinfe/semi-ui';
 import { Sparkles, Users, ToggleLeft, X, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,7 @@ import ParameterControl from './ParameterControl';
 import ImageUrlInput from './ImageUrlInput';
 import ConfigManager from './ConfigManager';
 import CustomRequestEditor from './CustomRequestEditor';
+import GroupSelector from '../common/GroupSelector';
 
 const SettingsPanel = ({
   inputs,
@@ -47,6 +48,21 @@ const SettingsPanel = ({
   messages,
 }) => {
   const { t } = useTranslation();
+
+  // parse inputs.group (JSON array string) into tokenGroups array
+  const tokenGroups = React.useMemo(() => {
+    if (!inputs.group) return [];
+    try {
+      const parsed = JSON.parse(inputs.group);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_) {}
+    return [];
+  }, [inputs.group]);
+
+  const setTokenGroups = (updater) => {
+    const next = typeof updater === 'function' ? updater(tokenGroups) : updater;
+    onInputChange('group', JSON.stringify(next));
+  };
 
   const currentConfig = {
     inputs,
@@ -114,7 +130,7 @@ const SettingsPanel = ({
         />
 
         {/* 分组选择 */}
-        <div className={customRequestMode ? 'opacity-50' : ''}>
+        <div className={customRequestMode ? 'opacity-50 pointer-events-none' : ''}>
           <div className='flex items-center gap-2 mb-2'>
             <Users size={16} className='text-gray-500' />
             <Typography.Text strong className='text-sm'>
@@ -126,22 +142,10 @@ const SettingsPanel = ({
               </Typography.Text>
             )}
           </div>
-          <Select
-            placeholder={t('请选择分组')}
-            name='group'
-            required
-            selection
-            filter={selectFilter}
-            autoClearSearchValue={false}
-            onChange={(value) => onInputChange('group', value)}
-            value={inputs.group}
-            autoComplete='new-password'
-            optionList={groups}
-            renderOptionItem={renderGroupOption}
-            style={{ width: '100%' }}
-            dropdownStyle={{ width: '100%', maxWidth: '100%' }}
-            className='!rounded-lg'
-            disabled={customRequestMode}
+          <GroupSelector
+            groups={groups}
+            tokenGroups={tokenGroups}
+            setTokenGroups={setTokenGroups}
           />
         </div>
 
