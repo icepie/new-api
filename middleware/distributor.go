@@ -114,6 +114,19 @@ func Distribute() func(c *gin.Context) {
 									break
 								}
 							}
+						} else if tokenGroupsList, ok := common.GetContextKey(c, constant.ContextKeyTokenGroups); ok {
+							// 新多分组逻辑：遍历有序分组列表找到亲和渠道所属分组
+							if groups, ok := tokenGroupsList.([]string); ok && len(groups) > 0 {
+								for _, g := range groups {
+									if model.IsChannelEnabledForGroupModel(g, modelRequest.Model, preferred.Id) {
+										selectGroup = g
+										common.SetContextKey(c, constant.ContextKeyAutoGroup, g)
+										channel = preferred
+										service.MarkChannelAffinityUsed(c, g, preferred.Id)
+										break
+									}
+								}
+							}
 						} else if model.IsChannelEnabledForGroupModel(usingGroup, modelRequest.Model, preferred.Id) {
 							channel = preferred
 							selectGroup = usingGroup

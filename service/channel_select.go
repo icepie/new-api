@@ -48,8 +48,17 @@ func (p *RetryParam) ResetRetryNextTry() {
 // CacheGetRandomSatisfiedChannel tries to get a random channel that satisfies the requirements.
 // 尝试获取一个满足要求的随机渠道。
 //
-// For "auto" tokenGroup with cross-group Retry enabled:
-// 对于启用了跨分组重试的 "auto" tokenGroup：
+// New multi-group logic (ContextKeyTokenGroups set):
+// 新多分组逻辑（ContextKeyTokenGroups 已设置）：
+//
+//   - Uses the ordered group list from ContextKeyTokenGroups directly.
+//     直接使用 ContextKeyTokenGroups 中的有序分组列表。
+//
+//   - Each group exhausts all its priorities before moving to the next group.
+//     每个分组会用完所有优先级后才会切换到下一个分组。
+//
+// Legacy "auto" tokenGroup with cross-group Retry enabled (fallback):
+// 旧版 "auto" tokenGroup 跨分组重试（兼容旧令牌）：
 //
 //   - Each group will exhaust all its priorities before moving to the next group.
 //     每个分组会用完所有优先级后才会切换到下一个分组。
@@ -84,12 +93,20 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 	var channel *model.Channel
 	var err error
 	selectGroup := param.TokenGroup
-	userGroup := common.GetContextKeyString(param.Ctx, constant.ContextKeyUserGroup)
 
+	// 新多分组逻辑：优先使用 ContextKeyTokenGroups
+	if tokenGroups, ok := common.GetContextKey(param.Ctx, constant.ContextKeyTokenGroups); ok {
+		if groups, ok := tokenGroups.([]string); ok && len(groups) > 0 {
+			return selectFromOrderedGroups(param, groups)
+		}
+	}
+
+	// 兼容旧逻辑
 	if param.TokenGroup == "auto" {
 		if len(setting.GetAutoGroups()) == 0 {
 			return nil, selectGroup, errors.New("auto groups is not enabled")
 		}
+		userGroup := common.GetContextKeyString(param.Ctx, constant.ContextKeyUserGroup)
 		autoGroups := GetUserAutoGroup(userGroup)
 
 		// startGroupIndex: the group index to start searching from
@@ -157,6 +174,50 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 		if err != nil {
 			return nil, param.TokenGroup, err
 		}
+	}
+	return channel, selectGroup, nil
+}
+
+// selectFromOrderedGroups 使用有序分组列表选择渠道，复用跨分组重试机制。
+func selectFromOrderedGroups(param *RetryParam, groups []string) (*model.Channel, string, error) {
+	var channel *model.Channel
+	selectGroup := param.TokenGroup
+
+	startGroupIndex := 0
+	if lastGroupIndex, exists := common.GetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex); exists {
+		if idx, ok := lastGroupIndex.(int); ok {
+			startGroupIndex = idx
+		}
+	}
+
+	for i := startGroupIndex; i < len(groups); i++ {
+		group := groups[i]
+		priorityRetry := param.GetRetry()
+		if i > startGroupIndex {
+			priorityRetry = 0
+		}
+		logger.LogDebug(param.Ctx, "Multi-group selecting group: %s, priorityRetry: %d", group, priorityRetry)
+
+		channel, _ := model.GetRandomSatisfiedChannel(group, param.ModelName, priorityRetry)
+		if channel == nil {
+			logger.LogDebug(param.Ctx, "No available channel in group %s for model %s at priorityRetry %d, trying next group", group, param.ModelName, priorityRetry)
+			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
+			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupRetryIndex, 0)
+			param.SetRetry(0)
+			continue
+		}
+		common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroup, group)
+		selectGroup = group
+		logger.LogDebug(param.Ctx, "Multi-group selected group: %s", group)
+
+		if priorityRetry >= common.RetryTimes {
+			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
+			param.SetRetry(0)
+			param.ResetRetryNextTry()
+		} else {
+			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i)
+		}
+		break
 	}
 	return channel, selectGroup, nil
 }

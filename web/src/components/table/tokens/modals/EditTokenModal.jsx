@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState, useContext, useRef } from 'react';
+import React, { useEffect, useState, useContext, useRef, useCallback } from 'react';
 import {
   API,
   showError,
@@ -41,6 +41,8 @@ import {
   Form,
   Col,
   Row,
+  Select,
+  Tooltip,
 } from '@douyinfe/semi-ui';
 import {
   IconCreditCard,
@@ -48,6 +50,9 @@ import {
   IconSave,
   IconClose,
   IconKey,
+  IconPlus,
+  IconDelete,
+  IconHandle,
 } from '@douyinfe/semi-icons';
 import { useTranslation } from 'react-i18next';
 import { StatusContext } from '../../../../context/Status';
@@ -62,6 +67,10 @@ const EditTokenModal = (props) => {
   const formApiRef = useRef(null);
   const [models, setModels] = useState([]);
   const [groups, setGroups] = useState([]);
+  // 多分组优先级列表，每项 { group: string, priority: number }，按 priority 升序排列
+  const [tokenGroups, setTokenGroups] = useState([]);
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
   const isEdit = props.editingToken.id !== undefined;
 
   const getInitValues = () => ({
@@ -72,8 +81,6 @@ const EditTokenModal = (props) => {
     model_limits_enabled: false,
     model_limits: [],
     allow_ips: '',
-    group: '',
-    cross_group_retry: false,
     tokenCount: 1,
   });
 
@@ -162,6 +169,20 @@ const EditTokenModal = (props) => {
       } else {
         data.model_limits = [];
       }
+      // 解析多分组配置
+      let parsedGroups = [];
+      if (data.groups) {
+        try {
+          parsedGroups = JSON.parse(data.groups);
+        } catch (_) {
+          parsedGroups = [];
+        }
+      }
+      // 兼容旧 group 字段：若 groups 为空但 group 有值，迁移为单分组
+      if (parsedGroups.length === 0 && data.group) {
+        parsedGroups = [{ group: data.group, priority: 1 }];
+      }
+      setTokenGroups(parsedGroups.sort((a, b) => a.priority - b.priority));
       if (formApiRef.current) {
         formApiRef.current.setValues({ ...getInitValues(), ...data });
       }
@@ -186,9 +207,11 @@ const EditTokenModal = (props) => {
       if (isEdit) {
         loadToken();
       } else {
+        setTokenGroups([]);
         formApiRef.current?.setValues(getInitValues());
       }
     } else {
+      setTokenGroups([]);
       formApiRef.current?.reset();
     }
   }, [props.visiable, props.editingToken.id]);
@@ -205,8 +228,53 @@ const EditTokenModal = (props) => {
     return result;
   };
 
+  const handleDragStart = useCallback((idx) => {
+    setDraggedIdx(idx);
+  }, []);
+
+  const handleDragOver = useCallback((e, idx) => {
+    e.preventDefault();
+    setDragOverIdx(idx);
+  }, []);
+
+  const handleDrop = useCallback((idx) => {
+    if (draggedIdx === null || draggedIdx === idx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    setTokenGroups((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(draggedIdx, 1);
+      next.splice(idx, 0, moved);
+      return next;
+    });
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  }, [draggedIdx]);
+
+  const addGroup = (groupName) => {
+    if (!groupName) return;
+    if (tokenGroups.some((g) => g.group === groupName)) return;
+    setTokenGroups((prev) => [
+      ...prev,
+      { group: groupName, priority: prev.length + 1 },
+    ]);
+  };
+
+  const removeGroup = (idx) => {
+    setTokenGroups((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const submit = async (values) => {
     setLoading(true);
+    // 将 tokenGroups 重新赋 priority（按当前顺序 1,2,3...）并序列化
+    const groupsPayload = tokenGroups.map((item, idx) => ({
+      group: item.group,
+      priority: idx + 1,
+    }));
+    const groupsJson = groupsPayload.length > 0 ? JSON.stringify(groupsPayload) : '';
+
     if (isEdit) {
       let { tokenCount: _tc, ...localInputs } = values;
       localInputs.remain_quota = parseInt(localInputs.remain_quota);
@@ -221,6 +289,9 @@ const EditTokenModal = (props) => {
       }
       localInputs.model_limits = localInputs.model_limits.join(',');
       localInputs.model_limits_enabled = localInputs.model_limits.length > 0;
+      localInputs.groups = groupsJson;
+      localInputs.group = '';
+      localInputs.cross_group_retry = false;
       let res = await API.put(`/api/token/`, {
         ...localInputs,
         id: parseInt(props.editingToken.id),
@@ -258,6 +329,9 @@ const EditTokenModal = (props) => {
         }
         localInputs.model_limits = localInputs.model_limits.join(',');
         localInputs.model_limits_enabled = localInputs.model_limits.length > 0;
+        localInputs.groups = groupsJson;
+        localInputs.group = '';
+        localInputs.cross_group_retry = false;
         let res = await API.post(`/api/token/`, localInputs);
         const { success, message } = res.data;
         if (success) {
@@ -359,39 +433,71 @@ const EditTokenModal = (props) => {
                     />
                   </Col>
                   <Col span={24}>
-                    {groups.length > 0 ? (
-                      <Form.Select
-                        field='group'
-                        label={t('令牌分组')}
-                        placeholder={t('令牌分组，默认为用户的分组')}
-                        optionList={groups}
-                        renderOptionItem={renderGroupOption}
-                        showClear
-                        style={{ width: '100%' }}
-                      />
-                    ) : (
-                      <Form.Select
-                        placeholder={t('管理员未设置用户可选分组')}
-                        disabled
-                        label={t('令牌分组')}
-                        style={{ width: '100%' }}
-                      />
-                    )}
-                  </Col>
-                  <Col
-                    span={24}
-                    style={{
-                      display: values.group === 'auto' ? 'block' : 'none',
-                    }}
-                  >
-                    <Form.Switch
-                      field='cross_group_retry'
-                      label={t('跨分组重试')}
-                      size='default'
-                      extraText={t(
-                        '开启后，当前分组渠道失败时会按顺序尝试下一个分组的渠道',
-                      )}
-                    />
+                    <Form.Slot label={t('令牌分组')}>
+                      <div className='flex flex-col gap-2'>
+                        {/* 已选分组拖拽排序列表 */}
+                        {tokenGroups.length > 0 && (
+                          <div className='flex flex-col gap-1'>
+                            {tokenGroups.map((item, idx) => (
+                              <div
+                                key={item.group}
+                                draggable
+                                onDragStart={() => handleDragStart(idx)}
+                                onDragOver={(e) => handleDragOver(e, idx)}
+                                onDrop={() => handleDrop(idx)}
+                                onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
+                                className='flex items-center gap-2 px-2 py-1 rounded-lg border cursor-grab select-none'
+                                style={{
+                                  background: dragOverIdx === idx && draggedIdx !== idx
+                                    ? 'var(--semi-color-primary-light-default)'
+                                    : 'var(--semi-color-fill-0)',
+                                  opacity: draggedIdx === idx ? 0.4 : 1,
+                                  borderColor: dragOverIdx === idx && draggedIdx !== idx
+                                    ? 'var(--semi-color-primary)'
+                                    : 'var(--semi-color-border)',
+                                }}
+                              >
+                                <IconHandle style={{ color: 'var(--semi-color-text-2)', flexShrink: 0 }} />
+                                <Tag shape='circle' size='small' style={{ flexShrink: 0 }}>
+                                  {idx + 1}
+                                </Tag>
+                                <span className='flex-1 text-sm'>{item.group}</span>
+                                <Button
+                                  size='small'
+                                  type='danger'
+                                  theme='borderless'
+                                  icon={<IconDelete />}
+                                  onClick={() => removeGroup(idx)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* 添加分组下拉 */}
+                        {groups.length > 0 ? (
+                          <Select
+                            placeholder={t('添加分组')}
+                            optionList={groups.filter(
+                              (g) => !tokenGroups.some((tg) => tg.group === g.value),
+                            )}
+                            renderOptionItem={renderGroupOption}
+                            onChange={(val) => addGroup(val)}
+                            value={null}
+                            showClear
+                            style={{ width: '100%' }}
+                          />
+                        ) : (
+                          <Select
+                            placeholder={t('管理员未设置用户可选分组')}
+                            disabled
+                            style={{ width: '100%' }}
+                          />
+                        )}
+                        <div className='text-xs' style={{ color: 'var(--semi-color-text-2)' }}>
+                          {t('按优先级从高到低排列，拖拽调整顺序。为空时使用系统默认分组顺序。')}
+                        </div>
+                      </div>
+                    </Form.Slot>
                   </Col>
                   <Col xs={24} sm={24} md={24} lg={10} xl={10}>
                     <Form.DatePicker

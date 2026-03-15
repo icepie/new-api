@@ -377,6 +377,12 @@ func processChannelError(c *gin.Context, channelError types.ChannelError, err *t
 		modelName := c.GetString("original_model")
 		tokenId := c.GetInt("token_id")
 		userGroup := c.GetString("group")
+		// 优先使用实际选中的分组（跨分组重试时会变动）
+		if autoGroup, exists := c.Get("auto_group"); exists {
+			if ag, ok := autoGroup.(string); ok && ag != "" {
+				userGroup = ag
+			}
+		}
 		channelId := c.GetInt("channel_id")
 		other := make(map[string]interface{})
 		if c.Request != nil && c.Request.URL != nil {

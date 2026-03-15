@@ -28,6 +28,7 @@ type Token struct {
 	UsedQuota          int            `json:"used_quota" gorm:"default:0"` // used quota
 	Group              string         `json:"group" gorm:"default:''"`
 	CrossGroupRetry    bool           `json:"cross_group_retry"` // 跨分组重试，仅auto分组有效
+	Groups             string         `json:"groups" gorm:"type:text;default:''"` // 多分组优先级配置，JSON数组，为空时使用系统autoGroups
 	DeletedAt          gorm.DeletedAt `gorm:"index"`
 }
 

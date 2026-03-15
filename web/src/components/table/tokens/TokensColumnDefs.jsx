@@ -89,6 +89,30 @@ const renderStatus = (text, record, t) => {
 
 // Render group column
 const renderGroupColumn = (text, record, t) => {
+  // 新多分组逻辑：优先读取 groups 字段
+  if (record.groups) {
+    let entries = [];
+    try {
+      entries = JSON.parse(record.groups);
+    } catch (_) {
+      entries = [];
+    }
+    if (entries.length > 0) {
+      const sorted = [...entries].sort((a, b) => a.priority - b.priority);
+      return (
+        <Space wrap>
+          {sorted.map((item, idx) => (
+            <Tooltip key={item.group} content={`${t('优先级')} ${idx + 1}`} position='top'>
+              <Tag shape='circle' size='small'>
+                {item.group}
+              </Tag>
+            </Tooltip>
+          ))}
+        </Space>
+      );
+    }
+  }
+  // 兼容旧 group 字段
   if (text === 'auto') {
     return (
       <Tooltip

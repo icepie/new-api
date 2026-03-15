@@ -389,6 +389,14 @@ func SetupContextForToken(c *gin.Context, token *model.Token, parts ...string) e
 	}
 	common.SetContextKey(c, constant.ContextKeyTokenGroup, token.Group)
 	common.SetContextKey(c, constant.ContextKeyTokenCrossGroupRetry, token.CrossGroupRetry)
+	// 仅当 token.Groups 非空时解析多分组列表，旧令牌不设置此 key，继续走原有逻辑
+	if token.Groups != "" {
+		userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
+		tokenGroups := service.ResolveTokenGroups(token.Groups, userGroup)
+		if len(tokenGroups) > 0 {
+			common.SetContextKey(c, constant.ContextKeyTokenGroups, tokenGroups)
+		}
+	}
 	if len(parts) > 1 {
 		if model.IsAdmin(token.UserId) {
 			c.Set("specific_channel_id", parts[1])
