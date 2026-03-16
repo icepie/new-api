@@ -183,6 +183,8 @@ func selectFromOrderedGroups(param *RetryParam, groups []string) (*model.Channel
 	var channel *model.Channel
 	selectGroup := param.TokenGroup
 
+	crossGroupRetry := common.GetContextKeyBool(param.Ctx, constant.ContextKeyTokenCrossGroupRetry)
+
 	startGroupIndex := 0
 	if lastGroupIndex, exists := common.GetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex); exists {
 		if idx, ok := lastGroupIndex.(int); ok {
@@ -210,11 +212,14 @@ func selectFromOrderedGroups(param *RetryParam, groups []string) (*model.Channel
 		selectGroup = group
 		logger.LogDebug(param.Ctx, "Multi-group selected group: %s", group)
 
-		if priorityRetry >= common.RetryTimes {
+		if crossGroupRetry && priorityRetry >= common.RetryTimes {
+			// 当前分组重试次数已耗尽，下次重试切换到下一分组
+			logger.LogDebug(param.Ctx, "Multi-group %s retries exhausted (priorityRetry=%d >= RetryTimes=%d), switching to next group", group, priorityRetry, common.RetryTimes)
 			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
 			param.SetRetry(0)
 			param.ResetRetryNextTry()
 		} else {
+			// 保持在当前分组继续重试
 			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i)
 		}
 		break
