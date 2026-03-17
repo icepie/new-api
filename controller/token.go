@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -8,9 +9,27 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/gin-gonic/gin"
 )
+
+func buildMaskedTokenResponse(token *model.Token) *model.Token {
+	if token == nil {
+		return nil
+	}
+	maskedToken := *token
+	maskedToken.Key = token.GetMaskedKey()
+	return &maskedToken
+}
+
+func buildMaskedTokenResponses(tokens []*model.Token) []*model.Token {
+	maskedTokens := make([]*model.Token, 0, len(tokens))
+	for _, token := range tokens {
+		maskedTokens = append(maskedTokens, buildMaskedTokenResponse(token))
+	}
+	return maskedTokens
+}
 
 func GetAllTokens(c *gin.Context) {
 	userId := c.GetInt("id")
@@ -22,9 +41,8 @@ func GetAllTokens(c *gin.Context) {
 	}
 	total, _ := model.CountUserTokens(userId)
 	pageInfo.SetTotal(int(total))
-	pageInfo.SetItems(tokens)
+	pageInfo.SetItems(buildMaskedTokenResponses(tokens))
 	common.ApiSuccess(c, pageInfo)
-	return
 }
 
 func SearchTokens(c *gin.Context) {
@@ -40,9 +58,8 @@ func SearchTokens(c *gin.Context) {
 		return
 	}
 	pageInfo.SetTotal(int(total))
-	pageInfo.SetItems(tokens)
+	pageInfo.SetItems(buildMaskedTokenResponses(tokens))
 	common.ApiSuccess(c, pageInfo)
-	return
 }
 
 func GetToken(c *gin.Context) {
@@ -57,12 +74,24 @@ func GetToken(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    token,
+	common.ApiSuccess(c, buildMaskedTokenResponse(token))
+}
+
+func GetTokenKey(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	userId := c.GetInt("id")
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	token, err := model.GetTokenByIds(id, userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, gin.H{
+		"key": token.GetFullKey(),
 	})
-	return
 }
 
 func GetTokenStatus(c *gin.Context) {
@@ -158,17 +187,20 @@ func AddToken(c *gin.Context) {
 			return
 		}
 	}
-
-	// 检查令牌限制
-	userId := c.GetInt("id")
-	if err := model.CheckTokenLimits(userId); err != nil {
+	// 检查用户令牌数量是否已达上限
+	maxTokens := operation_setting.GetMaxUserTokens()
+	count, err := model.CountUserTokens(c.GetInt("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if int(count) >= maxTokens {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": err.Error(),
+			"message": fmt.Sprintf("已达到最大令牌数量限制 (%d)", maxTokens),
 		})
 		return
 	}
-
 	key, err := common.GenerateKey()
 	if err != nil {
 		common.ApiErrorI18n(c, i18n.MsgTokenGenerateFailed)
@@ -199,7 +231,6 @@ func AddToken(c *gin.Context) {
 		"success": true,
 		"message": "",
 	})
-	return
 }
 
 func DeleteToken(c *gin.Context) {
@@ -214,7 +245,6 @@ func DeleteToken(c *gin.Context) {
 		"success": true,
 		"message": "",
 	})
-	return
 }
 
 func UpdateToken(c *gin.Context) {
@@ -278,7 +308,7 @@ func UpdateToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    cleanToken,
+		"data":    buildMaskedTokenResponse(cleanToken),
 	})
 }
 
@@ -302,233 +332,5 @@ func DeleteTokenBatch(c *gin.Context) {
 		"success": true,
 		"message": "",
 		"data":    count,
-	})
-}
-
-// GetUserTokensByAdmin 管理员获取指定用户的所有令牌
-func GetUserTokensByAdmin(c *gin.Context) {
-	targetUserId, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	// 检查权限
-	adminId := c.GetInt("id")
-	adminRole := c.GetInt("role")
-
-	// 如果不是超级管理员，检查是否同组织
-	if adminRole != common.RoleRootUser {
-		adminUser, err := model.GetUserById(adminId, false)
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
-		targetUser, err := model.GetUserById(targetUserId, false)
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
-		if adminUser.OrgId != targetUser.OrgId {
-			c.JSON(http.StatusForbidden, gin.H{
-				"success": false,
-				"message": "无权管理其他组织的用户令牌",
-			})
-			return
-		}
-	}
-
-	pageInfo := common.GetPageQuery(c)
-	tokens, err := model.GetAllUserTokens(targetUserId, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-	total, _ := model.CountUserTokens(targetUserId)
-	pageInfo.SetTotal(int(total))
-	pageInfo.SetItems(tokens)
-	common.ApiSuccess(c, pageInfo)
-}
-
-// GetUserTokenByAdmin 管理员获取指定用户的单个令牌
-func GetUserTokenByAdmin(c *gin.Context) {
-	targetUserId, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	tokenId, err := strconv.Atoi(c.Param("token_id"))
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	// 检查权限
-	adminId := c.GetInt("id")
-	adminRole := c.GetInt("role")
-
-	if adminRole != common.RoleRootUser {
-		adminUser, err := model.GetUserById(adminId, false)
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
-		targetUser, err := model.GetUserById(targetUserId, false)
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
-		if adminUser.OrgId != targetUser.OrgId {
-			c.JSON(http.StatusForbidden, gin.H{
-				"success": false,
-				"message": "无权管理其他组织的用户令牌",
-			})
-			return
-		}
-	}
-
-	// 验证令牌属于目标用户
-	token, err := model.GetTokenByIds(tokenId, targetUserId)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    token,
-	})
-}
-
-// UpdateUserTokenByAdmin 管理员更新指定用户的令牌
-func UpdateUserTokenByAdmin(c *gin.Context) {
-	targetUserId, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	// 检查权限
-	adminId := c.GetInt("id")
-	adminRole := c.GetInt("role")
-
-	if adminRole != common.RoleRootUser {
-		adminUser, err := model.GetUserById(adminId, false)
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
-		targetUser, err := model.GetUserById(targetUserId, false)
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
-		if adminUser.OrgId != targetUser.OrgId {
-			c.JSON(http.StatusForbidden, gin.H{
-				"success": false,
-				"message": "无权管理其他组织的用户令牌",
-			})
-			return
-		}
-	}
-
-	statusOnly := c.Query("status_only")
-	token := model.Token{}
-	err = c.ShouldBindJSON(&token)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	// 验证令牌属于目标用户
-	cleanToken, err := model.GetTokenByIds(token.Id, targetUserId)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	if statusOnly != "" {
-		cleanToken.Status = token.Status
-	} else {
-		cleanToken.Name = token.Name
-		cleanToken.ExpiredTime = token.ExpiredTime
-		cleanToken.RemainQuota = token.RemainQuota
-		cleanToken.UnlimitedQuota = token.UnlimitedQuota
-		cleanToken.ModelLimitsEnabled = token.ModelLimitsEnabled
-		cleanToken.ModelLimits = token.ModelLimits
-		cleanToken.AllowIps = token.AllowIps
-		cleanToken.Group = token.Group
-		cleanToken.CrossGroupRetry = token.CrossGroupRetry
-	}
-
-	err = cleanToken.Update()
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    cleanToken,
-	})
-}
-
-// DeleteUserTokenByAdmin 管理员删除指定用户的令牌
-func DeleteUserTokenByAdmin(c *gin.Context) {
-	targetUserId, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	tokenId, err := strconv.Atoi(c.Param("token_id"))
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	// 检查权限
-	adminId := c.GetInt("id")
-	adminRole := c.GetInt("role")
-
-	if adminRole != common.RoleRootUser {
-		adminUser, err := model.GetUserById(adminId, false)
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
-		targetUser, err := model.GetUserById(targetUserId, false)
-		if err != nil {
-			common.ApiError(c, err)
-			return
-		}
-		if adminUser.OrgId != targetUser.OrgId {
-			c.JSON(http.StatusForbidden, gin.H{
-				"success": false,
-				"message": "无权管理其他组织的用户令牌",
-			})
-			return
-		}
-	}
-
-	// 验证令牌属于目标用户
-	token, err := model.GetTokenByIds(tokenId, targetUserId)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	err = token.Delete()
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
 	})
 }

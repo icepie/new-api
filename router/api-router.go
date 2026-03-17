@@ -31,10 +31,6 @@ func SetApiRouter(router *gin.Engine) {
 		//apiRouter.GET("/midjourney", controller.GetMidjourney)
 		apiRouter.GET("/home_page_content", controller.GetHomePageContent)
 		apiRouter.GET("/pricing", middleware.TryUserAuth(), controller.GetPricing)
-		apiRouter.GET("/pricing/listed", middleware.AdminAuth(), controller.GetListedModels)
-		apiRouter.POST("/pricing/batch_update", middleware.AdminAuth(), controller.BatchUpdateModelListing)
-		apiRouter.PUT("/pricing/official_price", middleware.AdminAuth(), controller.UpdateModelOfficialPrice)
-		apiRouter.PUT("/pricing/model_listing_meta", middleware.AdminAuth(), controller.UpdateModelListingMeta)
 		apiRouter.GET("/verification", middleware.EmailVerificationRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), controller.ResetPassword)
@@ -132,26 +128,7 @@ func SetApiRouter(router *gin.Engine) {
 				// Admin 2FA routes
 				adminRoute.GET("/2fa/stats", controller.Admin2FAStats)
 				adminRoute.DELETE("/:id/2fa", controller.AdminDisable2FA)
-
-				// Admin token management for users
-				adminRoute.GET("/:id/tokens", controller.GetUserTokensByAdmin)
-				adminRoute.GET("/:id/tokens/:token_id", controller.GetUserTokenByAdmin)
-				adminRoute.PUT("/:id/tokens/:token_id", controller.UpdateUserTokenByAdmin)
-				adminRoute.DELETE("/:id/tokens/:token_id", controller.DeleteUserTokenByAdmin)
-
 			}
-		}
-
-		// Organization management (Admin can view their own org, Root can view all)
-		orgRoute := apiRouter.Group("/organization")
-		orgRoute.Use(middleware.AdminAuth())
-		{
-			orgRoute.GET("/", controller.GetOrganizations)
-			orgRoute.GET("/:id", controller.GetOrganization)
-			orgRoute.POST("/", controller.CreateOrganization)
-			orgRoute.PUT("/:id", controller.UpdateOrganization)
-			orgRoute.DELETE("/:id", controller.DeleteOrganization)
-			orgRoute.GET("/billing", controller.GetOrganizationBilling)
 		}
 
 		// Subscription billing (plans, purchase, admin management)
@@ -186,7 +163,6 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/subscription/epay/notify", controller.SubscriptionEpayNotify)
 		apiRouter.GET("/subscription/epay/return", controller.SubscriptionEpayReturn)
 		apiRouter.POST("/subscription/epay/return", controller.SubscriptionEpayReturn)
-
 		optionRoute := apiRouter.Group("/option")
 		optionRoute.Use(middleware.RootAuth())
 		{
@@ -272,6 +248,7 @@ func SetApiRouter(router *gin.Engine) {
 			tokenRoute.GET("/", controller.GetAllTokens)
 			tokenRoute.GET("/search", middleware.SearchRateLimit(), controller.SearchTokens)
 			tokenRoute.GET("/:id", controller.GetToken)
+			tokenRoute.POST("/:id/key", middleware.CriticalRateLimit(), middleware.DisableCache(), controller.GetTokenKey)
 			tokenRoute.POST("/", controller.AddToken)
 			tokenRoute.PUT("/", controller.UpdateToken)
 			tokenRoute.DELETE("/:id", controller.DeleteToken)
