@@ -21,7 +21,6 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/setting"
 	"gorm.io/gorm"
 
 	"github.com/gin-contrib/sessions"
@@ -622,9 +621,6 @@ func StarLogin(c *gin.Context) {
 						UnlimitedQuota:     true,
 						ModelLimitsEnabled: false,
 					}
-					if setting.DefaultUseAutoGroup {
-						token.Group = "auto"
-					}
 					if err := token.Insert(); err != nil {
 						common.SysLog(fmt.Sprintf("为用户 %s 创建默认令牌失败: %v", insertedUser.Username, err))
 					} else {
@@ -903,9 +899,6 @@ func StarRegister(c *gin.Context) {
 									RemainQuota:        500000,
 									UnlimitedQuota:     true,
 									ModelLimitsEnabled: false,
-								}
-								if setting.DefaultUseAutoGroup {
-									token.Group = "auto"
 								}
 								if err := token.Insert(); err != nil {
 									common.SysLog(fmt.Sprintf("为用户 %s 创建默认令牌失败: %v", insertedUser.Username, err))
@@ -1539,9 +1532,6 @@ func handleStarWechatLogin(c *gin.Context, starUserId, xtoken, xy_uuid_token str
 							RemainQuota:        500000,
 							UnlimitedQuota:     true,
 							ModelLimitsEnabled: false,
-						}
-						if setting.DefaultUseAutoGroup {
-							token.Group = "auto"
 						}
 						if err := token.Insert(); err != nil {
 							common.SysLog(fmt.Sprintf("为用户 %s 创建默认令牌失败: %v", insertedUser.Username, err))
@@ -2332,9 +2322,6 @@ func Register(c *gin.Context) {
 			RemainQuota:        500000, // 示例额度
 			UnlimitedQuota:     true,
 			ModelLimitsEnabled: false,
-		}
-		if setting.DefaultUseAutoGroup {
-			token.Group = "auto"
 		}
 		if err := token.Insert(); err != nil {
 			common.ApiErrorI18n(c, i18n.MsgCreateDefaultTokenErr)

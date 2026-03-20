@@ -11,7 +11,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/setting"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"gorm.io/gorm"
@@ -401,10 +400,6 @@ func createDefaultTokenForUser(userId int, username string) error {
 		RemainQuota:        500000, // 默认额度
 		UnlimitedQuota:     true,
 		ModelLimitsEnabled: false,
-	}
-
-	if setting.DefaultUseAutoGroup {
-		token.Group = "auto"
 	}
 
 	if err := token.Insert(); err != nil {
