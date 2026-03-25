@@ -152,16 +152,19 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			// Prepare state for next retry
 			// 为下一次重试准备状态
 			if crossGroupRetry && priorityRetry >= common.RetryTimes {
-				// Current group has exhausted all retries, prepare to switch to next group
-				// This request still uses current group, but next retry will use next group
-				// 当前分组已用完所有重试次数，准备切换到下一个分组
-				// 本次请求仍使用当前分组，但下次重试将使用下一个分组
-				logger.LogDebug(param.Ctx, "Current group %s retries exhausted (priorityRetry=%d >= RetryTimes=%d), preparing switch to next group for next retry", autoGroup, priorityRetry, common.RetryTimes)
-				common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
-				// Reset retry counter so outer loop can continue for next group
-				// 重置重试计数器，以便外层循环可以为下一个分组继续
-				param.SetRetry(0)
-				param.ResetRetryNextTry()
+				nextGroupIdx := i + 1
+				common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, nextGroupIdx)
+				if nextGroupIdx < len(autoGroups) {
+					// Current group exhausted, switch to next group
+					// 当前分组已用完所有重试次数，切换到下一个分组
+					logger.LogDebug(param.Ctx, "Current group %s retries exhausted (priorityRetry=%d >= RetryTimes=%d), switching to next group", autoGroup, priorityRetry, common.RetryTimes)
+					param.SetRetry(0)
+					param.ResetRetryNextTry()
+				} else {
+					// Last group exhausted, do not reset retry counter
+					// 已是最后一个分组，不重置重试计数器，让外层循环自然停止
+					logger.LogDebug(param.Ctx, "Current group %s retries exhausted (priorityRetry=%d >= RetryTimes=%d), last group reached, stopping", autoGroup, priorityRetry, common.RetryTimes)
+				}
 			} else {
 				// Stay in current group, save current state
 				// 保持在当前分组，保存当前状态
@@ -213,11 +216,19 @@ func selectFromOrderedGroups(param *RetryParam, groups []string) (*model.Channel
 		logger.LogDebug(param.Ctx, "Multi-group selected group: %s", group)
 
 		if crossGroupRetry && priorityRetry >= common.RetryTimes {
-			// 当前分组重试次数已耗尽，下次重试切换到下一分组
-			logger.LogDebug(param.Ctx, "Multi-group %s retries exhausted (priorityRetry=%d >= RetryTimes=%d), switching to next group", group, priorityRetry, common.RetryTimes)
-			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
-			param.SetRetry(0)
-			param.ResetRetryNextTry()
+			nextGroupIdx := i + 1
+			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, nextGroupIdx)
+			if nextGroupIdx < len(groups) {
+				// 还有下一个分组，重置重试计数器并准备切换
+				logger.LogDebug(param.Ctx, "Multi-group %s retries exhausted (priorityRetry=%d >= RetryTimes=%d), switching to next group", group, priorityRetry, common.RetryTimes)
+				param.SetRetry(0)
+				param.ResetRetryNextTry()
+			} else {
+				// 已是最后一个分组，不重置重试计数器
+				// 这样外层 shouldRetry 计算 RetryTimes-GetRetry()=0 → 停止重试，
+				// 避免触发一次多余的 getChannel 调用而产生误导性的"渠道不存在"错误
+				logger.LogDebug(param.Ctx, "Multi-group %s retries exhausted (priorityRetry=%d >= RetryTimes=%d), last group reached, stopping", group, priorityRetry, common.RetryTimes)
+			}
 		} else {
 			// 保持在当前分组继续重试
 			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i)
