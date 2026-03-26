@@ -143,6 +143,7 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 				// Reset retry counter so outer loop can continue for next group
 				// 重置重试计数器，以便外层循环可以为下一个分组继续
 				param.SetRetry(0)
+				param.ResetRetryNextTry()
 				continue
 			}
 			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroup, autoGroup)
@@ -209,6 +210,7 @@ func selectFromOrderedGroups(param *RetryParam, groups []string) (*model.Channel
 			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
 			common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupRetryIndex, 0)
 			param.SetRetry(0)
+			param.ResetRetryNextTry()
 			continue
 		}
 		common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroup, group)
