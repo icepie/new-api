@@ -19,9 +19,11 @@ For commercial licensing, please contact support@quantumnous.com
 
 import React from 'react';
 import Dashboard from '../../components/dashboard';
+import NiceClawLaunchFloat from '../../components/homepage/NiceClawLaunchFloat';
 
 const Detail = () => (
   <div className='mt-[60px] px-2'>
+    <NiceClawLaunchFloat />
     <Dashboard />
   </div>
 );

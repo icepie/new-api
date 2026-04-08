@@ -3307,6 +3307,10 @@
     "1h缓存创建：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 1h缓存创建倍率 {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}": "Создание кэша 1h: {{tokens}} / 1M * коэффициент модели {{modelRatio}} * коэффициент создания кэша 1h {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}",
     "输出：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 输出倍率 {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}": "Вывод: {{tokens}} / 1M * коэффициент модели {{modelRatio}} * коэффициент вывода {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}",
     "空": "Пусто",
-    "查看价格": "Посмотреть цены"
+    "查看价格": "Посмотреть цены",
+    "niceclaw.launch.tag": "Уведомление о запуске",
+    "niceclaw.launch.title": "NiceClaw уже доступен",
+    "niceclaw.launch.description": "Десктопное приложение уже доступно: удобнее работа с несколькими моделями, вызов инструментов и локальные рабочие процессы.",
+    "niceclaw.launch.action": "Открыть NiceClaw"
   }
 }

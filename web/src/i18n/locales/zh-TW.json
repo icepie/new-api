@@ -2901,6 +2901,10 @@
     "1h缓存创建：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 1h缓存创建倍率 {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}": "1h快取建立：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 1h快取建立倍率 {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}",
     "输出：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 输出倍率 {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}": "輸出：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 輸出倍率 {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}",
     "空": "空",
-    "查看价格": "查看價格"
+    "查看价格": "查看價格",
+    "niceclaw.launch.tag": "上線通知",
+    "niceclaw.launch.title": "NiceClaw 已上線",
+    "niceclaw.launch.description": "桌面端現已開放體驗，帶來更順手的多模型協作、工具呼叫與本地工作流程。",
+    "niceclaw.launch.action": "點擊打開 NiceClaw"
   }
 }

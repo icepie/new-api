@@ -3274,6 +3274,10 @@
     "1h缓存创建：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 1h缓存创建倍率 {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}": "1h キャッシュ作成: {{tokens}} / 1M * モデル倍率 {{modelRatio}} * 1h キャッシュ作成倍率 {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}",
     "输出：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 输出倍率 {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}": "出力: {{tokens}} / 1M * モデル倍率 {{modelRatio}} * 出力倍率 {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}",
     "空": "空",
-    "查看价格": "料金を見る"
+    "查看价格": "料金を見る",
+    "niceclaw.launch.tag": "ローンチ通知",
+    "niceclaw.launch.title": "NiceClaw が公開されました",
+    "niceclaw.launch.description": "デスクトップ版の提供を開始しました。マルチモデル連携、ツール呼び出し、ローカルワークフローをよりスムーズに利用できます。",
+    "niceclaw.launch.action": "NiceClaw を開く"
   }
 }

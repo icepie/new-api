@@ -3330,6 +3330,10 @@
     "1h缓存创建：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 1h缓存创建倍率 {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}": "1h cache creation: {{tokens}} / 1M * model ratio {{modelRatio}} * 1h cache creation ratio {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}",
     "输出：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 输出倍率 {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}": "Output: {{tokens}} / 1M * model ratio {{modelRatio}} * output ratio {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}",
     "空": "Empty",
-    "查看价格": "View Pricing"
+    "查看价格": "View Pricing",
+    "niceclaw.launch.tag": "Launch Notice",
+    "niceclaw.launch.title": "NiceClaw Is Live",
+    "niceclaw.launch.description": "The desktop app is now live with smoother multi-model workflows, tool calling, and local collaboration.",
+    "niceclaw.launch.action": "Open NiceClaw"
   }
 }

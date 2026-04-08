@@ -3836,6 +3836,10 @@
     "1h缓存创建：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 1h缓存创建倍率 {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}": "Tạo bộ nhớ đệm 1h: {{tokens}} / 1M * hệ số mô hình {{modelRatio}} * hệ số tạo bộ nhớ đệm 1h {{cacheCreationRatio1h}} * {{ratioType}} {{ratio}} = {{amount}}",
     "输出：{{tokens}} / 1M * 模型倍率 {{modelRatio}} * 输出倍率 {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}": "Đầu ra: {{tokens}} / 1M * hệ số mô hình {{modelRatio}} * hệ số đầu ra {{completionRatio}} * {{ratioType}} {{ratio}} = {{amount}}",
     "空": "Trống",
-    "查看价格": "Xem giá"
+    "查看价格": "Xem giá",
+    "niceclaw.launch.tag": "Thông báo ra mắt",
+    "niceclaw.launch.title": "NiceClaw đã ra mắt",
+    "niceclaw.launch.description": "Ứng dụng desktop hiện đã khả dụng với quy trình đa mô hình, gọi công cụ và cộng tác cục bộ mượt mà hơn.",
+    "niceclaw.launch.action": "Mở NiceClaw"
   }
 }

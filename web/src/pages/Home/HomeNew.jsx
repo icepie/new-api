@@ -27,6 +27,7 @@ import QuickStart from '../../components/homepage/QuickStart';
 import ApiUrlDisplay from '../../components/homepage/ApiUrlDisplay';
 import Typewriter from '../../components/homepage/Typewriter';
 import ShuffleText from '../../components/homepage/ShuffleText';
+import NiceClawLaunchFloat from '../../components/homepage/NiceClawLaunchFloat';
 import { getSystemName } from '../../helpers';
 import '../../styles/homepage.css';
 
@@ -35,7 +36,6 @@ const HomeNew = () => {
   const [statusState] = useContext(StatusContext);
   const containerRef = useRef(null);
   const locale = i18n.language.startsWith('zh') ? 'zh' : 'en';
-  const isChinese = i18n.language.startsWith('zh');
 
   const docsLink = statusState?.status?.docs_link || '';
 
@@ -351,6 +351,8 @@ const HomeNew = () => {
 
   return (
     <div className="min-h-screen snap-scroll-container overflow-x-hidden relative" ref={containerRef}>
+      <NiceClawLaunchFloat />
+
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-screen snap-section flex items-center justify-center">
         <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-20 xl:px-24 pt-16 sm:pt-20 md:pt-24 relative z-10">
@@ -586,4 +588,3 @@ const HomeNew = () => {
 };
 
 export default HomeNew;
-
