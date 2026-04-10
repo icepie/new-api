@@ -40,9 +40,93 @@ body {
   font-family: inherit;
 }
 
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 .app-layout {
   height: 100vh;
   height: 100dvh;
+}
+
+.electron-block-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.9), transparent 45%),
+    linear-gradient(160deg, #f6f8fb 0%, #eef3ff 52%, #f7f9fc 100%);
+}
+
+.electron-block-card {
+  width: min(100%, 560px);
+  padding: 32px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.electron-block-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.electron-block-description {
+  display: block;
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(15, 23, 42, 0.78);
+}
+
+.electron-block-url {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+}
+
+.electron-block-actions {
+  margin-top: 18px;
+}
+
+.electron-block-hint {
+  display: block;
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .electron-block-page {
+    padding: 16px;
+  }
+
+  .electron-block-card {
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+
+  .electron-block-url {
+    font-size: 17px;
+  }
 }
 
 .app-sider {

@@ -387,6 +387,32 @@ export default function ModelCard({
     return price.toFixed(2);
   };
 
+  const enableGroups = Array.isArray(model?.enable_groups) ? model.enable_groups : [];
+  const activeGroup = priceData?.usedGroup || selectedGroup;
+  const showOriginalPrice =
+    model &&
+    displayPrice &&
+    activeGroup &&
+    activeGroup !== 'default' &&
+    enableGroups.includes('default');
+
+  let defaultPriceData = null;
+  if (showOriginalPrice) {
+    try {
+      defaultPriceData = calculateModelPrice({
+        record: model,
+        selectedGroup: 'default',
+        groupRatio,
+        tokenUnit,
+        displayPrice,
+        currency,
+      });
+    } catch (e) {
+      console.error('Default group price calculation error:', e);
+      defaultPriceData = null;
+    }
+  }
+
   const handleCardClick = () => {
     // 如果提供了完整的模型对象，使用它；否则构建一个基本对象
     const modelData = model || {
@@ -497,6 +523,31 @@ export default function ModelCard({
 
       {/* Price */}
       <div className="pricing-model-card-price">
+        {defaultPriceData && (
+          <div className="pricing-model-card-original-price">
+            <span className="pricing-model-card-original-price-line">
+              {defaultPriceData.isPerToken ? (
+                <>
+                  {locale === 'zh' ? '原价:' : 'Original:'}{' '}
+                  <span className="pricing-detail-price-strikethrough">
+                    {defaultPriceData.inputPrice}/{defaultPriceData.unitLabel || 'M'}
+                  </span>
+                  {' · '}
+                  <span className="pricing-detail-price-strikethrough">
+                    {defaultPriceData.completionPrice || defaultPriceData.outputPrice}/{defaultPriceData.unitLabel || 'M'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {locale === 'zh' ? '原价:' : 'Original:'}{' '}
+                  <span className="pricing-detail-price-strikethrough">
+                    {defaultPriceData.price} / {locale === 'zh' ? '次' : 'req'}
+                  </span>
+                </>
+              )}
+            </span>
+          </div>
+        )}
         {priceData && priceData.isPerToken ? (
           <div className="pricing-model-card-price-per-token">
             <div className="pricing-model-card-price-row">
@@ -557,4 +608,3 @@ export default function ModelCard({
     </div>
   );
 }
-

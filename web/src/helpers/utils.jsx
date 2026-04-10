@@ -689,13 +689,13 @@ export const calculateModelPrice = ({
 
     if (isTokensDisplay) {
       return {
-        inputRatio: formatRatio(record.model_ratio),
-        completionRatio: formatRatio(record.completion_ratio),
-        cacheRatio: formatRatio(record.cache_ratio),
-        createCacheRatio: formatRatio(record.create_cache_ratio),
-        imageRatio: formatRatio(record.image_ratio),
-        audioInputRatio: formatRatio(record.audio_ratio),
-        audioOutputRatio: formatRatio(record.audio_completion_ratio),
+        inputRatio: formatRatio(record.model_ratio * usedGroupRatio),
+        completionRatio: formatRatio(record.completion_ratio * usedGroupRatio),
+        cacheRatio: hasRatioValue(record.cache_ratio) ? formatRatio(Number(record.cache_ratio) * usedGroupRatio) : null,
+        createCacheRatio: hasRatioValue(record.create_cache_ratio) ? formatRatio(Number(record.create_cache_ratio) * usedGroupRatio) : null,
+        imageRatio: hasRatioValue(record.image_ratio) ? formatRatio(Number(record.image_ratio) * usedGroupRatio) : null,
+        audioInputRatio: hasRatioValue(record.audio_ratio) ? formatRatio(Number(record.audio_ratio) * usedGroupRatio) : null,
+        audioOutputRatio: hasRatioValue(record.audio_completion_ratio) ? formatRatio(Number(record.audio_completion_ratio) * usedGroupRatio) : null,
         isPerToken: true,
         isTokensDisplay: true,
         usedGroup,

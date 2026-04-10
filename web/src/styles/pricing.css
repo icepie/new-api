@@ -171,6 +171,21 @@
   margin-top: 0;
 }
 
+.pricing-model-card-original-price {
+  margin-bottom: 0.375rem;
+}
+
+.pricing-model-card-original-price-line {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: rgb(107, 114, 128);
+  white-space: normal;
+}
+
+.dark .pricing-model-card-original-price-line {
+  color: rgb(156, 163, 175);
+}
+
 .pricing-model-card-price-per-token {
   display: flex;
   flex-direction: column;

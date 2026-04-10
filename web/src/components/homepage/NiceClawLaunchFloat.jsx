@@ -20,6 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../../styles/homepage.css';
+import niceclawIcon from '../../assets/niceclaw.svg';
 
 const NiceClawLaunchFloat = () => {
   const { t } = useTranslation();
@@ -109,7 +110,7 @@ const NiceClawLaunchFloat = () => {
           <span className='niceclaw-launch-dock__glow' />
           <div className='niceclaw-launch-dock__shell'>
             <img
-              src='/niceclaw.svg'
+              src={niceclawIcon}
               alt='NiceClaw'
               className='niceclaw-launch-dock__icon'
             />
