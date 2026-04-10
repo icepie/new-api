@@ -106,6 +106,9 @@ body {
 
 .electron-block-actions {
   margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .electron-block-hint {

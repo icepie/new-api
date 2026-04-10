@@ -1,4 +1,4 @@
-const { contextBridge } = require('electron');
+const { contextBridge, shell } = require('electron');
 
 // 获取数据目录路径（用于显示给用户）
 // 优先使用主进程设置的真实路径，如果没有则回退到手动拼接
@@ -14,5 +14,13 @@ contextBridge.exposeInMainWorld('electron', {
   version: process.versions.electron,
   platform: process.platform,
   versions: process.versions,
-  dataDir: getDataDirPath()
+  dataDir: getDataDirPath(),
+  openExternal: async (url) => {
+    try {
+      await shell.openExternal(url);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
 });
