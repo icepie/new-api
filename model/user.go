@@ -800,21 +800,18 @@ func IsAdmin(userId int) bool {
 //	return user.Status == common.UserStatusEnabled, nil
 //}
 
-func ValidateAccessToken(token string) (user *User, err error) {
+func ValidateAccessToken(token string) (*User, error) {
 	if token == "" {
-		return nil, ErrTokenInvalid
+		return nil, nil
 	}
 	token = strings.Replace(token, "Bearer ", "", 1)
-	user = &User{}
-	result := DB.Where("access_token = ?", token).First(user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, ErrTokenInvalid
+	user := &User{}
+	err := DB.Where("access_token = ?", token).First(user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
 		}
-		return nil, ErrDatabase
-	}
-	if result.RowsAffected != 1 {
-		return nil, ErrTokenInvalid
+		return nil, fmt.Errorf("%w: %v", ErrDatabase, err)
 	}
 	return user, nil
 }
