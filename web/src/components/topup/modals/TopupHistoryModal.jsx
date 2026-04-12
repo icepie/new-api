@@ -35,6 +35,7 @@ import {
 import { Coins } from 'lucide-react';
 import { IconSearch } from '@douyinfe/semi-icons';
 import { API, timestamp2string } from '../../../helpers';
+import { formatDisplayMoney } from '../../../helpers/render';
 import { isAdmin } from '../../../helpers/utils';
 import { useIsMobile } from '../../../hooks/common/useIsMobile';
 
@@ -94,6 +95,18 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
       loadTopups(page, pageSize);
     }
   }, [visible, page, pageSize, keyword]);
+
+  useEffect(() => {
+    if (!visible || !(topups || []).some((item) => item?.status === 'pending')) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      loadTopups(page, pageSize);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [visible, topups, page, pageSize, keyword]);
 
   const handlePageChange = (currentPage) => {
     setPage(currentPage);
@@ -198,7 +211,9 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
         title: t('支付金额'),
         dataIndex: 'money',
         key: 'money',
-        render: (money) => <Text type='danger'>¥{money.toFixed(2)}</Text>,
+        render: (money) => (
+          <Text type='danger'>¥{formatDisplayMoney(money)}</Text>
+        ),
       },
       {
         title: t('状态'),

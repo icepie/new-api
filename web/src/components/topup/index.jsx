@@ -27,11 +27,13 @@ import {
   renderQuotaWithAmount,
   copy,
   getQuotaPerUnit,
+  createPaymentStatusPoller,
 } from '../../helpers';
 import { Modal, Toast } from '@douyinfe/semi-ui';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../../context/User';
 import { StatusContext } from '../../context/Status';
+import { formatDisplayMoney } from '../../helpers/render';
 
 import RechargeCard from './RechargeCard';
 import InvitationCard from './InvitationCard';
@@ -86,6 +88,8 @@ const TopUp = () => {
 
   // 账单Modal状态
   const [openHistory, setOpenHistory] = useState(false);
+  const topUpPollingStopRef = useRef(null);
+  const payStatusHandledRef = useRef(false);
 
   // 订阅相关
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
@@ -218,11 +222,12 @@ const TopUp = () => {
       }
 
       if (res !== undefined) {
-        const { message, data } = res.data;
+        const { message, data, trade_no: tradeNo } = res.data;
         if (message === 'success') {
           if (payWay === 'stripe') {
             // Stripe 支付回调处理
             window.open(data.pay_link, '_blank');
+            startTopUpStatusPolling(tradeNo);
           } else {
             // 普通支付表单提交
             let params = data;
@@ -246,6 +251,7 @@ const TopUp = () => {
             document.body.appendChild(form);
             form.submit();
             document.body.removeChild(form);
+            startTopUpStatusPolling(tradeNo);
           }
         } else {
           const errorMsg =
@@ -290,9 +296,9 @@ const TopUp = () => {
         payment_method: 'creem',
       });
       if (res !== undefined) {
-        const { message, data } = res.data;
+        const { message, data, trade_no: tradeNo } = res.data;
         if (message === 'success') {
-          processCreemCallback(data);
+          processCreemCallback(data, tradeNo);
         } else {
           const errorMsg =
             typeof data === 'string' ? data : message || t('支付失败');
@@ -310,9 +316,47 @@ const TopUp = () => {
     }
   };
 
-  const processCreemCallback = (data) => {
+  const processCreemCallback = (data, tradeNo) => {
     // 与 Stripe 保持一致的实现方式
     window.open(data.checkout_url, '_blank');
+    startTopUpStatusPolling(tradeNo);
+  };
+
+  const stopTopUpStatusPolling = () => {
+    if (typeof topUpPollingStopRef.current === 'function') {
+      topUpPollingStopRef.current();
+      topUpPollingStopRef.current = null;
+    }
+  };
+
+  const startTopUpStatusPolling = (tradeNo) => {
+    if (!tradeNo) return;
+
+    stopTopUpStatusPolling();
+    topUpPollingStopRef.current = createPaymentStatusPoller({
+      fetchStatus: async () => {
+        const res = await API.get(
+          `/api/user/topup/status?trade_no=${encodeURIComponent(tradeNo)}`,
+        );
+        if (!res.data?.success) {
+          throw new Error(res.data?.message || 'load topup status failed');
+        }
+        return res.data.data || {};
+      },
+      onSuccess: async () => {
+        showSuccess(t('支付成功，额度已到账'));
+        await getUserQuota();
+      },
+      onExpired: () => {
+        showError(t('订单已过期'));
+      },
+      onTimeout: () => {
+        showInfo(t('支付结果确认中，可稍后在充值账单中查看'));
+      },
+      onError: () => {
+        showInfo(t('支付结果确认中，可稍后在充值账单中查看'));
+      },
+    });
   };
 
   const getUserQuota = async () => {
@@ -535,6 +579,9 @@ const TopUp = () => {
     // 始终获取最新用户数据，确保余额等统计信息准确
     getUserQuota().then();
     setTransferAmount(getQuotaPerUnit());
+    return () => {
+      stopTopUpStatusPolling();
+    };
   }, []);
 
   useEffect(() => {
@@ -551,6 +598,31 @@ const TopUp = () => {
   }, []);
 
   useEffect(() => {
+    if (payStatusHandledRef.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const payStatus = params.get('pay');
+    if (!payStatus) return;
+
+    payStatusHandledRef.current = true;
+
+    if (payStatus === 'success') {
+      showSuccess(t('支付成功'));
+      getUserQuota().then();
+      getSubscriptionSelf().then();
+    } else if (payStatus === 'pending') {
+      showInfo(t('支付处理中，请稍后在账单中查看'));
+    } else if (payStatus === 'fail') {
+      showError(t('支付未完成或校验失败'));
+    }
+
+    params.delete('pay');
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
+    window.history.replaceState({}, '', nextUrl);
+  }, [t]);
+
+  useEffect(() => {
     if (statusState?.status) {
       // const minTopUpValue = statusState.status.min_topup || 1;
       // setMinTopUp(minTopUpValue);
@@ -563,7 +635,7 @@ const TopUp = () => {
   }, [statusState?.status]);
 
   const renderAmount = () => {
-    return amount + ' ' + t('元');
+    return `${formatDisplayMoney(amount)} ${t('元')}`;
   };
 
   const getAmount = async (value) => {
@@ -578,7 +650,7 @@ const TopUp = () => {
       if (res !== undefined) {
         const { message, data } = res.data;
         if (message === 'success') {
-          setAmount(parseFloat(data));
+          setAmount(Number(Number(data).toFixed(2)));
         } else {
           setAmount(0);
           Toast.error({ content: '错误：' + data, id: 'getAmount' });
@@ -604,7 +676,7 @@ const TopUp = () => {
       if (res !== undefined) {
         const { message, data } = res.data;
         if (message === 'success') {
-          setAmount(parseFloat(data));
+          setAmount(Number(Number(data).toFixed(2)));
         } else {
           setAmount(0);
           Toast.error({ content: '错误：' + data, id: 'getAmount' });
@@ -647,13 +719,10 @@ const TopUp = () => {
 
     // 计算实际支付金额，考虑折扣
     const discount = preset.discount || topupInfo.discount[preset.value] || 1.0;
-    const discountedAmount = preset.value * priceRatio * discount;
+    const discountedAmount = Number(
+      (preset.value * priceRatio * discount).toFixed(2),
+    );
     setAmount(discountedAmount);
-  };
-
-  // 格式化大数字显示
-  const formatLargeNumber = (num) => {
-    return num.toString();
   };
 
   // 根据最小充值金额生成预设充值额度选项
@@ -721,7 +790,7 @@ const TopUp = () => {
             </p>
             <p>
               {t('价格')}：{selectedCreemProduct.currency === 'EUR' ? '€' : '$'}
-              {selectedCreemProduct.price}
+              {formatDisplayMoney(selectedCreemProduct.price)}
             </p>
             <p>
               {t('充值额度')}：{selectedCreemProduct.quota}
@@ -743,7 +812,6 @@ const TopUp = () => {
           presetAmounts={presetAmounts}
           selectedPreset={selectedPreset}
           selectPresetAmount={selectPresetAmount}
-          formatLargeNumber={formatLargeNumber}
           priceRatio={priceRatio}
           topUpCount={topUpCount}
           minTopUp={minTopUp}

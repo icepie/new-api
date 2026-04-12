@@ -5,12 +5,12 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/goccy/go-json"
 	"errors"
 	"fmt"
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/goccy/go-json"
 	"io"
 	"log"
 	"net/http"
@@ -140,6 +140,7 @@ func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
 			"checkout_url": checkoutUrl,
 			"order_id":     referenceId,
 		},
+		"trade_no": referenceId,
 	})
 }
 

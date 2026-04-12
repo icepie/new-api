@@ -48,7 +48,11 @@ import {
 import { IconGift } from '@douyinfe/semi-icons';
 import SmartBackground from 'smart-background';
 import { useMinimumLoadingTime } from '../../hooks/common/useMinimumLoadingTime';
-import { getCurrencyConfig } from '../../helpers/render';
+import {
+  formatDisplayMoney,
+  formatDisplayNumber,
+  getCurrencyConfig,
+} from '../../helpers/render';
 import SubscriptionPlansCard from './SubscriptionPlansCard';
 import { SMART_BACKGROUND_VARIANTS } from '../common/ui/smartBackgroundThemes';
 
@@ -64,7 +68,6 @@ const RechargeCard = ({
   presetAmounts,
   selectedPreset,
   selectPresetAmount,
-  formatLargeNumber,
   priceRatio,
   topUpCount,
   minTopUp,
@@ -449,7 +452,7 @@ const RechargeCard = ({
                               style={{ margin: '0 0 8px 0' }}
                             >
                               <IconCoins size={18} />
-                              {formatLargeNumber(displayValue)} {symbol}
+                              {formatDisplayNumber(displayValue)} {symbol}
                               {hasDiscount && (
                                 <Tag style={{ marginLeft: 4 }} color='green'>
                                   {t('折').includes('off')
@@ -467,10 +470,10 @@ const RechargeCard = ({
                               }}
                             >
                               {t('实付')} {symbol}
-                              {displayActualPay.toFixed(2)}，
+                              {formatDisplayMoney(displayActualPay)}，
                               {hasDiscount
-                                ? `${t('节省')} ${symbol}${displaySave.toFixed(2)}`
-                                : `${t('节省')} ${symbol}0.00`}
+                                ? `${t('节省')} ${symbol}${formatDisplayMoney(displaySave)}`
+                                : `${t('节省')} ${symbol}${formatDisplayMoney(0)}`}
                             </div>
                           </div>
                         </Card>
@@ -499,7 +502,7 @@ const RechargeCard = ({
                         </div>
                         <div className='text-lg font-semibold text-blue-600'>
                           {product.currency === 'EUR' ? '€' : '$'}
-                          {product.price}
+                          {formatDisplayMoney(product.price)}
                         </div>
                       </Card>
                     ))}

@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting"
@@ -19,7 +19,6 @@ import (
 
 	"github.com/Calcium-Ion/go-epay/epay"
 	"github.com/gin-gonic/gin"
-	"github.com/samber/lo"
 	"github.com/shopspring/decimal"
 )
 
@@ -177,7 +176,7 @@ func RequestEpay(c *gin.Context) {
 	}
 
 	callBackAddress := service.GetCallbackAddress()
-	returnUrl, _ := url.Parse(getRequestBaseURL(c) + "/console/log")
+	returnUrl, _ := url.Parse(getRequestBaseURL(c) + "/api/user/epay/return")
 	notifyUrl, _ := url.Parse(callBackAddress + "/api/user/epay/notify")
 	tradeNo := fmt.Sprintf("%s%d", common.GetRandomString(6), time.Now().Unix())
 	tradeNo = fmt.Sprintf("USR%dNO%s", id, tradeNo)
@@ -224,7 +223,7 @@ func RequestEpay(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "error", "data": "创建订单失败"})
 		return
 	}
-	c.JSON(200, gin.H{"message": "success", "data": params, "url": uri})
+	c.JSON(200, gin.H{"message": "success", "data": params, "url": uri, "trade_no": tradeNo})
 }
 
 // tradeNo lock
@@ -255,25 +254,11 @@ func UnlockOrder(tradeNo string) {
 }
 
 func EpayNotify(c *gin.Context) {
-	var params map[string]string
-
-	if c.Request.Method == "POST" {
-		// POST 请求：从 POST body 解析参数
-		if err := c.Request.ParseForm(); err != nil {
-			log.Println("易支付回调POST解析失败:", err)
-			_, _ = c.Writer.Write([]byte("fail"))
-			return
-		}
-		params = lo.Reduce(lo.Keys(c.Request.PostForm), func(r map[string]string, t string, i int) map[string]string {
-			r[t] = c.Request.PostForm.Get(t)
-			return r
-		}, map[string]string{})
-	} else {
-		// GET 请求：从 URL Query 解析参数
-		params = lo.Reduce(lo.Keys(c.Request.URL.Query()), func(r map[string]string, t string, i int) map[string]string {
-			r[t] = c.Request.URL.Query().Get(t)
-			return r
-		}, map[string]string{})
+	params, err := collectEpayCallbackParams(c)
+	if err != nil {
+		log.Println("易支付回调参数解析失败:", err)
+		_, _ = c.Writer.Write([]byte("fail"))
+		return
 	}
 
 	if len(params) == 0 {
@@ -306,37 +291,44 @@ func EpayNotify(c *gin.Context) {
 	}
 
 	if verifyInfo.TradeStatus == epay.StatusTradeSuccess {
-		log.Println(verifyInfo)
-		LockOrder(verifyInfo.ServiceTradeNo)
-		defer UnlockOrder(verifyInfo.ServiceTradeNo)
-		topUp := model.GetTopUpByTradeNo(verifyInfo.ServiceTradeNo)
-		if topUp == nil {
-			log.Printf("易支付回调未找到订单: %v", verifyInfo)
+		if err := completeWalletTopUpFromVerifyInfo(verifyInfo); err != nil {
+			log.Printf("易支付回调处理失败: %v, verifyInfo=%v", err, verifyInfo)
 			return
-		}
-		if topUp.Status == "pending" {
-			topUp.Status = "success"
-			err := topUp.Update()
-			if err != nil {
-				log.Printf("易支付回调更新订单失败: %v", topUp)
-				return
-			}
-			//user, _ := model.GetUserById(topUp.UserId, false)
-			//user.Quota += topUp.Amount * 500000
-			dAmount := decimal.NewFromInt(int64(topUp.Amount))
-			dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
-			quotaToAdd := int(dAmount.Mul(dQuotaPerUnit).IntPart())
-			err = model.IncreaseUserQuota(topUp.UserId, quotaToAdd, true)
-			if err != nil {
-				log.Printf("易支付回调更新用户失败: %v", topUp)
-				return
-			}
-			log.Printf("易支付回调更新用户成功 %v", topUp)
-			model.RecordLog(topUp.UserId, model.LogTypeTopup, fmt.Sprintf("使用在线充值成功，充值金额: %v，支付金额：%f", logger.LogQuota(quotaToAdd), topUp.Money))
 		}
 	} else {
 		log.Printf("易支付异常回调: %v", verifyInfo)
 	}
+}
+
+func EpayReturn(c *gin.Context) {
+	params, err := collectEpayCallbackParams(c)
+	if err != nil || len(params) == 0 {
+		c.Redirect(http.StatusFound, getRequestBaseURL(c)+"/console/topup?pay=fail")
+		return
+	}
+
+	client := GetEpayClient()
+	if client == nil {
+		c.Redirect(http.StatusFound, getRequestBaseURL(c)+"/console/topup?pay=fail")
+		return
+	}
+	verifyInfo, err := client.Verify(params)
+	if err != nil || !verifyInfo.VerifyStatus {
+		c.Redirect(http.StatusFound, getRequestBaseURL(c)+"/console/topup?pay=fail")
+		return
+	}
+
+	if verifyInfo.TradeStatus == epay.StatusTradeSuccess {
+		if err := completeWalletTopUpFromVerifyInfo(verifyInfo); err != nil {
+			log.Printf("易支付回跳处理失败: %v, verifyInfo=%v", err, verifyInfo)
+			c.Redirect(http.StatusFound, getRequestBaseURL(c)+"/console/topup?pay=fail")
+			return
+		}
+		c.Redirect(http.StatusFound, getRequestBaseURL(c)+"/console/topup?pay=success")
+		return
+	}
+
+	c.Redirect(http.StatusFound, getRequestBaseURL(c)+"/console/topup?pay=pending")
 }
 
 func RequestAmount(c *gin.Context) {

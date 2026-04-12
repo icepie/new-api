@@ -102,6 +102,7 @@ func SubscriptionRequestStripePay(c *gin.Context) {
 		"data": gin.H{
 			"pay_link": payLink,
 		},
+		"trade_no": referenceId,
 	})
 }
 

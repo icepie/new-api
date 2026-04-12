@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Badge,
   Button,
@@ -30,7 +30,14 @@ import {
   Tooltip,
   Typography,
 } from '@douyinfe/semi-ui';
-import { API, showError, showSuccess, renderQuota } from '../../helpers';
+import {
+  API,
+  showError,
+  showInfo,
+  showSuccess,
+  renderQuota,
+  createPaymentStatusPoller,
+} from '../../helpers';
 import { getCurrencyConfig } from '../../helpers/render';
 import { RefreshCw, Sparkles } from 'lucide-react';
 import SubscriptionPurchaseModal from './modals/SubscriptionPurchaseModal';
@@ -89,6 +96,7 @@ const SubscriptionPlansCard = ({
   const [paying, setPaying] = useState(false);
   const [selectedEpayMethod, setSelectedEpayMethod] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const pollingStopRef = useRef(null);
 
   const epayMethods = useMemo(() => getEpayMethods(payMethods), [payMethods]);
 
@@ -113,6 +121,51 @@ const SubscriptionPlansCard = ({
     }
   };
 
+  const stopSubscriptionStatusPolling = () => {
+    if (typeof pollingStopRef.current === 'function') {
+      pollingStopRef.current();
+      pollingStopRef.current = null;
+    }
+  };
+
+  const startSubscriptionStatusPolling = (tradeNo) => {
+    if (!tradeNo) return;
+
+    stopSubscriptionStatusPolling();
+    pollingStopRef.current = createPaymentStatusPoller({
+      fetchStatus: async () => {
+        const res = await API.get(
+          `/api/subscription/order/status?trade_no=${encodeURIComponent(tradeNo)}`,
+        );
+        if (!res.data?.success) {
+          throw new Error(
+            res.data?.message || 'load subscription order status failed',
+          );
+        }
+        return res.data.data || {};
+      },
+      onSuccess: async () => {
+        showSuccess(t('支付成功，订阅已生效'));
+        await reloadSubscriptionSelf?.();
+      },
+      onExpired: () => {
+        showError(t('订单已过期'));
+      },
+      onTimeout: () => {
+        showInfo(t('支付结果确认中，可稍后刷新订阅列表查看'));
+      },
+      onError: () => {
+        showInfo(t('支付结果确认中，可稍后刷新订阅列表查看'));
+      },
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      stopSubscriptionStatusPolling();
+    };
+  }, []);
+
   const payStripe = async () => {
     if (!selectedPlan?.plan?.stripe_price_id) {
       showError(t('该套餐未配置 Stripe'));
@@ -126,6 +179,7 @@ const SubscriptionPlansCard = ({
       if (res.data?.message === 'success') {
         window.open(res.data.data?.pay_link, '_blank');
         showSuccess(t('已打开支付页面'));
+        startSubscriptionStatusPolling(res.data?.trade_no);
         closeBuy();
       } else {
         const errorMsg =
@@ -154,6 +208,7 @@ const SubscriptionPlansCard = ({
       if (res.data?.message === 'success') {
         window.open(res.data.data?.checkout_url, '_blank');
         showSuccess(t('已打开支付页面'));
+        startSubscriptionStatusPolling(res.data?.trade_no);
         closeBuy();
       } else {
         const errorMsg =
@@ -183,6 +238,7 @@ const SubscriptionPlansCard = ({
       if (res.data?.message === 'success') {
         submitEpayForm({ url: res.data.url, params: res.data.data });
         showSuccess(t('已发起支付'));
+        startSubscriptionStatusPolling(res.data?.trade_no);
         closeBuy();
       } else {
         const errorMsg =

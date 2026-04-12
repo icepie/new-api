@@ -1107,6 +1107,28 @@ export function renderQuotaWithAmount(amount) {
   return '$' + formattedAmount;
 }
 
+export function formatDisplayNumber(
+  value,
+  digits = 2,
+  trimTrailingZeros = true,
+) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return trimTrailingZeros ? '0' : (0).toFixed(digits);
+  }
+
+  const rounded = Number(numericValue.toFixed(digits));
+  const fixed = rounded.toFixed(digits);
+  if (!trimTrailingZeros) {
+    return fixed;
+  }
+  return fixed.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+}
+
+export function formatDisplayMoney(value, digits = 2) {
+  return formatDisplayNumber(value, digits, false);
+}
+
 /**
  * 获取当前货币配置信息
  * @returns {Object} - { symbol, rate, type }
