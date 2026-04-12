@@ -637,15 +637,15 @@ func (user *User) ValidateAndFill() (err error) {
 	password := user.Password
 	username := strings.TrimSpace(user.Username)
 	if username == "" || password == "" {
-		return ErrInvalidCredentials
+		return ErrUserEmptyCredentials
 	}
-	// find buy username or email
-	result := DB.Where("username = ? OR email = ?", username, username).First(user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	// find by username or email
+	err = DB.Where("username = ? OR email = ?", username, username).First(user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrInvalidCredentials
 		}
-		return ErrDatabase
+		return fmt.Errorf("%w: %v", ErrDatabase, err)
 	}
 	okay := common.ValidatePasswordAndHash(password, user.Password)
 	if !okay || user.Status != common.UserStatusEnabled {
