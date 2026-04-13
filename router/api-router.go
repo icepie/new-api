@@ -163,6 +163,23 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/subscription/epay/notify", controller.SubscriptionEpayNotify)
 		apiRouter.GET("/subscription/epay/return", controller.SubscriptionEpayReturn)
 		apiRouter.POST("/subscription/epay/return", controller.SubscriptionEpayReturn)
+
+		organizationRoute := apiRouter.Group("/organization")
+		organizationRoute.Use(middleware.AdminAuth())
+		{
+			organizationRoute.GET("/", controller.GetOrganizations)
+			organizationRoute.GET("/:id", controller.GetOrganization)
+			organizationRoute.POST("/", controller.CreateOrganization)
+			organizationRoute.PUT("/:id", controller.UpdateOrganization)
+			organizationRoute.DELETE("/:id", controller.DeleteOrganization)
+		}
+
+		organizationBillingRoute := apiRouter.Group("/organization")
+		organizationBillingRoute.Use(middleware.UserAuth())
+		{
+			organizationBillingRoute.GET("/billing", controller.GetOrganizationBilling)
+		}
+
 		optionRoute := apiRouter.Group("/option")
 		optionRoute.Use(middleware.RootAuth())
 		{
