@@ -24,6 +24,7 @@ import {
   API,
   copy,
   isAdmin,
+  isRoot,
   showError,
   showSuccess,
   timestamp2string,
@@ -60,6 +61,7 @@ export const useMjLogsData = () => {
 
   // User and admin
   const isAdminUser = isAdmin();
+  const canViewChannelInfo = isRoot();
   // Role-specific storage key to prevent different roles from overwriting each other
   const STORAGE_KEY = isAdminUser
     ? 'mj-logs-table-columns-admin'
@@ -100,8 +102,10 @@ export const useMjLogsData = () => {
         const merged = { ...defaults, ...parsed };
 
         // For non-admin users, force-hide admin-only columns (does not touch admin settings)
-        if (!isAdminUser) {
+        if (!canViewChannelInfo) {
           merged[COLUMN_KEYS.CHANNEL] = false;
+        }
+        if (!isAdminUser) {
           merged[COLUMN_KEYS.SUBMIT_RESULT] = false;
         }
         setVisibleColumns(merged);
@@ -127,7 +131,7 @@ export const useMjLogsData = () => {
     return {
       [COLUMN_KEYS.SUBMIT_TIME]: true,
       [COLUMN_KEYS.DURATION]: true,
-      [COLUMN_KEYS.CHANNEL]: isAdminUser,
+      [COLUMN_KEYS.CHANNEL]: canViewChannelInfo,
       [COLUMN_KEYS.TYPE]: true,
       [COLUMN_KEYS.TASK_ID]: true,
       [COLUMN_KEYS.SUBMIT_RESULT]: isAdminUser,
@@ -160,9 +164,10 @@ export const useMjLogsData = () => {
 
     allKeys.forEach((key) => {
       if (
-        (key === COLUMN_KEYS.CHANNEL || key === COLUMN_KEYS.SUBMIT_RESULT) &&
-        !isAdminUser
+        key === COLUMN_KEYS.CHANNEL && !canViewChannelInfo
       ) {
+        updatedColumns[key] = false;
+      } else if (key === COLUMN_KEYS.SUBMIT_RESULT && !isAdminUser) {
         updatedColumns[key] = false;
       } else {
         updatedColumns[key] = checked;
@@ -226,10 +231,11 @@ export const useMjLogsData = () => {
     setLoading(true);
     const { channel_id, mj_id, start_timestamp, end_timestamp } =
       getFormValues();
+    const effectiveChannelId = canViewChannelInfo ? channel_id : '';
     let localStartTimestamp = Date.parse(start_timestamp);
     let localEndTimestamp = Date.parse(end_timestamp);
     const url = isAdminUser
-      ? `/api/mj/?p=${page}&page_size=${size}&channel_id=${channel_id}&mj_id=${mj_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`
+      ? `/api/mj/?p=${page}&page_size=${size}&channel_id=${effectiveChannelId}&mj_id=${mj_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`
       : `/api/mj/self/?p=${page}&page_size=${size}&mj_id=${mj_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
     const res = await API.get(url);
     const { success, message, data } = res.data;
@@ -293,6 +299,7 @@ export const useMjLogsData = () => {
     pageSize,
     showBanner,
     isAdminUser,
+    canViewChannelInfo,
 
     // Modal state
     isModalOpen,

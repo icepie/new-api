@@ -30,6 +30,7 @@ const ColumnSelectorModal = ({
   initDefaultColumns,
   COLUMN_KEYS,
   isAdminUser,
+  canViewChannelInfo,
   copyText,
   openContentModal,
   openImageModal,
@@ -43,6 +44,7 @@ const ColumnSelectorModal = ({
     openContentModal,
     openImageModal,
     isAdminUser,
+    canViewChannelInfo,
   });
 
   return (
@@ -80,11 +82,10 @@ const ColumnSelectorModal = ({
       >
         {allColumns.map((column) => {
           // Skip admin-only columns for non-admin users
-          if (
-            !isAdminUser &&
-            (column.key === COLUMN_KEYS.CHANNEL ||
-              column.key === COLUMN_KEYS.SUBMIT_RESULT)
-          ) {
+          if (!canViewChannelInfo && column.key === COLUMN_KEYS.CHANNEL) {
+            return null;
+          }
+          if (!isAdminUser && column.key === COLUMN_KEYS.SUBMIT_RESULT) {
             return null;
           }
 

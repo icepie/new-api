@@ -24,6 +24,7 @@ import {
   API,
   copy,
   isAdmin,
+  isRoot,
   showError,
   showSuccess,
   timestamp2string,
@@ -59,6 +60,7 @@ export const useTaskLogsData = () => {
 
   // User and admin
   const isAdminUser = isAdmin();
+  const canViewChannelInfo = isRoot();
   // Role-specific storage key to prevent different roles from overwriting each other
   const STORAGE_KEY = isAdminUser
     ? 'task-logs-table-columns-admin'
@@ -111,8 +113,10 @@ export const useTaskLogsData = () => {
         const merged = { ...defaults, ...parsed };
 
         // For non-admin users, force-hide admin-only columns (does not touch admin settings)
-        if (!isAdminUser) {
+        if (!canViewChannelInfo) {
           merged[COLUMN_KEYS.CHANNEL] = false;
+        }
+        if (!isAdminUser) {
           merged[COLUMN_KEYS.USERNAME] = false;
         }
         setVisibleColumns(merged);
@@ -131,7 +135,7 @@ export const useTaskLogsData = () => {
       [COLUMN_KEYS.SUBMIT_TIME]: true,
       [COLUMN_KEYS.FINISH_TIME]: true,
       [COLUMN_KEYS.DURATION]: true,
-      [COLUMN_KEYS.CHANNEL]: isAdminUser,
+      [COLUMN_KEYS.CHANNEL]: canViewChannelInfo,
       [COLUMN_KEYS.USERNAME]: isAdminUser,
       [COLUMN_KEYS.PLATFORM]: true,
       [COLUMN_KEYS.TYPE]: true,
@@ -163,9 +167,10 @@ export const useTaskLogsData = () => {
 
     allKeys.forEach((key) => {
       if (
-        (key === COLUMN_KEYS.CHANNEL || key === COLUMN_KEYS.USERNAME) &&
-        !isAdminUser
+        key === COLUMN_KEYS.CHANNEL && !canViewChannelInfo
       ) {
+        updatedColumns[key] = false;
+      } else if (key === COLUMN_KEYS.USERNAME && !isAdminUser) {
         updatedColumns[key] = false;
       } else {
         updatedColumns[key] = checked;
@@ -230,10 +235,11 @@ export const useTaskLogsData = () => {
     setLoading(true);
     const { channel_id, task_id, start_timestamp, end_timestamp } =
       getFormValues();
+    const effectiveChannelId = canViewChannelInfo ? channel_id : '';
     let localStartTimestamp = parseInt(Date.parse(start_timestamp) / 1000);
     let localEndTimestamp = parseInt(Date.parse(end_timestamp) / 1000);
     let url = isAdminUser
-      ? `/api/task/?p=${page}&page_size=${size}&channel_id=${channel_id}&task_id=${task_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`
+      ? `/api/task/?p=${page}&page_size=${size}&channel_id=${effectiveChannelId}&task_id=${task_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`
       : `/api/task/self?p=${page}&page_size=${size}&task_id=${task_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
     const res = await API.get(url);
     const { success, message, data } = res.data;
@@ -317,6 +323,7 @@ export const useTaskLogsData = () => {
     logCount,
     pageSize,
     isAdminUser,
+    canViewChannelInfo,
 
     // Modal state
     isModalOpen,

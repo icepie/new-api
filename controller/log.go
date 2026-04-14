@@ -26,6 +26,7 @@ func GetAllLogs(c *gin.Context) {
 	userRole := c.GetInt("role")
 	var orgId int
 	if userRole != common.RoleRootUser {
+		channel = 0
 		currentUser, err := model.GetUserById(userId, false)
 		if err != nil {
 			common.ApiError(c, err)
@@ -39,6 +40,9 @@ func GetAllLogs(c *gin.Context) {
 	if err != nil {
 		common.ApiError(c, err)
 		return
+	}
+	if userRole != common.RoleRootUser {
+		model.SanitizeLogsChannelInfo(logs)
 	}
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(logs)
@@ -87,6 +91,9 @@ func SearchAllLogs(c *gin.Context) {
 	if err != nil {
 		common.ApiError(c, err)
 		return
+	}
+	if userRole != common.RoleRootUser {
+		model.SanitizeLogsChannelInfo(logs)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -144,6 +151,7 @@ func GetLogsStat(c *gin.Context) {
 	userRole := c.GetInt("role")
 	var orgId int
 	if userRole != common.RoleRootUser {
+		channel = 0
 		currentUser, err := model.GetUserById(userId, false)
 		if err != nil {
 			common.ApiError(c, err)
@@ -175,6 +183,9 @@ func GetLogsSelfStat(c *gin.Context) {
 	modelName := c.Query("model_name")
 	channel, _ := strconv.Atoi(c.Query("channel"))
 	group := c.Query("group")
+	if c.GetInt("role") != common.RoleRootUser {
+		channel = 0
+	}
 	quotaNum := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, group, 0)
 	//tokenNum := model.SumUsedToken(logType, startTimestamp, endTimestamp, modelName, username, tokenName)
 	c.JSON(200, gin.H{

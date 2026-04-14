@@ -239,6 +239,7 @@ export const getTaskLogsColumns = ({
   copyText,
   openContentModal,
   isAdminUser,
+  canViewChannelInfo,
   openVideoModal,
   openAudioModal,
 }) => {
@@ -272,7 +273,7 @@ export const getTaskLogsColumns = ({
       title: t('渠道'),
       dataIndex: 'channel_id',
       render: (text, record, index) => {
-        return isAdminUser ? (
+        return canViewChannelInfo ? (
           <div>
             <Tag
               color={colors[parseInt(text) % colors.length]}

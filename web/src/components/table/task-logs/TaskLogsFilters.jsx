@@ -30,7 +30,7 @@ const TaskLogsFilters = ({
   setShowColumnSelector,
   formApi,
   loading,
-  isAdminUser,
+  canViewChannelInfo,
   t,
 }) => {
   return (
@@ -75,7 +75,7 @@ const TaskLogsFilters = ({
           />
 
           {/* 渠道 ID - 仅管理员可见 */}
-          {isAdminUser && (
+          {canViewChannelInfo && (
             <Form.Input
               field='channel_id'
               prefix={<IconSearch />}

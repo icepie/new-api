@@ -14,6 +14,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func sanitizeTaskChannelInfo(tasks []*dto.TaskDto) {
+	for i := range tasks {
+		if tasks[i] == nil {
+			continue
+		}
+		tasks[i].ChannelId = 0
+	}
+}
+
 // UpdateTaskBulk 薄入口，实际轮询逻辑在 service 层
 func UpdateTaskBulk() {
 	service.TaskPollingLoop()
@@ -21,6 +30,7 @@ func UpdateTaskBulk() {
 
 func GetAllTask(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
+	userRole := c.GetInt("role")
 
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
@@ -34,11 +44,18 @@ func GetAllTask(c *gin.Context) {
 		EndTimestamp:   endTimestamp,
 		ChannelID:      c.Query("channel_id"),
 	}
+	if userRole != common.RoleRootUser {
+		queryParams.ChannelID = ""
+	}
 
 	items := model.TaskGetAllTasks(pageInfo.GetStartIdx(), pageInfo.GetPageSize(), queryParams)
 	total := model.TaskCountAllTasks(queryParams)
+	dtoItems := tasksToDto(items, true)
+	if userRole != common.RoleRootUser {
+		sanitizeTaskChannelInfo(dtoItems)
+	}
 	pageInfo.SetTotal(int(total))
-	pageInfo.SetItems(tasksToDto(items, true))
+	pageInfo.SetItems(dtoItems)
 	common.ApiSuccess(c, pageInfo)
 }
 
@@ -46,6 +63,7 @@ func GetUserTask(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
 
 	userId := c.GetInt("id")
+	userRole := c.GetInt("role")
 
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
@@ -61,8 +79,12 @@ func GetUserTask(c *gin.Context) {
 
 	items := model.TaskGetAllUserTask(userId, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), queryParams)
 	total := model.TaskCountAllUserTask(userId, queryParams)
+	dtoItems := tasksToDto(items, false)
+	if userRole != common.RoleRootUser {
+		sanitizeTaskChannelInfo(dtoItems)
+	}
 	pageInfo.SetTotal(int(total))
-	pageInfo.SetItems(tasksToDto(items, false))
+	pageInfo.SetItems(dtoItems)
 	common.ApiSuccess(c, pageInfo)
 }
 

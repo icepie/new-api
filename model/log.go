@@ -53,7 +53,7 @@ const (
 
 func formatUserLogs(logs []*Log) {
 	for i := range logs {
-		logs[i].ChannelName = ""
+		sanitizeLogChannelInfo(logs[i])
 		var otherMap map[string]interface{}
 		otherMap, _ = common.StrToMap(logs[i].Other)
 		if otherMap != nil {
@@ -63,6 +63,48 @@ func formatUserLogs(logs []*Log) {
 		}
 		logs[i].Other = common.MapToJsonStr(otherMap)
 		logs[i].Id = logs[i].Id % 1024
+	}
+}
+
+func sanitizeLogChannelInfo(log *Log) {
+	if log == nil {
+		return
+	}
+
+	log.ChannelId = 0
+	log.ChannelName = ""
+
+	if log.Other == "" {
+		return
+	}
+
+	otherMap, _ := common.StrToMap(log.Other)
+	if otherMap == nil {
+		return
+	}
+
+	delete(otherMap, "channel_id")
+	delete(otherMap, "channel_name")
+	delete(otherMap, "channel_type")
+
+	if adminInfo, ok := otherMap["admin_info"].(map[string]interface{}); ok {
+		delete(adminInfo, "use_channel")
+		delete(adminInfo, "channel_affinity")
+		delete(adminInfo, "is_multi_key")
+		delete(adminInfo, "multi_key_index")
+		if len(adminInfo) == 0 {
+			delete(otherMap, "admin_info")
+		} else {
+			otherMap["admin_info"] = adminInfo
+		}
+	}
+
+	log.Other = common.MapToJsonStr(otherMap)
+}
+
+func SanitizeLogsChannelInfo(logs []*Log) {
+	for i := range logs {
+		sanitizeLogChannelInfo(logs[i])
 	}
 }
 

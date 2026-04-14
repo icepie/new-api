@@ -31,7 +31,7 @@ const LogsFilters = ({
   formApi,
   setLogType,
   loading,
-  isAdminUser,
+  canViewChannelInfo,
   t,
 }) => {
   return (
@@ -102,7 +102,7 @@ const LogsFilters = ({
             size='small'
           />
 
-          {isAdminUser && (
+          {canViewChannelInfo && (
             <>
               <Form.Input
                 field='channel'

@@ -20,6 +20,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func sanitizeMidjourneyChannelInfo(items []*model.Midjourney) {
+	for i := range items {
+		if items[i] == nil {
+			continue
+		}
+		items[i].ChannelId = 0
+	}
+}
+
 func UpdateMidjourneyTaskBulk() {
 	//imageModel := "midjourney"
 	ctx := context.TODO()
@@ -256,6 +265,7 @@ func checkMjTaskNeedUpdate(oldTask *model.Midjourney, newTask dto.MidjourneyDto)
 
 func GetAllMidjourney(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
+	userRole := c.GetInt("role")
 
 	// 解析其他查询参数
 	queryParams := model.TaskQueryParams{
@@ -263,6 +273,9 @@ func GetAllMidjourney(c *gin.Context) {
 		MjID:           c.Query("mj_id"),
 		StartTimestamp: c.Query("start_timestamp"),
 		EndTimestamp:   c.Query("end_timestamp"),
+	}
+	if userRole != common.RoleRootUser {
+		queryParams.ChannelID = ""
 	}
 
 	items := model.GetAllTasks(pageInfo.GetStartIdx(), pageInfo.GetPageSize(), queryParams)
@@ -274,6 +287,9 @@ func GetAllMidjourney(c *gin.Context) {
 			items[i] = midjourney
 		}
 	}
+	if userRole != common.RoleRootUser {
+		sanitizeMidjourneyChannelInfo(items)
+	}
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(items)
 	common.ApiSuccess(c, pageInfo)
@@ -283,6 +299,7 @@ func GetUserMidjourney(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
 
 	userId := c.GetInt("id")
+	userRole := c.GetInt("role")
 
 	queryParams := model.TaskQueryParams{
 		MjID:           c.Query("mj_id"),
@@ -298,6 +315,9 @@ func GetUserMidjourney(c *gin.Context) {
 			midjourney.ImageUrl = system_setting.ServerAddress + "/mj/image/" + midjourney.MjId
 			items[i] = midjourney
 		}
+	}
+	if userRole != common.RoleRootUser {
+		sanitizeMidjourneyChannelInfo(items)
 	}
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(items)

@@ -2074,6 +2074,7 @@ func setupLogin(user *model.User, c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgUserSessionSaveFailed)
 		return
 	}
+	displayQuota := getDisplayQuotaForSelf(user)
 	// 返回用户数据（不包含敏感信息如密码）
 	// 注意：不要返回 Password 和 OriginalPassword 字段
 	cleanUser := model.User{
@@ -2084,7 +2085,7 @@ func setupLogin(user *model.User, c *gin.Context) {
 		Status:          user.Status,
 		Group:           user.Group,
 		Email:           user.Email,
-		Quota:           user.Quota,
+		Quota:           displayQuota,
 		UsedQuota:       user.UsedQuota,
 		RequestCount:    user.RequestCount,
 		AffCode:         user.AffCode,
@@ -2230,6 +2231,30 @@ func Register(c *gin.Context) {
 		"message": "",
 	})
 	return
+}
+
+func getDisplayQuotaForSelf(user *model.User) int {
+	if user == nil || user.OrgId == 0 {
+		return user.Quota
+	}
+
+	org, err := model.GetOrganizationById(user.OrgId)
+	if err != nil {
+		return user.Quota
+	}
+
+	if org.BillingType == "postpaid" {
+		availableQuota := org.Quota + org.OverdraftLimit - org.UsedQuota
+		if availableQuota < 0 {
+			return 0
+		}
+		return availableQuota
+	}
+
+	if org.Quota < 0 {
+		return 0
+	}
+	return org.Quota
 }
 
 func GetAllUsers(c *gin.Context) {
@@ -2445,6 +2470,7 @@ func GetSelf(c *gin.Context) {
 
 	// 获取用户设置并提取sidebar_modules
 	userSetting := user.GetSetting()
+	displayQuota := getDisplayQuotaForSelf(user)
 
 	// 构建响应数据，包含用户信息和权限
 	responseData := map[string]interface{}{
@@ -2461,7 +2487,7 @@ func GetSelf(c *gin.Context) {
 		"telegram_id":       user.TelegramId,
 		"star_user_id":      user.StarUserId,
 		"group":             user.Group,
-		"quota":             user.Quota,
+		"quota":             displayQuota,
 		"used_quota":        user.UsedQuota,
 		"request_count":     user.RequestCount,
 		"aff_code":          user.AffCode,
@@ -2472,8 +2498,8 @@ func GetSelf(c *gin.Context) {
 		"linux_do_id":       user.LinuxDOId,
 		"setting":           user.Setting,
 		"stripe_customer":   user.StripeCustomer,
-		"org_id":            user.OrgId,            // 添加组织ID字段
-		"unlimited_quota":   user.UnlimitedQuota,  // 添加无限额度标志
+		"org_id":            user.OrgId,                 // 添加组织ID字段
+		"unlimited_quota":   user.UnlimitedQuota,        // 添加无限额度标志
 		"sidebar_modules":   userSetting.SidebarModules, // 正确提取sidebar_modules字段
 		"permissions":       permissions,                // 新增权限字段
 	}
