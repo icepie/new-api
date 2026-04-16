@@ -2,9 +2,9 @@ package model
 
 import (
 	"database/sql"
-	"github.com/goccy/go-json"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 	"strconv"
 	"strings"
 
@@ -637,13 +637,19 @@ func (user *User) ValidateAndFill() (err error) {
 	password := user.Password
 	username := strings.TrimSpace(user.Username)
 	if username == "" || password == "" {
-		return errors.New("用户名或密码为空")
+		return ErrInvalidCredentials
 	}
 	// find buy username or email
-	DB.Where("username = ? OR email = ?", username, username).First(user)
+	result := DB.Where("username = ? OR email = ?", username, username).First(user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return ErrInvalidCredentials
+		}
+		return ErrDatabase
+	}
 	okay := common.ValidatePasswordAndHash(password, user.Password)
 	if !okay || user.Status != common.UserStatusEnabled {
-		return errors.New("用户名或密码错误，或用户已被封禁")
+		return ErrInvalidCredentials
 	}
 	return nil
 }
@@ -794,16 +800,23 @@ func IsAdmin(userId int) bool {
 //	return user.Status == common.UserStatusEnabled, nil
 //}
 
-func ValidateAccessToken(token string) (user *User) {
+func ValidateAccessToken(token string) (user *User, err error) {
 	if token == "" {
-		return nil
+		return nil, ErrTokenInvalid
 	}
 	token = strings.Replace(token, "Bearer ", "", 1)
 	user = &User{}
-	if DB.Where("access_token = ?", token).First(user).RowsAffected == 1 {
-		return user
+	result := DB.Where("access_token = ?", token).First(user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrTokenInvalid
+		}
+		return nil, ErrDatabase
 	}
-	return nil
+	if result.RowsAffected != 1 {
+		return nil, ErrTokenInvalid
+	}
+	return user, nil
 }
 
 // GetUserQuota gets quota from Redis first, falls back to DB if needed
