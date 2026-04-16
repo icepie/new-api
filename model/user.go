@@ -53,7 +53,7 @@ type User struct {
 	Remark           string         `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
 	StripeCustomer   string         `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
 	OrgId            int            `json:"org_id" gorm:"type:int;index:idx_username_org,priority:2;default:0;column:org_id"` // 组织ID，与username组成复合唯一索引
-	OrgName          string         `json:"org_name,omitempty" gorm:"-"`                                                       // 组织名称(不存数据库，查询时填充)
+	OrgName          string         `json:"org_name,omitempty" gorm:"-"`                                                      // 组织名称(不存数据库，查询时填充)
 }
 
 func (user *User) ToBaseUser() *UserBase {
@@ -991,16 +991,23 @@ func IsAdmin(userId int) bool {
 //	return user.Status == common.UserStatusEnabled, nil
 //}
 
-func ValidateAccessToken(token string) (user *User) {
+func ValidateAccessToken(token string) (user *User, err error) {
 	if token == "" {
-		return nil
+		return nil, ErrTokenInvalid
 	}
 	token = strings.Replace(token, "Bearer ", "", 1)
 	user = &User{}
-	if DB.Where("access_token = ?", token).First(user).RowsAffected == 1 {
-		return user
+	result := DB.Where("access_token = ?", token).First(user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrTokenInvalid
+		}
+		return nil, ErrDatabase
 	}
-	return nil
+	if result.RowsAffected != 1 {
+		return nil, ErrTokenInvalid
+	}
+	return user, nil
 }
 
 // GetUserQuota gets quota from Redis first, falls back to DB if needed
