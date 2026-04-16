@@ -273,3 +273,91 @@ func TestGetTokenKeyRequiresOwnershipAndReturnsFullKey(t *testing.T) {
 		t.Fatalf("unauthorized key response leaked raw token key: %s", unauthorizedRecorder.Body.String())
 	}
 }
+
+func TestAdminGetUserTokensReturnsFullKeysForTargetUser(t *testing.T) {
+	db := setupTokenControllerTestDB(t)
+	token := seedToken(t, db, 10, "admin-list-token", "admin1234token5678")
+	seedToken(t, db, 11, "other-user-token", "other1234token5678")
+
+	ctx, recorder := newAuthenticatedContext(t, http.MethodGet, "/api/user/10/tokens?p=0&size=10", nil, 1)
+	ctx.Params = gin.Params{{Key: "id", Value: "10"}}
+	AdminGetUserTokens(ctx)
+
+	response := decodeAPIResponse(t, recorder)
+	if !response.Success {
+		t.Fatalf("expected success response, got message: %s", response.Message)
+	}
+
+	var page tokenPageResponse
+	if err := common.Unmarshal(response.Data, &page); err != nil {
+		t.Fatalf("failed to decode admin token page response: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("expected exactly one token, got %d", len(page.Items))
+	}
+	if page.Items[0].Key != token.GetFullKey() {
+		t.Fatalf("expected full key %q, got %q", token.GetFullKey(), page.Items[0].Key)
+	}
+}
+
+func TestAdminGetUserTokenReturnsFullKeyForTargetUser(t *testing.T) {
+	db := setupTokenControllerTestDB(t)
+	token := seedToken(t, db, 12, "admin-detail-token", "detail1234token5678")
+
+	ctx, recorder := newAuthenticatedContext(t, http.MethodGet, "/api/user/12/tokens/"+strconv.Itoa(token.Id), nil, 1)
+	ctx.Params = gin.Params{
+		{Key: "id", Value: "12"},
+		{Key: "token_id", Value: strconv.Itoa(token.Id)},
+	}
+	AdminGetUserToken(ctx)
+
+	response := decodeAPIResponse(t, recorder)
+	if !response.Success {
+		t.Fatalf("expected success response, got message: %s", response.Message)
+	}
+
+	var detail tokenResponseItem
+	if err := common.Unmarshal(response.Data, &detail); err != nil {
+		t.Fatalf("failed to decode admin token detail response: %v", err)
+	}
+	if detail.Key != token.GetFullKey() {
+		t.Fatalf("expected full key %q, got %q", token.GetFullKey(), detail.Key)
+	}
+}
+
+func TestAdminUpdateUserTokenReturnsFullKeyForTargetUser(t *testing.T) {
+	db := setupTokenControllerTestDB(t)
+	token := seedToken(t, db, 13, "admin-edit-token", "edit1234token5678")
+
+	body := map[string]any{
+		"id":                   token.Id,
+		"name":                 "admin-updated-token",
+		"expired_time":         -1,
+		"remain_quota":         100,
+		"unlimited_quota":      true,
+		"model_limits_enabled": false,
+		"model_limits":         "",
+		"group":                "default",
+		"cross_group_retry":    false,
+	}
+
+	ctx, recorder := newAuthenticatedContext(t, http.MethodPut, "/api/user/13/tokens/"+strconv.Itoa(token.Id), body, 1)
+	ctx.Params = gin.Params{
+		{Key: "id", Value: "13"},
+		{Key: "token_id", Value: strconv.Itoa(token.Id)},
+	}
+	AdminUpdateUserToken(ctx)
+
+	response := decodeAPIResponse(t, recorder)
+	if !response.Success {
+		t.Fatalf("expected success response, got message: %s", response.Message)
+	}
+
+	var detail tokenResponseItem
+	if err := common.Unmarshal(response.Data, &detail); err != nil {
+		t.Fatalf("failed to decode admin token update response: %v", err)
+	}
+	if detail.Key != token.GetFullKey() {
+		t.Fatalf("expected full key %q, got %q", token.GetFullKey(), detail.Key)
+	}
+}

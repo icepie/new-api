@@ -62,6 +62,140 @@ func SearchTokens(c *gin.Context) {
 	common.ApiSuccess(c, pageInfo)
 }
 
+func getPathInt(c *gin.Context, key string) (int, error) {
+	value, err := strconv.Atoi(c.Param(key))
+	if err != nil {
+		common.ApiError(c, err)
+		return 0, err
+	}
+	return value, nil
+}
+
+func AdminGetUserTokens(c *gin.Context) {
+	userId, err := getPathInt(c, "id")
+	if err != nil {
+		return
+	}
+	pageInfo := common.GetPageQuery(c)
+	tokens, err := model.GetAllUserTokens(userId, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	total, _ := model.CountUserTokens(userId)
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(tokens)
+	common.ApiSuccess(c, pageInfo)
+}
+
+func AdminGetUserToken(c *gin.Context) {
+	userId, err := getPathInt(c, "id")
+	if err != nil {
+		return
+	}
+	tokenId, err := getPathInt(c, "token_id")
+	if err != nil {
+		return
+	}
+	token, err := model.GetTokenByIds(tokenId, userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, token)
+}
+
+func AdminDeleteUserToken(c *gin.Context) {
+	userId, err := getPathInt(c, "id")
+	if err != nil {
+		return
+	}
+	tokenId, err := getPathInt(c, "token_id")
+	if err != nil {
+		return
+	}
+	err = model.DeleteTokenById(tokenId, userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
+}
+
+func AdminUpdateUserToken(c *gin.Context) {
+	userId, err := getPathInt(c, "id")
+	if err != nil {
+		return
+	}
+	tokenId, err := getPathInt(c, "token_id")
+	if err != nil {
+		return
+	}
+	statusOnly := c.Query("status_only")
+	token := model.Token{}
+	err = c.ShouldBindJSON(&token)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if len(token.Name) > 50 {
+		common.ApiErrorI18n(c, i18n.MsgTokenNameTooLong)
+		return
+	}
+	if !token.UnlimitedQuota {
+		if token.RemainQuota < 0 {
+			common.ApiErrorI18n(c, i18n.MsgTokenQuotaNegative)
+			return
+		}
+		maxQuotaValue := int((1000000000 * common.QuotaPerUnit))
+		if token.RemainQuota > maxQuotaValue {
+			common.ApiErrorI18n(c, i18n.MsgTokenQuotaExceedMax, map[string]any{"Max": maxQuotaValue})
+			return
+		}
+	}
+	cleanToken, err := model.GetTokenByIds(tokenId, userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if token.Status == common.TokenStatusEnabled {
+		if cleanToken.Status == common.TokenStatusExpired && cleanToken.ExpiredTime <= common.GetTimestamp() && cleanToken.ExpiredTime != -1 {
+			common.ApiErrorI18n(c, i18n.MsgTokenExpiredCannotEnable)
+			return
+		}
+		if cleanToken.Status == common.TokenStatusExhausted && cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
+			common.ApiErrorI18n(c, i18n.MsgTokenExhaustedCannotEable)
+			return
+		}
+	}
+	if statusOnly != "" {
+		cleanToken.Status = token.Status
+	} else {
+		cleanToken.Name = token.Name
+		cleanToken.ExpiredTime = token.ExpiredTime
+		cleanToken.RemainQuota = token.RemainQuota
+		cleanToken.UnlimitedQuota = token.UnlimitedQuota
+		cleanToken.ModelLimitsEnabled = token.ModelLimitsEnabled
+		cleanToken.ModelLimits = token.ModelLimits
+		cleanToken.AllowIps = token.AllowIps
+		cleanToken.Group = token.Group
+		cleanToken.CrossGroupRetry = token.CrossGroupRetry
+	}
+	err = cleanToken.Update()
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    cleanToken,
+	})
+}
+
 func GetToken(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	userId := c.GetInt("id")
