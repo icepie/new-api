@@ -3016,6 +3016,8 @@ func CreateUser(c *gin.Context) {
 type ManageRequest struct {
 	Id     int    `json:"id"`
 	Action string `json:"action"`
+	Mode   string `json:"mode"`
+	Value  int    `json:"value"`
 }
 
 // ManageUser Only admin user can do this
@@ -3101,7 +3103,7 @@ func ManageUser(c *gin.Context) {
 				common.ApiErrorI18n(c, i18n.MsgUserQuotaChangeZero)
 				return
 			}
-			if err := model.DecreaseUserQuota(user.Id, req.Value, true); err != nil {
+			if err := model.DecreaseUserQuota(user.Id, req.Value); err != nil {
 				common.ApiError(c, err)
 				return
 			}
