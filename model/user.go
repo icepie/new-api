@@ -537,6 +537,10 @@ func (user *User) TransferAffQuotaToQuota(quota int) error {
 func (user *User) Insert(inviterId int) error {
 	var err error
 
+	if err = ApplyOrganizationDefaultGroup(user, false); err != nil {
+		return err
+	}
+
 	// 检查用户名在同一组织内是否已存在
 	var existingUser User
 	err = DB.Where("username = ? AND org_id = ?", user.Username, user.OrgId).First(&existingUser).Error
@@ -624,6 +628,9 @@ func (user *User) Insert(inviterId int) error {
 // Post-creation tasks (sidebar config, logs, inviter rewards) are handled after the transaction commits.
 func (user *User) InsertWithTx(tx *gorm.DB, inviterId int) error {
 	var err error
+	if err = ApplyOrganizationDefaultGroup(user, false); err != nil {
+		return err
+	}
 	if user.Password != "" {
 		user.Password, err = common.Password2Hash(user.Password)
 		if err != nil {
@@ -699,6 +706,10 @@ func (user *User) Update(updatePassword bool) error {
 func (user *User) Edit(updatePassword bool) error {
 	var err error
 
+	if err = ApplyOrganizationDefaultGroup(user, false); err != nil {
+		return err
+	}
+
 	// 检查用户名在同一组织内是否已存在（排除自己）
 	var existingUser User
 	err = DB.Where("username = ? AND org_id = ? AND id != ?", user.Username, user.OrgId, user.Id).First(&existingUser).Error
@@ -740,6 +751,21 @@ func (user *User) Edit(updatePassword bool) error {
 
 	// Update cache
 	return updateUserCache(*user)
+}
+
+func ApplyOrganizationDefaultGroup(user *User, force bool) error {
+	if user == nil || user.OrgId == 0 {
+		return nil
+	}
+	if !force && strings.TrimSpace(user.Group) != "" {
+		return nil
+	}
+	group, err := GetOrganizationDefaultGroup(user.OrgId)
+	if err != nil {
+		return err
+	}
+	user.Group = group
+	return nil
 }
 
 func (user *User) ClearBinding(bindingType string) error {

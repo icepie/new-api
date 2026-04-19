@@ -46,6 +46,7 @@ const AddUserModal = (props) => {
   const [organizations, setOrganizations] = useState([]);
   const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [groupOptions, setGroupOptions] = useState([]);
   const [formKey, setFormKey] = useState(0);
 
   const getInitValues = () => ({
@@ -85,9 +86,25 @@ const AddUserModal = (props) => {
     }
   };
 
+  const fetchGroups = async () => {
+    try {
+      const res = await API.get('/api/group/');
+      const groups = Array.isArray(res.data?.data) ? res.data.data : [];
+      setGroupOptions(groups.map((group) => ({ label: group, value: group })));
+    } catch (e) {
+      showError(e.message);
+    }
+  };
+
+  const getOrgDefaultGroup = (orgId) => {
+    const org = organizations.find((item) => item.id === orgId);
+    return org?.default_group || 'default';
+  };
+
   useEffect(() => {
     fetchCurrentUser();
     fetchOrganizations();
+    fetchGroups();
   }, []);
 
   const submit = async (values) => {
@@ -229,20 +246,40 @@ const AddUserModal = (props) => {
                     />
                   </Col>
                   {currentUser && currentUser.role === 100 && (
-                    <Col span={24}>
-                      <Form.Select
-                        field='org_id'
-                        label={t('所属组织')}
-                        placeholder={t('请选择组织')}
-                        optionList={organizations.map(org => ({
-                          label: org.name,
-                          value: org.id
-                        }))}
-                        onChange={(value) => {
-                          setSelectedOrgId(value);
-                        }}
-                      />
-                    </Col>
+                    <>
+                      <Col span={24}>
+                        <Form.Select
+                          field='org_id'
+                          label={t('所属组织')}
+                          placeholder={t('请选择组织')}
+                          optionList={organizations.map(org => ({
+                            label: org.name,
+                            value: org.id
+                          }))}
+                          onChange={(value) => {
+                            setSelectedOrgId(value);
+                            if (value) {
+                              formApiRef.current?.setValue('group', getOrgDefaultGroup(value));
+                            }
+                          }}
+                        />
+                      </Col>
+                      <Col span={24}>
+                        <Form.Select
+                          field='group'
+                          label={t('分组')}
+                          placeholder={t('请选择分组')}
+                          optionList={groupOptions}
+                          allowCreate
+                          filter
+                          extraText={
+                            selectedOrgId
+                              ? `${t('当前组织默认分组')}: ${getOrgDefaultGroup(selectedOrgId)}`
+                              : t('不选择组织时按普通用户处理')
+                          }
+                        />
+                      </Col>
+                    </>
                   )}
                   <Col span={24}>
                     <Form.Input

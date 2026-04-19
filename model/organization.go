@@ -3,8 +3,10 @@ package model
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"gorm.io/gorm"
 )
@@ -22,6 +24,7 @@ type Organization struct {
 	Description string         `json:"description" gorm:"type:varchar(1024)"`             // 组织描述
 	Status      string         `json:"status" gorm:"type:varchar(20);index;default:'enabled'"` // 状态(enabled/disabled)
 	Remark      string         `json:"remark" gorm:"type:varchar(1024)"`                  // 备注
+	DefaultGroup string        `json:"default_group" gorm:"type:varchar(64);default:'default';column:default_group"` // 组织默认分组
 
 	// 计费相关字段（仅用于记录和显示）
 	BillingType  string `json:"billing_type" gorm:"type:varchar(20);default:'prepaid'"`   // prepaid(预付费) / postpaid(后付费)
@@ -56,6 +59,7 @@ type OrganizationForm struct {
 	Description          string `json:"description" binding:"max=1024"`
 	Status               string `json:"status" binding:"required,oneof=enabled disabled"`
 	Remark               string `json:"remark" binding:"max=1024"`
+	DefaultGroup         string `json:"default_group" binding:"max=64"`
 	BillingType          string `json:"billing_type" binding:"required,oneof=prepaid postpaid"`
 	BillingCycle         string `json:"billing_cycle" binding:"required,oneof=monthly quarterly yearly"`
 	Quota                int    `json:"quota" binding:"min=0"`
@@ -68,6 +72,14 @@ type OrganizationForm struct {
 
 func (o *Organization) TableName() string {
 	return "organizations"
+}
+
+func NormalizeDefaultGroup(group string) string {
+	group = strings.TrimSpace(group)
+	if group == "" {
+		return "default"
+	}
+	return group
 }
 
 // GetAllOrganizations 获取所有组织
@@ -132,6 +144,17 @@ func GetOrganizationById(id int) (*Organization, error) {
 	return &org, err
 }
 
+func GetOrganizationDefaultGroup(orgId int) (string, error) {
+	if orgId == 0 {
+		return NormalizeDefaultGroup(""), nil
+	}
+	org, err := GetOrganizationById(orgId)
+	if err != nil {
+		return "", err
+	}
+	return NormalizeDefaultGroup(org.DefaultGroup), nil
+}
+
 // GetOrganizationByCode 根据代码获取组织
 func GetOrganizationByCode(code string) (*Organization, error) {
 	if code == "" {
@@ -144,6 +167,7 @@ func GetOrganizationByCode(code string) (*Organization, error) {
 
 // Insert 创建组织
 func (o *Organization) Insert() error {
+	o.DefaultGroup = NormalizeDefaultGroup(o.DefaultGroup)
 	// 检查代码是否已存在
 	var count int64
 	if err := DB.Model(&Organization{}).Where("code = ?", o.Code).Count(&count).Error; err != nil {
@@ -161,6 +185,7 @@ func (o *Organization) Update() error {
 	if o.ID == 0 {
 		return errors.New("id 为空")
 	}
+	o.DefaultGroup = NormalizeDefaultGroup(o.DefaultGroup)
 
 	// 检查代码是否与其他组织冲突
 	var count int64
@@ -177,6 +202,7 @@ func (o *Organization) Update() error {
 		"description":              o.Description,
 		"status":                   o.Status,
 		"remark":                   o.Remark,
+		"default_group":            o.DefaultGroup,
 		"billing_type":             o.BillingType,
 		"billing_cycle":            o.BillingCycle,
 		"quota":                    o.Quota,
@@ -186,6 +212,36 @@ func (o *Organization) Update() error {
 		"max_keys_per_sub_account": o.MaxKeysPerSubAccount,
 		"max_keys_per_org":         o.MaxKeysPerOrg,
 	}).Error
+}
+
+func SyncOrgUsersGroup(orgId int, group string) error {
+	if orgId == 0 {
+		return nil
+	}
+	group = NormalizeDefaultGroup(group)
+	return DB.Model(&User{}).Where("org_id = ?", orgId).Update("group", group).Error
+}
+
+func RefreshOrgUserGroupCaches(orgId int) error {
+	if orgId == 0 {
+		return nil
+	}
+	users, err := GetUsersByOrgId(orgId)
+	if err != nil {
+		return err
+	}
+	for _, user := range users {
+		if user == nil {
+			continue
+		}
+		if err := updateUserCache(*user); err != nil {
+			common.SysLog("failed to update org user cache: " + err.Error())
+		}
+		if err := updateUserGroupCache(user.Id, user.Group); err != nil {
+			common.SysLog("failed to update org user group cache: " + err.Error())
+		}
+	}
+	return nil
 }
 
 // Delete 删除组织

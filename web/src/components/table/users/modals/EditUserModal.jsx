@@ -116,6 +116,11 @@ const EditUserModal = (props) => {
     }
   };
 
+  const getOrgDefaultGroup = (orgId) => {
+    const org = organizations.find((item) => item.id === orgId);
+    return org?.default_group || 'default';
+  };
+
   const fetchGroups = async () => {
     try {
       let res = await API.get(`/api/group/`);
@@ -350,8 +355,24 @@ const EditUserModal = (props) => {
                             }))}
                             onChange={(value) => {
                               setSelectedOrgId(value);
+                              if (value && !formApiRef.current?.getValue('group')) {
+                                formApiRef.current?.setValue('group', getOrgDefaultGroup(value));
+                              }
                             }}
                           />
+                        </Col>
+                      )}
+
+                      {isOrgAdmin && values.org_id > 0 && (
+                        <Col span={24}>
+                          <Input
+                            value={getOrgDefaultGroup(values.org_id)}
+                            disabled
+                            addonBefore={t('组织默认分组')}
+                          />
+                          <Text type='secondary' className='block mt-1'>
+                            {t('该用户分组由组织默认分组控制')}
+                          </Text>
                         </Col>
                       )}
 
@@ -362,9 +383,14 @@ const EditUserModal = (props) => {
                             label={t('分组')}
                             placeholder={t('请选择分组')}
                             optionList={groupOptions}
-                            allowAdditions
-                            search
+                            allowCreate
+                            filter
                             rules={[{ required: true, message: t('请选择分组') }]}
+                            extraText={
+                              values.org_id > 0
+                                ? `${t('当前组织默认分组')}: ${getOrgDefaultGroup(values.org_id)}`
+                                : t('非组织用户可自由设置分组')
+                            }
                           />
                         </Col>
                       )}

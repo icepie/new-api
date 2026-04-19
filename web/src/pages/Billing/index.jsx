@@ -129,7 +129,7 @@ const Billing = () => {
       return (
         <Popover content={popoverContent} position='top'>
           <Tag color='green' shape='circle'>
-            {t('无限额度')}
+            {`${t('已用额度')}: ${renderQuota(used)}`}
           </Tag>
         </Popover>
       );
@@ -535,14 +535,10 @@ const Billing = () => {
                                 style={{ borderColor: 'var(--semi-color-border)' }}
                               >
                                 <span className='text-sm font-medium text-[var(--semi-color-text-2)] mr-2 whitespace-nowrap select-none'>
-                                  {user.unlimited_quota ? t('额度类型') : t('已用额度')}
+                                  {t('已用额度')}
                                 </span>
                                 <div className='flex-1 break-all flex justify-end items-center gap-1'>
-                                  {user.unlimited_quota ? (
-                                    <Tag color='green' size='small'>{t('无限额度')}</Tag>
-                                  ) : (
-                                    renderQuota(user.used_quota)
-                                  )}
+                                  {renderQuota(user.used_quota)}
                                 </div>
                               </div>
                               {!user.unlimited_quota && (
@@ -644,13 +640,13 @@ const Billing = () => {
                   // 无限额度用户
                   <div className='rounded-xl bg-gray-50 dark:bg-gray-800/50 px-4 py-4 sm:px-5 sm:py-4'>
                     <div className='flex justify-between items-center gap-2 mb-2'>
-                      <span className='text-sm text-[var(--semi-color-text-2)]'>{t('额度类型')}</span>
-                      <Tag color='green' size='large'>{t('无限额度')}</Tag>
+                      <span className='text-sm text-[var(--semi-color-text-2)]'>{t('已用额度')}</span>
+                      <Tag color='green' size='large'>{renderQuota(currentUser.used_quota)}</Tag>
                     </div>
                     <div className='flex justify-between items-center gap-2'>
-                      <span className='text-sm text-[var(--semi-color-text-2)]'>{t('已用额度')}</span>
+                      <span className='text-sm text-[var(--semi-color-text-2)]'>{t('额度类型')}</span>
                       <span className='text-sm sm:text-base font-semibold tabular-nums text-[var(--semi-color-text-0)]'>
-                        {renderQuota(currentUser.used_quota)}
+                        {t('无限额度')}
                       </span>
                     </div>
                   </div>

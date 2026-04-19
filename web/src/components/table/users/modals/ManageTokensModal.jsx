@@ -225,7 +225,7 @@ const ManageTokensModal = ({ visible, onCancel, user, t }) => {
       return (
         <Popover content={popoverContent} position='top'>
           <Tag color='white' shape='circle'>
-            {t('无限额度')}
+            {`${t('已用额度')}: ${renderQuota(used)}`}
           </Tag>
         </Popover>
       );

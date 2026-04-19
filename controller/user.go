@@ -2693,6 +2693,18 @@ func UpdateUser(c *gin.Context) {
 		}
 	}
 
+	if myRole != common.RoleRootUser && updatedUser.OrgId > 0 {
+		if err := model.ApplyOrganizationDefaultGroup(&updatedUser, true); err != nil {
+			common.ApiError(c, err)
+			return
+		}
+	} else if myRole == common.RoleRootUser && updatedUser.OrgId > 0 && strings.TrimSpace(updatedUser.Group) == "" {
+		if err := model.ApplyOrganizationDefaultGroup(&updatedUser, false); err != nil {
+			common.ApiError(c, err)
+			return
+		}
+	}
+
 	if updatedUser.Password == "$I_LOVE_U" {
 		updatedUser.Password = "" // rollback to what it should be
 	}
@@ -2998,8 +3010,12 @@ func CreateUser(c *gin.Context) {
 		DisplayName:    user.DisplayName,
 		Role:           user.Role, // 保持管理员设置的角色
 		OrgId:          user.OrgId,
+		Group:          strings.TrimSpace(user.Group),
 		Remark:         user.Remark,
 		UnlimitedQuota: user.UnlimitedQuota, // 支持无限额度设置
+	}
+	if myRole != common.RoleRootUser && cleanUser.OrgId > 0 {
+		cleanUser.Group = ""
 	}
 	if err := cleanUser.Insert(0); err != nil {
 		common.ApiError(c, err)

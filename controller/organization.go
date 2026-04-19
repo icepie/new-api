@@ -88,6 +88,7 @@ func CreateOrganization(c *gin.Context) {
 		Description:          form.Description,
 		Status:               form.Status,
 		Remark:               form.Remark,
+		DefaultGroup:         model.NormalizeDefaultGroup(form.DefaultGroup),
 		BillingType:          form.BillingType,
 		BillingCycle:         form.BillingCycle,
 		Quota:                form.Quota,
@@ -131,6 +132,9 @@ func UpdateOrganization(c *gin.Context) {
 	org.Description = form.Description
 	org.Status = form.Status
 	org.Remark = form.Remark
+	oldDefaultGroup := model.NormalizeDefaultGroup(org.DefaultGroup)
+	newDefaultGroup := model.NormalizeDefaultGroup(form.DefaultGroup)
+	org.DefaultGroup = newDefaultGroup
 	org.BillingType = form.BillingType
 	org.BillingCycle = form.BillingCycle
 	org.Quota = form.Quota
@@ -143,6 +147,17 @@ func UpdateOrganization(c *gin.Context) {
 	if err := org.Update(); err != nil {
 		common.ApiErrorI18n(c, i18n.MsgOrgUpdateFailed)
 		return
+	}
+
+	if oldDefaultGroup != newDefaultGroup {
+		if err := model.SyncOrgUsersGroup(id, newDefaultGroup); err != nil {
+			common.ApiErrorI18n(c, i18n.MsgOrgUpdateFailed)
+			return
+		}
+		if err := model.RefreshOrgUserGroupCaches(id); err != nil {
+			common.ApiErrorI18n(c, i18n.MsgOrgUpdateFailed)
+			return
+		}
 	}
 
 	// 先同步组织的已用额度（从用户汇总）

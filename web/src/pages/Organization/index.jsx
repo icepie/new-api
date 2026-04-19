@@ -34,6 +34,7 @@ const { Text, Paragraph } = Typography;
 const Organization = () => {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const [groupOptions, setGroupOptions] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -53,6 +54,7 @@ const Organization = () => {
     description: '',
     status: 'enabled',
     remark: '',
+    default_group: 'default',
     billing_type: 'prepaid',
     billing_cycle: 'monthly',
     quota: 0,
@@ -80,6 +82,12 @@ const Organization = () => {
         title: t('组织名称'),
         dataIndex: 'name',
         width: 200,
+      },
+      {
+        title: t('默认分组'),
+        dataIndex: 'default_group',
+        width: 140,
+        render: (value) => <Tag color='cyan'>{value || 'default'}</Tag>,
       },
       {
         title: t('额度使用'),
@@ -330,9 +338,23 @@ const Organization = () => {
     }
   };
 
+  const loadGroups = async () => {
+    try {
+      const res = await API.get('/api/group/');
+      const groups = Array.isArray(res.data?.data) ? res.data.data : [];
+      setGroupOptions(groups.map((group) => ({ label: group, value: group })));
+    } catch (error) {
+      showError(t('加载分组失败'));
+    }
+  };
+
   useEffect(() => {
     loadOrganizations();
   }, [page, pageSize]);
+
+  useEffect(() => {
+    loadGroups();
+  }, []);
 
   const handleSearch = () => {
     setPage(1);
@@ -347,6 +369,7 @@ const Organization = () => {
       description: org.description,
       status: org.status,
       remark: org.remark || '',
+      default_group: org.default_group || 'default',
       billing_type: org.billing_type || 'prepaid',
       billing_cycle: org.billing_cycle || 'monthly',
       quota: org.quota !== undefined ? org.quota : 0,
@@ -367,6 +390,7 @@ const Organization = () => {
       description: '',
       status: 'enabled',
       remark: '',
+      default_group: 'default',
       billing_type: 'prepaid',
       billing_cycle: 'monthly',
       quota: 0,
@@ -604,6 +628,16 @@ const Organization = () => {
                 placeholder={t('请输入备注信息')}
                 maxLength={1000}
                 rows={2}
+              />
+              <Form.Select
+                field="default_group"
+                label={t('默认分组')}
+                placeholder={t('请选择默认分组')}
+                optionList={groupOptions}
+                allowCreate
+                filter
+                rules={[{ required: true, message: t('请选择默认分组') }]}
+                extraText={t('修改默认分组会同步该组织下全部用户分组')}
               />
 
               <Row gutter={12}>
