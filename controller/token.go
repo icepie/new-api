@@ -77,7 +77,9 @@ func AdminGetUserTokens(c *gin.Context) {
 		return
 	}
 	pageInfo := common.GetPageQuery(c)
-	tokens, err := model.GetAllUserTokens(userId, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
+	sortBy := c.Query("sort_by")
+	sortOrder := c.Query("sort_order")
+	tokens, err := model.GetAllUserTokensWithSort(userId, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), sortBy, sortOrder)
 	if err != nil {
 		common.ApiError(c, err)
 		return

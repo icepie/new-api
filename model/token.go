@@ -11,6 +11,18 @@ import (
 	"gorm.io/gorm"
 )
 
+func normalizeUserTokenSort(sortBy string, sortOrder string) string {
+	switch sortBy {
+	case "used_quota":
+		if strings.EqualFold(sortOrder, "asc") {
+			return "used_quota asc, id desc"
+		}
+		return "used_quota desc, id desc"
+	default:
+		return "id desc"
+	}
+}
+
 type Token struct {
 	Id                 int            `json:"id"`
 	UserId             int            `json:"user_id" gorm:"index"`
@@ -82,6 +94,13 @@ func GetAllUserTokens(userId int, startIdx int, num int) ([]*Token, error) {
 	var tokens []*Token
 	var err error
 	err = DB.Where("user_id = ?", userId).Order("id desc").Limit(num).Offset(startIdx).Find(&tokens).Error
+	return tokens, err
+}
+
+func GetAllUserTokensWithSort(userId int, startIdx int, num int, sortBy string, sortOrder string) ([]*Token, error) {
+	var tokens []*Token
+	orderClause := normalizeUserTokenSort(sortBy, sortOrder)
+	err := DB.Where("user_id = ?", userId).Order(orderClause).Limit(num).Offset(startIdx).Find(&tokens).Error
 	return tokens, err
 }
 

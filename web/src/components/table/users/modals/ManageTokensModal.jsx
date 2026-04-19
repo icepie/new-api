@@ -58,6 +58,7 @@ const ManageTokensModal = ({ visible, onCancel, user, t }) => {
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [usedQuotaSortOrder, setUsedQuotaSortOrder] = useState(null);
   const [showKeys, setShowKeys] = useState({});
   const [editingToken, setEditingToken] = useState({});
   const [showEdit, setShowEdit] = useState(false);
@@ -71,6 +72,8 @@ const ManageTokensModal = ({ visible, onCancel, user, t }) => {
         params: {
           p: currentPage - 1,
           size: pageSize,
+          sort_by: usedQuotaSortOrder ? 'used_quota' : undefined,
+          sort_order: usedQuotaSortOrder || undefined,
         },
       });
       const { success, message, data } = res.data;
@@ -93,7 +96,7 @@ const ManageTokensModal = ({ visible, onCancel, user, t }) => {
     } else {
       setShowKeys({});
     }
-  }, [visible, user, currentPage, pageSize]);
+  }, [visible, user, currentPage, pageSize, usedQuotaSortOrder]);
 
   const handleStatusToggle = async (token) => {
     const newStatus = token.status === 1 ? 2 : 1;
@@ -397,6 +400,13 @@ const ManageTokensModal = ({ visible, onCancel, user, t }) => {
       title: t('剩余/总额度'),
       key: 'quota_usage',
       width: 150,
+      sorter: true,
+      sortOrder:
+        usedQuotaSortOrder === 'asc'
+          ? 'ascend'
+          : usedQuotaSortOrder === 'desc'
+            ? 'descend'
+            : false,
       render: (text, record) => renderQuotaUsage(text, record),
     },
     {
@@ -496,6 +506,18 @@ const ManageTokensModal = ({ visible, onCancel, user, t }) => {
             columns={columns}
             dataSource={tokens}
             scroll={{ x: 'max-content' }}
+            onChange={(pagination, filters, sorter) => {
+              const nextSortOrder =
+                sorter?.key === 'quota_usage'
+                  ? sorter.sortOrder === 'ascend'
+                    ? 'asc'
+                    : sorter.sortOrder === 'descend'
+                      ? 'desc'
+                      : null
+                  : null;
+              setUsedQuotaSortOrder(nextSortOrder);
+              setCurrentPage(1);
+            }}
             pagination={{
               currentPage: currentPage,
               pageSize: pageSize,
