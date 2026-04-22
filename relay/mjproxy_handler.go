@@ -264,6 +264,7 @@ func RelaySwapFace(c *gin.Context, info *relaycommon.RelayInfo) *dto.MidjourneyR
 		Progress:    "0%",
 		FailReason:  "",
 		ChannelId:   c.GetInt("channel_id"),
+		Group:       info.UsingGroup,
 		Quota:       priceData.Quota,
 	}
 	err = midjourneyTask.Insert()
@@ -577,6 +578,7 @@ func RelayMidjourneySubmit(c *gin.Context, relayInfo *relaycommon.RelayInfo) *dt
 		Progress:    "0%",
 		FailReason:  "",
 		ChannelId:   c.GetInt("channel_id"),
+		Group:       relayInfo.UsingGroup,
 		Quota:       priceData.Quota,
 	}
 	if midjResponse.Code == 3 {

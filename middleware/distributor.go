@@ -90,12 +90,21 @@ func Distribute() func(c *gin.Context) {
 						return
 					}
 					if playgroundRequest.Group != "" {
-						if !service.GroupInUserUsableGroups(usingGroup, playgroundRequest.Group) && playgroundRequest.Group != usingGroup {
-							abortWithOpenAiMessage(c, http.StatusForbidden, i18n.T(c, i18n.MsgDistributorGroupAccessDenied))
-							return
+						var pgGroups []service.TokenGroupEntry
+						if jsonErr := common.Unmarshal([]byte(playgroundRequest.Group), &pgGroups); jsonErr == nil && len(pgGroups) > 0 {
+							userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
+							resolved := service.ResolveTokenGroupsFromEntries(pgGroups, userGroup)
+							if len(resolved) > 0 {
+								common.SetContextKey(c, constant.ContextKeyTokenGroups, resolved)
+							}
+						} else {
+							if !service.GroupInUserUsableGroups(usingGroup, playgroundRequest.Group) && playgroundRequest.Group != usingGroup {
+								abortWithOpenAiMessage(c, http.StatusForbidden, i18n.T(c, i18n.MsgDistributorGroupAccessDenied))
+								return
+							}
+							usingGroup = playgroundRequest.Group
+							common.SetContextKey(c, constant.ContextKeyUsingGroup, usingGroup)
 						}
-						usingGroup = playgroundRequest.Group
-						common.SetContextKey(c, constant.ContextKeyUsingGroup, usingGroup)
 					}
 				}
 
@@ -112,6 +121,18 @@ func Distribute() func(c *gin.Context) {
 									channel = preferred
 									service.MarkChannelAffinityUsed(c, g, preferred.Id)
 									break
+								}
+							}
+						} else if tokenGroupsList, ok := common.GetContextKey(c, constant.ContextKeyTokenGroups); ok {
+							if groups, ok := tokenGroupsList.([]string); ok && len(groups) > 0 {
+								for _, g := range groups {
+									if model.IsChannelEnabledForGroupModel(g, modelRequest.Model, preferred.Id) {
+										selectGroup = g
+										common.SetContextKey(c, constant.ContextKeyAutoGroup, g)
+										channel = preferred
+										service.MarkChannelAffinityUsed(c, g, preferred.Id)
+										break
+									}
 								}
 							}
 						} else if model.IsChannelEnabledForGroupModel(usingGroup, modelRequest.Model, preferred.Id) {

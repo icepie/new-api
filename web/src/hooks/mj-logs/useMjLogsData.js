@@ -40,6 +40,7 @@ export const useMjLogsData = () => {
     SUBMIT_TIME: 'submit_time',
     DURATION: 'duration',
     CHANNEL: 'channel',
+    GROUP: 'group',
     TYPE: 'type',
     TASK_ID: 'task_id',
     SUBMIT_RESULT: 'submit_result',
@@ -79,6 +80,7 @@ export const useMjLogsData = () => {
   const formInitValues = {
     channel_id: '',
     mj_id: '',
+    group: '',
     dateRange: [
       timestamp2string(now.getTime() / 1000 - 2592000),
       timestamp2string(now.getTime() / 1000 + 3600),
@@ -132,6 +134,7 @@ export const useMjLogsData = () => {
       [COLUMN_KEYS.SUBMIT_TIME]: true,
       [COLUMN_KEYS.DURATION]: true,
       [COLUMN_KEYS.CHANNEL]: canViewChannelInfo,
+      [COLUMN_KEYS.GROUP]: true,
       [COLUMN_KEYS.TYPE]: true,
       [COLUMN_KEYS.TASK_ID]: true,
       [COLUMN_KEYS.SUBMIT_RESULT]: isAdminUser,
@@ -203,6 +206,7 @@ export const useMjLogsData = () => {
     return {
       channel_id: formValues.channel_id || '',
       mj_id: formValues.mj_id || '',
+      group: formValues.group || '',
       start_timestamp,
       end_timestamp,
     };
@@ -229,14 +233,14 @@ export const useMjLogsData = () => {
   // Load logs function
   const loadLogs = async (page = 1, size = pageSize) => {
     setLoading(true);
-    const { channel_id, mj_id, start_timestamp, end_timestamp } =
+    const { channel_id, mj_id, group, start_timestamp, end_timestamp } =
       getFormValues();
     const effectiveChannelId = canViewChannelInfo ? channel_id : '';
     let localStartTimestamp = Date.parse(start_timestamp);
     let localEndTimestamp = Date.parse(end_timestamp);
     const url = isAdminUser
-      ? `/api/mj/?p=${page}&page_size=${size}&channel_id=${effectiveChannelId}&mj_id=${mj_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`
-      : `/api/mj/self/?p=${page}&page_size=${size}&mj_id=${mj_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
+      ? `/api/mj/?p=${page}&page_size=${size}&channel_id=${effectiveChannelId}&mj_id=${mj_id}&group=${group}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`
+      : `/api/mj/self/?p=${page}&page_size=${size}&mj_id=${mj_id}&group=${group}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
     const res = await API.get(url);
     const { success, message, data } = res.data;
     if (success) {

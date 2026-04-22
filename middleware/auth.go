@@ -426,7 +426,23 @@ func SetupContextForToken(c *gin.Context, token *model.Token, parts ...string) e
 		c.Set("token_model_limit_enabled", false)
 	}
 	common.SetContextKey(c, constant.ContextKeyTokenGroup, token.Group)
-	common.SetContextKey(c, constant.ContextKeyTokenCrossGroupRetry, token.CrossGroupRetry)
+	// 多分组令牌默认开启跨分组重试；旧版 "auto" 令牌和无分组令牌（使用系统 autoGroups）也需跨分组重试
+	crossGroupRetry := token.CrossGroupRetry || token.Groups != "" || token.Group == "auto" || token.Group == ""
+	common.SetContextKey(c, constant.ContextKeyTokenCrossGroupRetry, crossGroupRetry)
+	// 统一走多分组逻辑，不再区分新旧令牌：
+	// - token.Groups 非空：按配置的优先级列表
+	// - token.Groups 为空且 token.Group 非空（非 "auto"）：旧令牌单分组，包成单元素列表
+	// - token.Groups 为空且 token.Group 为空，或 token.Group == "auto"：使用系统 autoGroups 优先级
+	userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
+	var tokenGroups []string
+	if token.Groups == "" && token.Group != "" && token.Group != "auto" {
+		tokenGroups = []string{token.Group}
+	} else {
+		tokenGroups = service.ResolveTokenGroups(token.Groups, userGroup)
+	}
+	if len(tokenGroups) > 0 {
+		common.SetContextKey(c, constant.ContextKeyTokenGroups, tokenGroups)
+	}
 	if len(parts) > 1 {
 		if model.IsAdmin(token.UserId) {
 			c.Set("specific_channel_id", parts[1])

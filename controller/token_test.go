@@ -34,6 +34,15 @@ type tokenResponseItem struct {
 	Status int    `json:"status"`
 }
 
+type tokenDetailResponse struct {
+	ID              int    `json:"id"`
+	Name            string `json:"name"`
+	Key             string `json:"key"`
+	Group           string `json:"group"`
+	Groups          string `json:"groups"`
+	CrossGroupRetry bool   `json:"cross_group_retry"`
+}
+
 type tokenKeyResponse struct {
 	Key string `json:"key"`
 }
@@ -240,6 +249,97 @@ func TestUpdateTokenMasksKeyInResponse(t *testing.T) {
 	}
 }
 
+func TestAddTokenPersistsMultiGroups(t *testing.T) {
+	db := setupTokenControllerTestDB(t)
+	groupsJSON := `[{"group":"vip","priority":1},{"group":"default","priority":2}]`
+
+	body := map[string]any{
+		"name":                 "multi-group-token",
+		"expired_time":         -1,
+		"remain_quota":         100,
+		"unlimited_quota":      true,
+		"model_limits_enabled": false,
+		"model_limits":         "",
+		"group":                "",
+		"groups":               groupsJSON,
+		"cross_group_retry":    false,
+	}
+
+	ctx, recorder := newAuthenticatedContext(t, http.MethodPost, "/api/token/", body, 1)
+	AddToken(ctx)
+
+	response := decodeAPIResponse(t, recorder)
+	if !response.Success {
+		t.Fatalf("expected success response, got message: %s", response.Message)
+	}
+
+	var stored model.Token
+	if err := db.Where("user_id = ? AND name = ?", 1, "multi-group-token").First(&stored).Error; err != nil {
+		t.Fatalf("failed to fetch stored token: %v", err)
+	}
+	if stored.Groups != groupsJSON {
+		t.Fatalf("expected groups %q, got %q", groupsJSON, stored.Groups)
+	}
+	if stored.Group != "" {
+		t.Fatalf("expected legacy group to stay empty, got %q", stored.Group)
+	}
+	if stored.CrossGroupRetry {
+		t.Fatalf("expected cross_group_retry to remain false for multi-group token")
+	}
+}
+
+func TestUpdateTokenPersistsMultiGroupsAndMasksKey(t *testing.T) {
+	db := setupTokenControllerTestDB(t)
+	token := seedToken(t, db, 1, "multi-edit-token", "multi1234edit5678")
+	groupsJSON := `[{"group":"svip","priority":1},{"group":"default","priority":2}]`
+
+	body := map[string]any{
+		"id":                   token.Id,
+		"name":                 "multi-edit-token-updated",
+		"expired_time":         -1,
+		"remain_quota":         100,
+		"unlimited_quota":      true,
+		"model_limits_enabled": false,
+		"model_limits":         "",
+		"group":                "",
+		"groups":               groupsJSON,
+		"cross_group_retry":    false,
+	}
+
+	ctx, recorder := newAuthenticatedContext(t, http.MethodPut, "/api/token/", body, 1)
+	UpdateToken(ctx)
+
+	response := decodeAPIResponse(t, recorder)
+	if !response.Success {
+		t.Fatalf("expected success response, got message: %s", response.Message)
+	}
+
+	var detail tokenDetailResponse
+	if err := common.Unmarshal(response.Data, &detail); err != nil {
+		t.Fatalf("failed to decode token update response: %v", err)
+	}
+	if detail.Key != token.GetMaskedKey() {
+		t.Fatalf("expected masked update key %q, got %q", token.GetMaskedKey(), detail.Key)
+	}
+	if detail.Groups != groupsJSON {
+		t.Fatalf("expected response groups %q, got %q", groupsJSON, detail.Groups)
+	}
+	if detail.Group != "" {
+		t.Fatalf("expected response legacy group empty, got %q", detail.Group)
+	}
+
+	var stored model.Token
+	if err := db.First(&stored, token.Id).Error; err != nil {
+		t.Fatalf("failed to fetch updated token: %v", err)
+	}
+	if stored.Groups != groupsJSON {
+		t.Fatalf("expected stored groups %q, got %q", groupsJSON, stored.Groups)
+	}
+	if stored.Group != "" {
+		t.Fatalf("expected stored legacy group empty, got %q", stored.Group)
+	}
+}
+
 func TestGetTokenKeyRequiresOwnershipAndReturnsFullKey(t *testing.T) {
 	db := setupTokenControllerTestDB(t)
 	token := seedToken(t, db, 1, "owned-token", "owner1234token5678")
@@ -359,5 +459,58 @@ func TestAdminUpdateUserTokenReturnsFullKeyForTargetUser(t *testing.T) {
 	}
 	if detail.Key != token.GetFullKey() {
 		t.Fatalf("expected full key %q, got %q", token.GetFullKey(), detail.Key)
+	}
+}
+
+func TestAdminUpdateUserTokenPersistsMultiGroupsAndReturnsFullKey(t *testing.T) {
+	db := setupTokenControllerTestDB(t)
+	token := seedToken(t, db, 14, "admin-multi-edit-token", "adminmulti12345678")
+	groupsJSON := `[{"group":"enterprise","priority":1},{"group":"default","priority":2}]`
+
+	body := map[string]any{
+		"id":                   token.Id,
+		"name":                 "admin-multi-token-updated",
+		"expired_time":         -1,
+		"remain_quota":         100,
+		"unlimited_quota":      true,
+		"model_limits_enabled": false,
+		"model_limits":         "",
+		"group":                "",
+		"groups":               groupsJSON,
+		"cross_group_retry":    false,
+	}
+
+	ctx, recorder := newAuthenticatedContext(t, http.MethodPut, "/api/user/14/tokens/"+strconv.Itoa(token.Id), body, 1)
+	ctx.Params = gin.Params{
+		{Key: "id", Value: "14"},
+		{Key: "token_id", Value: strconv.Itoa(token.Id)},
+	}
+	AdminUpdateUserToken(ctx)
+
+	response := decodeAPIResponse(t, recorder)
+	if !response.Success {
+		t.Fatalf("expected success response, got message: %s", response.Message)
+	}
+
+	var detail tokenDetailResponse
+	if err := common.Unmarshal(response.Data, &detail); err != nil {
+		t.Fatalf("failed to decode admin token update response: %v", err)
+	}
+	if detail.Key != token.GetFullKey() {
+		t.Fatalf("expected full key %q, got %q", token.GetFullKey(), detail.Key)
+	}
+	if detail.Groups != groupsJSON {
+		t.Fatalf("expected response groups %q, got %q", groupsJSON, detail.Groups)
+	}
+
+	var stored model.Token
+	if err := db.First(&stored, token.Id).Error; err != nil {
+		t.Fatalf("failed to fetch admin updated token: %v", err)
+	}
+	if stored.Groups != groupsJSON {
+		t.Fatalf("expected stored groups %q, got %q", groupsJSON, stored.Groups)
+	}
+	if stored.Group != "" {
+		t.Fatalf("expected stored legacy group empty, got %q", stored.Group)
 	}
 }

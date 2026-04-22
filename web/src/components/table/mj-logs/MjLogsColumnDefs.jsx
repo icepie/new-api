@@ -46,6 +46,7 @@ import {
   Hash,
   Video,
 } from 'lucide-react';
+import { renderGroup } from '../../../helpers/render';
 
 const colors = [
   'amber',
@@ -363,6 +364,14 @@ export const getMjLogsColumns = ({
         ) : (
           <></>
         );
+      },
+    },
+    {
+      key: COLUMN_KEYS.GROUP,
+      title: t('实际分组'),
+      dataIndex: 'group',
+      render: (text) => {
+        return text ? <>{renderGroup(text)}</> : <></>;
       },
     },
     {

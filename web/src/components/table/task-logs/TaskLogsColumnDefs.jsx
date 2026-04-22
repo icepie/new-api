@@ -42,7 +42,7 @@ import {
   TASK_ACTION_REMIX_GENERATE,
 } from '../../../constants/common.constant';
 import { CHANNEL_OPTIONS } from '../../../constants/channel.constants';
-import { stringToColor } from '../../../helpers/render';
+import { renderGroup, stringToColor } from '../../../helpers/render';
 import { Avatar, Space } from '@douyinfe/semi-ui';
 
 const colors = [
@@ -313,6 +313,14 @@ export const getTaskLogsColumns = ({
             </Typography.Text>
           </Space>
         );
+      },
+    },
+    {
+      key: COLUMN_KEYS.GROUP,
+      title: t('实际分组'),
+      dataIndex: 'group',
+      render: (text) => {
+        return text ? <>{renderGroup(text)}</> : <></>;
       },
     },
     {

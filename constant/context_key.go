@@ -19,6 +19,7 @@ const (
 	ContextKeyTokenModelLimitEnabled ContextKey = "token_model_limit_enabled"
 	ContextKeyTokenModelLimit        ContextKey = "token_model_limit"
 	ContextKeyTokenCrossGroupRetry   ContextKey = "token_cross_group_retry"
+	ContextKeyTokenGroups            ContextKey = "token_groups" // []string 有序分组列表（新多分组逻辑）
 
 	/* channel related keys */
 	ContextKeyChannelId                ContextKey = "channel_id"

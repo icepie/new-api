@@ -74,6 +74,16 @@ const TaskLogsFilters = ({
             size='small'
           />
 
+          {/* 分组 */}
+          <Form.Input
+            field='group'
+            prefix={<IconSearch />}
+            placeholder={t('分组')}
+            showClear
+            pure
+            size='small'
+          />
+
           {/* 渠道 ID - 仅管理员可见 */}
           {canViewChannelInfo && (
             <Form.Input

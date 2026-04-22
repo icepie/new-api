@@ -42,6 +42,7 @@ export const useTaskLogsData = () => {
     DURATION: 'duration',
     CHANNEL: 'channel',
     USERNAME: 'username',
+    GROUP: 'group',
     PLATFORM: 'platform',
     TYPE: 'type',
     TASK_ID: 'task_id',
@@ -90,6 +91,7 @@ export const useTaskLogsData = () => {
   const formInitValues = {
     channel_id: '',
     task_id: '',
+    group: '',
     dateRange: [
       timestamp2string(zeroNow.getTime() / 1000),
       timestamp2string(now.getTime() / 1000 + 3600),
@@ -137,6 +139,7 @@ export const useTaskLogsData = () => {
       [COLUMN_KEYS.DURATION]: true,
       [COLUMN_KEYS.CHANNEL]: canViewChannelInfo,
       [COLUMN_KEYS.USERNAME]: isAdminUser,
+      [COLUMN_KEYS.GROUP]: true,
       [COLUMN_KEYS.PLATFORM]: true,
       [COLUMN_KEYS.TYPE]: true,
       [COLUMN_KEYS.TASK_ID]: true,
@@ -207,6 +210,7 @@ export const useTaskLogsData = () => {
     return {
       channel_id: formValues.channel_id || '',
       task_id: formValues.task_id || '',
+      group: formValues.group || '',
       start_timestamp,
       end_timestamp,
     };
@@ -233,14 +237,14 @@ export const useTaskLogsData = () => {
   // Load logs function
   const loadLogs = async (page = 1, size = pageSize) => {
     setLoading(true);
-    const { channel_id, task_id, start_timestamp, end_timestamp } =
+    const { channel_id, task_id, group, start_timestamp, end_timestamp } =
       getFormValues();
     const effectiveChannelId = canViewChannelInfo ? channel_id : '';
     let localStartTimestamp = parseInt(Date.parse(start_timestamp) / 1000);
     let localEndTimestamp = parseInt(Date.parse(end_timestamp) / 1000);
     let url = isAdminUser
-      ? `/api/task/?p=${page}&page_size=${size}&channel_id=${effectiveChannelId}&task_id=${task_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`
-      : `/api/task/self?p=${page}&page_size=${size}&task_id=${task_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
+      ? `/api/task/?p=${page}&page_size=${size}&channel_id=${effectiveChannelId}&task_id=${task_id}&group=${group}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`
+      : `/api/task/self?p=${page}&page_size=${size}&task_id=${task_id}&group=${group}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
     const res = await API.get(url);
     const { success, message, data } = res.data;
     if (success) {

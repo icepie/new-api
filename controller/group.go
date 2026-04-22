@@ -2,7 +2,9 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
+	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting"
@@ -23,10 +25,9 @@ func GetGroups(c *gin.Context) {
 	})
 }
 
-func GetUserGroups(c *gin.Context) {
+func buildUserGroups(userId int) map[string]map[string]interface{} {
 	usableGroups := make(map[string]map[string]interface{})
 	userGroup := ""
-	userId := c.GetInt("id")
 	userGroup, _ = model.GetUserGroup(userId, false)
 	userUsableGroups := service.GetUserUsableGroups(userGroup)
 	for groupName, _ := range ratio_setting.GetGroupRatioCopy() {
@@ -44,6 +45,25 @@ func GetUserGroups(c *gin.Context) {
 			"desc":  setting.GetUsableGroupDescription("auto"),
 		}
 	}
+	return usableGroups
+}
+
+func GetUserGroups(c *gin.Context) {
+	usableGroups := buildUserGroups(c.GetInt("id"))
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    usableGroups,
+	})
+}
+
+func GetUserGroupsByAdmin(c *gin.Context) {
+	userId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	usableGroups := buildUserGroups(userId)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

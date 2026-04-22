@@ -23,7 +23,6 @@ import {
   showError,
   showSuccess,
   timestamp2string,
-  renderGroupOption,
   renderQuotaWithPrompt,
   getModelCategories,
   selectFilter,
@@ -51,6 +50,7 @@ import {
 } from '@douyinfe/semi-icons';
 import { useTranslation } from 'react-i18next';
 import { StatusContext } from '../../../../context/Status';
+import GroupSelector from '../../../common/GroupSelector';
 
 const { Text, Title } = Typography;
 
@@ -62,6 +62,7 @@ const EditTokenModal = (props) => {
   const formApiRef = useRef(null);
   const [models, setModels] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [tokenGroups, setTokenGroups] = useState([]);
   const isEdit = props.editingToken.id !== undefined;
 
   const getInitValues = () => ({
@@ -72,8 +73,6 @@ const EditTokenModal = (props) => {
     model_limits_enabled: false,
     model_limits: [],
     allow_ips: '',
-    group: '',
-    cross_group_retry: false,
     tokenCount: 1,
   });
 
@@ -162,6 +161,18 @@ const EditTokenModal = (props) => {
       } else {
         data.model_limits = [];
       }
+      let parsedGroups = [];
+      if (data.groups) {
+        try {
+          parsedGroups = JSON.parse(data.groups);
+        } catch (_) {
+          parsedGroups = [];
+        }
+      }
+      if (parsedGroups.length === 0 && data.group) {
+        parsedGroups = [{ group: data.group, priority: 1 }];
+      }
+      setTokenGroups(parsedGroups.sort((a, b) => a.priority - b.priority));
       if (formApiRef.current) {
         formApiRef.current.setValues({ ...getInitValues(), ...data });
       }
@@ -186,9 +197,11 @@ const EditTokenModal = (props) => {
       if (isEdit) {
         loadToken();
       } else {
+        setTokenGroups([]);
         formApiRef.current?.setValues(getInitValues());
       }
     } else {
+      setTokenGroups([]);
       formApiRef.current?.reset();
     }
   }, [props.visiable, props.editingToken.id]);
@@ -207,6 +220,11 @@ const EditTokenModal = (props) => {
 
   const submit = async (values) => {
     setLoading(true);
+    const groupsPayload = tokenGroups.map((item, idx) => ({
+      group: item.group,
+      priority: idx + 1,
+    }));
+    const groupsJson = groupsPayload.length > 0 ? JSON.stringify(groupsPayload) : '';
     if (isEdit) {
       let { tokenCount: _tc, ...localInputs } = values;
       localInputs.remain_quota = parseInt(localInputs.remain_quota);
@@ -221,6 +239,9 @@ const EditTokenModal = (props) => {
       }
       localInputs.model_limits = localInputs.model_limits.join(',');
       localInputs.model_limits_enabled = localInputs.model_limits.length > 0;
+      localInputs.groups = groupsJson;
+      localInputs.group = '';
+      localInputs.cross_group_retry = false;
       let res = await API.put(`/api/token/`, {
         ...localInputs,
         id: parseInt(props.editingToken.id),
@@ -258,6 +279,9 @@ const EditTokenModal = (props) => {
         }
         localInputs.model_limits = localInputs.model_limits.join(',');
         localInputs.model_limits_enabled = localInputs.model_limits.length > 0;
+        localInputs.groups = groupsJson;
+        localInputs.group = '';
+        localInputs.cross_group_retry = false;
         let res = await API.post(`/api/token/`, localInputs);
         const { success, message } = res.data;
         if (success) {
@@ -359,39 +383,13 @@ const EditTokenModal = (props) => {
                     />
                   </Col>
                   <Col span={24}>
-                    {groups.length > 0 ? (
-                      <Form.Select
-                        field='group'
-                        label={t('令牌分组')}
-                        placeholder={t('令牌分组，默认为用户的分组')}
-                        optionList={groups}
-                        renderOptionItem={renderGroupOption}
-                        showClear
-                        style={{ width: '100%' }}
+                    <Form.Slot label={t('令牌分组')}>
+                      <GroupSelector
+                        groups={groups}
+                        tokenGroups={tokenGroups}
+                        setTokenGroups={setTokenGroups}
                       />
-                    ) : (
-                      <Form.Select
-                        placeholder={t('管理员未设置用户可选分组')}
-                        disabled
-                        label={t('令牌分组')}
-                        style={{ width: '100%' }}
-                      />
-                    )}
-                  </Col>
-                  <Col
-                    span={24}
-                    style={{
-                      display: values.group === 'auto' ? 'block' : 'none',
-                    }}
-                  >
-                    <Form.Switch
-                      field='cross_group_retry'
-                      label={t('跨分组重试')}
-                      size='default'
-                      extraText={t(
-                        '开启后，当前分组渠道失败时会按顺序尝试下一个分组的渠道',
-                      )}
-                    />
+                    </Form.Slot>
                   </Col>
                   <Col xs={24} sm={24} md={24} lg={10} xl={10}>
                     <Form.DatePicker

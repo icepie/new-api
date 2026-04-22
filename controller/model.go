@@ -177,6 +177,19 @@ func ListModels(c *gin.Context, modelType int) {
 					}
 				}
 			}
+		} else if tgs, ok := common.GetContextKey(c, constant.ContextKeyTokenGroups); ok {
+			if groups, ok := tgs.([]string); ok && len(groups) > 0 {
+				for _, g := range groups {
+					groupModels := model.GetGroupEnabledModels(g)
+					for _, m := range groupModels {
+						if !common.StringsContains(models, m) {
+							models = append(models, m)
+						}
+					}
+				}
+			} else {
+				models = model.GetGroupEnabledModels(group)
+			}
 		} else {
 			models = model.GetGroupEnabledModels(group)
 		}

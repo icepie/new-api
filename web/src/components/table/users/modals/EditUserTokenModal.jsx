@@ -17,13 +17,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import {
   API,
   showError,
   showSuccess,
   timestamp2string,
-  renderGroupOption,
   renderQuotaWithPrompt,
   getModelCategories,
   selectFilter,
@@ -49,15 +48,19 @@ import {
   IconClose,
   IconKey,
 } from '@douyinfe/semi-icons';
+import GroupSelector from '../../../common/GroupSelector';
+import { StatusContext } from '../../../../context/Status';
 
 const { Text, Title } = Typography;
 
 const EditUserTokenModal = ({ visible, onCancel, editingToken, userId, refresh, t }) => {
+  const [statusState] = useContext(StatusContext);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
   const formApiRef = useRef(null);
   const [models, setModels] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [tokenGroups, setTokenGroups] = useState([]);
 
   const getInitValues = () => ({
     name: '',
@@ -67,8 +70,6 @@ const EditUserTokenModal = ({ visible, onCancel, editingToken, userId, refresh, 
     model_limits_enabled: false,
     model_limits: [],
     allow_ips: '',
-    group: '',
-    cross_group_retry: false,
   });
 
   const setExpiredTime = (month, day, hour, minute) => {
@@ -117,7 +118,11 @@ const EditUserTokenModal = ({ visible, onCancel, editingToken, userId, refresh, 
   };
 
   const loadGroups = async () => {
-    let res = await API.get(`/api/user/groups`);
+    if (!userId) {
+      setGroups([]);
+      return;
+    }
+    let res = await API.get(`/api/user/${userId}/groups`);
     const { success, message, data } = res.data;
     if (success) {
       let localGroupOptions = Object.entries(data).map(([group, info]) => ({
@@ -125,6 +130,11 @@ const EditUserTokenModal = ({ visible, onCancel, editingToken, userId, refresh, 
         value: group,
         ratio: info.ratio,
       }));
+      if (statusState?.status?.default_use_auto_group) {
+        if (localGroupOptions.some((group) => group.value === 'auto')) {
+          localGroupOptions.sort((a, b) => (a.value === 'auto' ? -1 : 1));
+        }
+      }
       setGroups(localGroupOptions);
     } else {
       showError(t(message));
@@ -147,6 +157,18 @@ const EditUserTokenModal = ({ visible, onCancel, editingToken, userId, refresh, 
         } else {
           data.model_limits = [];
         }
+        let parsedGroups = [];
+        if (data.groups) {
+          try {
+            parsedGroups = JSON.parse(data.groups);
+          } catch (_) {
+            parsedGroups = [];
+          }
+        }
+        if (parsedGroups.length === 0 && data.group) {
+          parsedGroups = [{ group: data.group, priority: 1 }];
+        }
+        setTokenGroups(parsedGroups.sort((a, b) => a.priority - b.priority));
         if (formApiRef.current) {
           formApiRef.current.setValues({ ...getInitValues(), ...data });
         }
@@ -163,12 +185,13 @@ const EditUserTokenModal = ({ visible, onCancel, editingToken, userId, refresh, 
   useEffect(() => {
     loadModels();
     loadGroups();
-  }, []);
+  }, [userId, statusState?.status?.default_use_auto_group]);
 
   useEffect(() => {
     if (visible && editingToken.id) {
       loadToken();
     } else {
+      setTokenGroups([]);
       formApiRef.current?.reset();
     }
   }, [visible, editingToken.id]);
@@ -179,6 +202,11 @@ const EditUserTokenModal = ({ visible, onCancel, editingToken, userId, refresh, 
     setLoading(true);
     try {
       let localInputs = { ...values };
+      const groupsPayload = tokenGroups.map((item, idx) => ({
+        group: item.group,
+        priority: idx + 1,
+      }));
+      const groupsJson = groupsPayload.length > 0 ? JSON.stringify(groupsPayload) : '';
       localInputs.remain_quota = parseInt(localInputs.remain_quota);
 
       if (localInputs.expired_time !== -1) {
@@ -193,6 +221,9 @@ const EditUserTokenModal = ({ visible, onCancel, editingToken, userId, refresh, 
 
       localInputs.model_limits = localInputs.model_limits.join(',');
       localInputs.model_limits_enabled = localInputs.model_limits.length > 0;
+      localInputs.groups = groupsJson;
+      localInputs.group = '';
+      localInputs.cross_group_retry = false;
 
       let res = await API.put(`/api/user/${userId}/tokens/${editingToken.id}`, {
         ...localInputs,
@@ -289,34 +320,13 @@ const EditUserTokenModal = ({ visible, onCancel, editingToken, userId, refresh, 
                     />
                   </Col>
                   <Col span={24}>
-                    {groups.length > 0 ? (
-                      <Form.Select
-                        field='group'
-                        label={t('令牌分组')}
-                        placeholder={t('令牌分组，默认为用户的分组')}
-                        optionList={groups}
-                        renderOptionItem={renderGroupOption}
-                        showClear
-                        style={{ width: '100%' }}
+                    <Form.Slot label={t('令牌分组')}>
+                      <GroupSelector
+                        groups={groups}
+                        tokenGroups={tokenGroups}
+                        setTokenGroups={setTokenGroups}
                       />
-                    ) : (
-                      <Form.Select
-                        placeholder={t('管理员未设置用户可选分组')}
-                        disabled
-                        label={t('令牌分组')}
-                        style={{ width: '100%' }}
-                      />
-                    )}
-                  </Col>
-                  <Col span={24} style={{ display: values.group === 'auto' ? 'block' : 'none' }}>
-                    <Form.Switch
-                      field='cross_group_retry'
-                      label={t('跨分组重试')}
-                      size='default'
-                      extraText={t(
-                        '开启后，当前分组渠道失败时会按顺序尝试下一个分组的渠道',
-                      )}
-                    />
+                    </Form.Slot>
                   </Col>
                   <Col xs={24} sm={24} md={24} lg={10} xl={10}>
                     <Form.DatePicker

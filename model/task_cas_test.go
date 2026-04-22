@@ -26,6 +26,7 @@ func TestMain(m *testing.M) {
 	common.RedisEnabled = false
 	common.BatchUpdateEnabled = false
 	common.LogConsumeEnabled = true
+	initCol()
 
 	sqlDB, err := db.DB()
 	if err != nil {
@@ -33,7 +34,7 @@ func TestMain(m *testing.M) {
 	}
 	sqlDB.SetMaxOpenConns(1)
 
-	if err := db.AutoMigrate(&Task{}, &User{}, &Token{}, &Log{}, &Channel{}); err != nil {
+	if err := db.AutoMigrate(&Task{}, &Midjourney{}, &User{}, &Token{}, &Log{}, &Channel{}); err != nil {
 		panic("failed to migrate: " + err.Error())
 	}
 
@@ -44,6 +45,7 @@ func truncateTables(t *testing.T) {
 	t.Helper()
 	t.Cleanup(func() {
 		DB.Exec("DELETE FROM tasks")
+		DB.Exec("DELETE FROM midjourneys")
 		DB.Exec("DELETE FROM users")
 		DB.Exec("DELETE FROM tokens")
 		DB.Exec("DELETE FROM logs")
@@ -120,6 +122,44 @@ func TestSnapshot_Roundtrip(t *testing.T) {
 	assert.Equal(t, task.FailReason, snap.FailReason)
 	assert.Equal(t, task.PrivateData.ResultURL, snap.ResultURL)
 	assert.JSONEq(t, string(task.Data), string(snap.Data))
+}
+
+func TestTaskQueriesFilterByGroup(t *testing.T) {
+	truncateTables(t)
+
+	insertTask(t, &Task{TaskID: "task_default", UserId: 1, Group: "default", Status: TaskStatusSuccess})
+	insertTask(t, &Task{TaskID: "task_premium", UserId: 1, Group: "premium", Status: TaskStatusSuccess})
+	insertTask(t, &Task{TaskID: "task_other_user", UserId: 2, Group: "premium", Status: TaskStatusSuccess})
+
+	queryParams := SyncTaskQueryParams{Group: "premium"}
+
+	tasks := TaskGetAllTasks(0, 10, queryParams)
+	require.Len(t, tasks, 2)
+	assert.Equal(t, int64(2), TaskCountAllTasks(queryParams))
+
+	userTasks := TaskGetAllUserTask(1, 0, 10, queryParams)
+	require.Len(t, userTasks, 1)
+	assert.Equal(t, "task_premium", userTasks[0].TaskID)
+	assert.Equal(t, int64(1), TaskCountAllUserTask(1, queryParams))
+}
+
+func TestMidjourneyQueriesFilterByGroup(t *testing.T) {
+	truncateTables(t)
+
+	require.NoError(t, DB.Create(&Midjourney{MjId: "mj_default", UserId: 1, Group: "default"}).Error)
+	require.NoError(t, DB.Create(&Midjourney{MjId: "mj_premium", UserId: 1, Group: "premium"}).Error)
+	require.NoError(t, DB.Create(&Midjourney{MjId: "mj_other_user", UserId: 2, Group: "premium"}).Error)
+
+	queryParams := TaskQueryParams{Group: "premium"}
+
+	tasks := GetAllTasks(0, 10, queryParams)
+	require.Len(t, tasks, 2)
+	assert.Equal(t, int64(2), CountAllTasks(queryParams))
+
+	userTasks := GetAllUserTask(1, 0, 10, queryParams)
+	require.Len(t, userTasks, 1)
+	assert.Equal(t, "mj_premium", userTasks[0].MjId)
+	assert.Equal(t, int64(1), CountAllUserTask(1, queryParams))
 }
 
 // ---------------------------------------------------------------------------

@@ -622,7 +622,7 @@ export const getLogsColumns = ({
     },
     {
       key: COLUMN_KEYS.GROUP,
-      title: t('分组'),
+      title: t('实际分组'),
       dataIndex: 'group',
       render: (text, record, index) => {
         if (

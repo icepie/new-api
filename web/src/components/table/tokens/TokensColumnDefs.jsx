@@ -88,7 +88,50 @@ const renderStatus = (text, record, t) => {
 };
 
 // Render group column
+const VISIBLE_GROUPS = 2;
 const renderGroupColumn = (text, record, t) => {
+  if (record.groups) {
+    let entries = [];
+    try {
+      entries = JSON.parse(record.groups);
+    } catch (_) {
+      entries = [];
+    }
+    if (entries.length > 0) {
+      const sorted = [...entries].sort((a, b) => a.priority - b.priority);
+      const visible = sorted.slice(0, VISIBLE_GROUPS);
+      const hidden = sorted.slice(VISIBLE_GROUPS);
+      return (
+        <Space wrap={false} style={{ flexWrap: 'nowrap', alignItems: 'center' }}>
+          {visible.map((item, idx) => (
+            <Tooltip key={item.group} content={`${t('优先级')} ${idx + 1}`} position='top'>
+              <Tag shape='circle' size='small'>{item.group}</Tag>
+            </Tooltip>
+          ))}
+          {hidden.length > 0 && (
+            <Popover
+              position='top'
+              showArrow
+              content={
+                <div style={{ padding: '4px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {sorted.map((item, idx) => (
+                    <div key={item.group} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Tag shape='circle' size='small' color='blue'>{idx + 1}</Tag>
+                      <span style={{ fontSize: 13 }}>{item.group}</span>
+                    </div>
+                  ))}
+                </div>
+              }
+            >
+              <Tag shape='circle' size='small' color='primary' style={{ cursor: 'pointer' }}>
+                +{hidden.length}
+              </Tag>
+            </Popover>
+          )}
+        </Space>
+      );
+    }
+  }
   if (text === 'auto') {
     return (
       <Tooltip
